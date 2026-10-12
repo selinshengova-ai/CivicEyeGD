@@ -1,0 +1,180 @@
+﻿
+@page
+@model IndexModel
+@{
+    ViewData["Title"] = "Начало";
+}
+
+<section class="civic-page">
+    <div class="civic-hero">
+        <div class="hero-content">
+            <span class="eyebrow">
+                <span class="status-dot"></span>
+                CIVIC TECHNOLOGY · ГОЦЕ ДЕЛЧЕВ
+            </span>
+
+            <h1>По-добър град<br />започва с <span>един сигнал.</span></h1>
+
+            <p>
+                Забеляза нередност? Отбележи я на картата.
+                Заедно можем да направим градската среда по-добра.
+            </p>
+
+            <div class="hero-actions">
+                <a href="#reports" class="btn-civic-primary">
+                    Разгледай сигналите <span>→</span>
+                </a>
+                <a href="#city-map" class="btn-civic-secondary">
+                    Виж картата
+                </a>
+            </div>
+        </div>
+
+        <div class="hero-visual" aria-label="Илюстрация на карта с градски сигнали">
+            <div class="map-orbit orbit-one"></div>
+            <div class="map-orbit orbit-two"></div>
+            <div class="map-symbol">
+                <span>◎</span>
+            </div>
+            <div class="floating-label label-top">
+                <span class="mini-dot green"></span>
+                Градска среда
+            </div>
+            <div class="floating-label label-bottom">
+                <span class="mini-dot blue"></span>
+                Всеки сигнал е важен
+            </div>
+        </div>
+    </div>
+
+    <section class="stats-grid" aria-label="Обобщение на сигналите">
+        <article class="stat-card">
+            <div class="stat-top">
+                <span>Всички сигнали</span>
+                <span class="stat-icon">◎</span>
+            </div>
+            <div class="stat-number">128</div>
+            <div class="stat-note">Демонстрационни данни</div>
+        </article>
+
+        <article class="stat-card">
+            <div class="stat-top">
+                <span>Нови сигнали</span>
+                <span class="stat-icon blue-icon">＋</span>
+            </div>
+            <div class="stat-number">24</div>
+            <div class="stat-note">Очакват преглед</div>
+        </article>
+
+        <article class="stat-card">
+            <div class="stat-top">
+                <span>В процес</span>
+                <span class="stat-icon orange-icon">↻</span>
+            </div>
+            <div class="stat-number">36</div>
+            <div class="stat-note">Демонстрационни данни</div>
+        </article>
+
+        <article class="stat-card">
+            <div class="stat-top">
+                <span>Решени</span>
+                <span class="stat-icon green-icon">✓</span>
+            </div>
+            <div class="stat-number">68</div>
+            <div class="stat-note">Демонстрационни данни</div>
+        </article>
+    </section>
+
+    <section class="content-section" id="city-map">
+        <div class="section-heading">
+            <div>
+                <span class="section-kicker">РАЗГЛЕДАЙ ГРАДА</span>
+                <h2>Сигнали на картата</h2>
+                <p>Открий проблемите и разгледай подадените сигнали.</p>
+            </div>
+            <span class="demo-badge">Преглед на концепцията</span>
+        </div>
+
+        <div class="map-placeholder">
+            <div class="map-grid-pattern"></div>
+            <div class="map-message">
+                <div class="map-pin-icon">⌖</div>
+                <h3>Картата на Гоце Делчев</h3>
+                <p>Тук ще добавим интерактивна карта с реални местоположения.</p>
+                <span>Следваща стъпка: Leaflet + OpenStreetMap</span>
+            </div>
+        </div>
+    </section>
+
+    <section class="content-section" id="reports">
+        <div class="section-heading reports-heading">
+            <div>
+                <span class="section-kicker">ОТ ОБЩНОСТТА</span>
+                <h2>Последни сигнали</h2>
+                <p>Пример как ще изглеждат сигналите в приложението.</p>
+            </div>
+            <span class="text-link">Всички сигнали ↗</span>
+        </div>
+
+        <div class="reports-list">
+            <article class="report-card">
+                <div class="report-category-icon road-icon">↗</div>
+                <div class="report-info">
+                    <div class="report-title-row">
+                        <h3>Повредена пътна настилка</h3>
+                        <span class="report-status status-new">Нов</span>
+                    </div>
+                    <p>Примерно местоположение · Гоце Делчев</p>
+                    <div class="report-meta">
+                        <span>Пътища</span><span>•</span><span>Демонстрационен сигнал</span>
+                    </div>
+                </div>
+                <span class="report-arrow">→</span>
+            </article>
+
+            <article class="report-card">
+                <div class="report-category-icon light-icon">☼</div>
+                <div class="report-info">
+                    <div class="report-title-row">
+                        <h3>Улично осветление</h3>
+                        <span class="report-status status-progress">В процес</span>
+                    </div>
+                    <p>Примерно местоположение · Гоце Делчев</p>
+                    <div class="report-meta">
+                        <span>Осветление</span><span>•</span><span>Демонстрационен сигнал</span>
+                    </div>
+                </div>
+                <span class="report-arrow">→</span>
+            </article>
+
+            <article class="report-card">
+                <div class="report-category-icon nature-icon">✳</div>
+                <div class="report-info">
+                    <div class="report-title-row">
+                        <h3>Нужда от почистване</h3>
+                        <span class="report-status status-resolved">Решен</span>
+                    </div>
+                    <p>Примерно местоположение · Гоце Делчев</p>
+                    <div class="report-meta">
+                        <span>Чистота</span><span>•</span><span>Демонстрационен сигнал</span>
+                    </div>
+                </div>
+                <span class="report-arrow">→</span>
+            </article>
+        </div>
+    </section>
+
+    <section class="call-to-action">
+        <div>
+            <span class="section-kicker">ТВОЯТ ГРАД. ТВОЯТ ГЛАС.</span>
+            <h2>Забеляза проблем?</h2>
+            <p>Следващата стъпка е да добавим форма, с която да подаваш реални сигнали.</p>
+        </div>
+        <a href="#reports" class="btn-civic-primary">Разгледай проекта <span>→</span></a>
+    </section>
+
+    <footer class="civic-footer">
+        <div class="footer-brand"><span class="brand-eye">◎</span> CivicEye <strong>GD</strong></div>
+        <p>Концепция за по-добра градска среда · Гоце Делчев</p>
+    </footer>
+</section>
