@@ -1,6 +1,6 @@
 ﻿
 @page
-@model IndexModel
+@model CivicEyeGD.Pages.IndexModel
 @{
     ViewData["Title"] = "Начало";
 }
@@ -53,8 +53,8 @@
                 <span>Всички сигнали</span>
                 <span class="stat-icon">◎</span>
             </div>
-            <div class="stat-number">128</div>
-            <div class="stat-note">Демонстрационни данни</div>
+            <div class="stat-number">@Model.TotalReports</div>
+            <div class="stat-note">Общо регистрирани сигнали</div>
         </article>
 
         <article class="stat-card">
@@ -62,7 +62,7 @@
                 <span>Нови сигнали</span>
                 <span class="stat-icon blue-icon">＋</span>
             </div>
-            <div class="stat-number">24</div>
+            <div class="stat-number">@Model.NewReports</div>
             <div class="stat-note">Очакват преглед</div>
         </article>
 
@@ -71,8 +71,8 @@
                 <span>В процес</span>
                 <span class="stat-icon orange-icon">↻</span>
             </div>
-            <div class="stat-number">36</div>
-            <div class="stat-note">Демонстрационни данни</div>
+            <div class="stat-number">@Model.InProgressReports</div>
+            <div class="stat-note">Работата продължава</div>
         </article>
 
         <article class="stat-card">
@@ -80,8 +80,8 @@
                 <span>Решени</span>
                 <span class="stat-icon green-icon">✓</span>
             </div>
-            <div class="stat-number">68</div>
-            <div class="stat-note">Демонстрационни данни</div>
+            <div class="stat-number">@Model.ResolvedReports</div>
+            <div class="stat-note">Приключени сигнали</div>
         </article>
     </section>
 
@@ -92,7 +92,7 @@
                 <h2>Сигнали на картата</h2>
                 <p>Открий проблемите и разгледай подадените сигнали.</p>
             </div>
-            <span class="demo-badge">Преглед на концепцията</span>
+            <span class="demo-badge">Картата предстои</span>
         </div>
 
         <div class="map-placeholder">
@@ -100,7 +100,7 @@
             <div class="map-message">
                 <div class="map-pin-icon">⌖</div>
                 <h3>Картата на Гоце Делчев</h3>
-                <p>Тук ще добавим интерактивна карта с реални местоположения.</p>
+                <p>Тук ще добавим интерактивна карта с реалните местоположения на сигналите.</p>
                 <span>Следваща стъпка: Leaflet + OpenStreetMap</span>
             </div>
         </div>
@@ -111,56 +111,59 @@
             <div>
                 <span class="section-kicker">ОТ ОБЩНОСТТА</span>
                 <h2>Последни сигнали</h2>
-                <p>Пример как ще изглеждат сигналите в приложението.</p>
+                <p>Сигнали, заредени от базата данни на CivicEye GD.</p>
             </div>
-            <span class="text-link">Всички сигнали ↗</span>
+            <span class="text-link">Последни 5 сигнала</span>
         </div>
 
         <div class="reports-list">
-            <article class="report-card">
-                <div class="report-category-icon road-icon">↗</div>
-                <div class="report-info">
-                    <div class="report-title-row">
-                        <h3>Повредена пътна настилка</h3>
-                        <span class="report-status status-new">Нов</span>
-                    </div>
-                    <p>Примерно местоположение · Гоце Делчев</p>
-                    <div class="report-meta">
-                        <span>Пътища</span><span>•</span><span>Демонстрационен сигнал</span>
-                    </div>
-                </div>
-                <span class="report-arrow">→</span>
-            </article>
+            @if (Model.Reports.Count > 0)
+            {
+                @foreach (var report in Model.Reports)
+                {
+                    var statusClass = report.Status switch
+                    {
+                        "Решен" => "status-resolved",
+                        "В процес" => "status-progress",
+                        _ => "status-new"
+                    };
 
-            <article class="report-card">
-                <div class="report-category-icon light-icon">☼</div>
-                <div class="report-info">
-                    <div class="report-title-row">
-                        <h3>Улично осветление</h3>
-                        <span class="report-status status-progress">В процес</span>
-                    </div>
-                    <p>Примерно местоположение · Гоце Делчев</p>
-                    <div class="report-meta">
-                        <span>Осветление</span><span>•</span><span>Демонстрационен сигнал</span>
-                    </div>
-                </div>
-                <span class="report-arrow">→</span>
-            </article>
+                    <article class="report-card">
+                        <div class="report-category-icon road-icon">◎</div>
 
-            <article class="report-card">
-                <div class="report-category-icon nature-icon">✳</div>
-                <div class="report-info">
-                    <div class="report-title-row">
-                        <h3>Нужда от почистване</h3>
-                        <span class="report-status status-resolved">Решен</span>
+                        <div class="report-info">
+                            <div class="report-title-row">
+                                <h3>@report.Title</h3>
+                                <span class="report-status @statusClass">
+                                    @report.Status
+                                </span>
+                            </div>
+
+                            <p>@report.Address</p>
+
+                            <div class="report-meta">
+                                <span>@report.Category</span>
+                                <span>•</span>
+                                <span>@report.CreatedAt.ToLocalTime().ToString("dd.MM.yyyy")</span>
+                            </div>
+
+                            <p>@report.Description</p>
+                        </div>
+
+                        <span class="report-arrow">→</span>
+                    </article>
+                }
+            }
+            else
+            {
+                <article class="report-card">
+                    <div class="report-category-icon road-icon">◎</div>
+                    <div class="report-info">
+                        <h3>Все още няма подадени сигнали</h3>
+                        <p>Когато бъде подаден първият сигнал, той ще се появи тук.</p>
                     </div>
-                    <p>Примерно местоположение · Гоце Делчев</p>
-                    <div class="report-meta">
-                        <span>Чистота</span><span>•</span><span>Демонстрационен сигнал</span>
-                    </div>
-                </div>
-                <span class="report-arrow">→</span>
-            </article>
+                </article>
+            }
         </div>
     </section>
 
@@ -168,13 +171,17 @@
         <div>
             <span class="section-kicker">ТВОЯТ ГРАД. ТВОЯТ ГЛАС.</span>
             <h2>Забеляза проблем?</h2>
-            <p>Следващата стъпка е да добавим форма, с която да подаваш реални сигнали.</p>
+            <p>Скоро ще можеш да подаваш сигнали директно през CivicEye GD.</p>
         </div>
-        <a href="#reports" class="btn-civic-primary">Разгледай проекта <span>→</span></a>
+        <a href="#reports" class="btn-civic-primary">
+            Разгледай сигналите <span>→</span>
+        </a>
     </section>
 
     <footer class="civic-footer">
-        <div class="footer-brand"><span class="brand-eye">◎</span> CivicEye <strong>GD</strong></div>
+        <div class="footer-brand">
+            <span class="brand-eye">◎</span> CivicEye <strong>GD</strong>
+        </div>
         <p>Концепция за по-добра градска среда · Гоце Делчев</p>
     </footer>
 </section>

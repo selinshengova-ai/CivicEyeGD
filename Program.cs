@@ -7,9 +7,13 @@ var builder = WebApplication.CreateBuilder(args);
 // Add services to the container.
 builder.Services.AddRazorPages();
 
+// Use one fixed database file in the project directory.
+var databasePath = Path.Combine(
+    builder.Environment.ContentRootPath,
+    "CivicEyeGD.db");
+
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
-    options.UseSqlite(
-        builder.Configuration.GetConnectionString("DefaultConnection")));
+    options.UseSqlite($"Data Source={databasePath}"));
 
 var app = builder.Build();
 
