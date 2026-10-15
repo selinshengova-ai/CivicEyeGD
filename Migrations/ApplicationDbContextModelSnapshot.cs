@@ -38,6 +38,12 @@ namespace CivicEyeGD.Migrations
                         .IsRequired()
                         .HasColumnType("TEXT");
 
+                    b.Property<double?>("Latitude")
+                        .HasColumnType("REAL");
+
+                    b.Property<double?>("Longitude")
+                        .HasColumnType("REAL");
+
                     b.Property<string>("Status")
                         .IsRequired()
                         .HasColumnType("TEXT");

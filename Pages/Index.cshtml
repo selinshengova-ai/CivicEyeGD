@@ -1,9 +1,70 @@
 ﻿
 @page
 @model CivicEyeGD.Pages.IndexModel
+
 @{
     ViewData["Title"] = "Начало";
 }
+
+<link rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css" />
+
+<style>
+    #city-map {
+        width: 100%;
+        height: 430px;
+        min-height: 320px;
+        border-radius: 16px;
+        overflow: hidden;
+        z-index: 1;
+        background: #e8eef0;
+    }
+
+    .map-legend {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 16px;
+        margin-top: 14px;
+        font-size: 0.9rem;
+    }
+
+    .map-legend-item {
+        display: flex;
+        align-items: center;
+        gap: 7px;
+    }
+
+    .legend-dot {
+        width: 11px;
+        height: 11px;
+        border-radius: 50%;
+        display: inline-block;
+    }
+
+    .legend-new {
+        background: #2563eb;
+    }
+
+    .legend-progress {
+        background: #ea580c;
+    }
+
+    .legend-resolved {
+        background: #16a34a;
+    }
+
+    .map-empty-message {
+        margin-top: 12px;
+        font-size: 0.9rem;
+        color: #64748b;
+    }
+
+    @@media (max-width: 768px) {
+        #city-map {
+            height: 340px;
+        }
+    }
+</style>
 
 <section class="civic-page">
     <div class="civic-hero">
@@ -21,10 +82,15 @@
             </p>
 
             <div class="hero-actions">
-                <a href="#reports" class="btn-civic-primary">
-                    Разгледай сигналите <span>→</span>
+                <a asp-page="/Create" class="btn-civic-primary">
+                    ＋ Подай сигнал
                 </a>
-                <a href="#city-map" class="btn-civic-secondary">
+
+                <a href="#reports" class="btn-civic-secondary">
+                    Разгледай сигналите
+                </a>
+
+                <a href="#map-section" class="btn-civic-secondary">
                     Виж картата
                 </a>
             </div>
@@ -33,13 +99,16 @@
         <div class="hero-visual" aria-label="Илюстрация на карта с градски сигнали">
             <div class="map-orbit orbit-one"></div>
             <div class="map-orbit orbit-two"></div>
+
             <div class="map-symbol">
                 <span>◎</span>
             </div>
+
             <div class="floating-label label-top">
                 <span class="mini-dot green"></span>
                 Градска среда
             </div>
+
             <div class="floating-label label-bottom">
                 <span class="mini-dot blue"></span>
                 Всеки сигнал е важен
@@ -85,25 +154,45 @@
         </article>
     </section>
 
-    <section class="content-section" id="city-map">
+    <section class="content-section" id="map-section">
         <div class="section-heading">
             <div>
                 <span class="section-kicker">РАЗГЛЕДАЙ ГРАДА</span>
                 <h2>Сигнали на картата</h2>
-                <p>Открий проблемите и разгледай подадените сигнали.</p>
+                <p>
+                    Разгледай градските проблеми и местоположенията
+                    на подадените сигнали.
+                </p>
             </div>
-            <span class="demo-badge">Картата предстои</span>
+
+            <span class="demo-badge">OpenStreetMap</span>
         </div>
 
-        <div class="map-placeholder">
-            <div class="map-grid-pattern"></div>
-            <div class="map-message">
-                <div class="map-pin-icon">⌖</div>
-                <h3>Картата на Гоце Делчев</h3>
-                <p>Тук ще добавим интерактивна карта с реалните местоположения на сигналите.</p>
-                <span>Следваща стъпка: Leaflet + OpenStreetMap</span>
-            </div>
+        <div id="city-map"
+             role="application"
+             aria-label="Интерактивна карта на Гоце Делчев">
         </div>
+
+        <div class="map-legend">
+            <span class="map-legend-item">
+                <span class="legend-dot legend-new"></span>
+                Подаден
+            </span>
+
+            <span class="map-legend-item">
+                <span class="legend-dot legend-progress"></span>
+                В процес
+            </span>
+
+            <span class="map-legend-item">
+                <span class="legend-dot legend-resolved"></span>
+                Решен
+            </span>
+        </div>
+
+        <p class="map-empty-message" id="map-message" aria-live="polite">
+            Картата се зарежда...
+        </p>
     </section>
 
     <section class="content-section" id="reports">
@@ -113,7 +202,10 @@
                 <h2>Последни сигнали</h2>
                 <p>Сигнали, заредени от базата данни на CivicEye GD.</p>
             </div>
-            <span class="text-link">Последни 5 сигнала</span>
+
+            <a asp-page="/Create" class="text-link">
+                ＋ Нов сигнал
+            </a>
         </div>
 
         <div class="reports-list">
@@ -134,6 +226,7 @@
                         <div class="report-info">
                             <div class="report-title-row">
                                 <h3>@report.Title</h3>
+
                                 <span class="report-status @statusClass">
                                     @report.Status
                                 </span>
@@ -158,9 +251,17 @@
             {
                 <article class="report-card">
                     <div class="report-category-icon road-icon">◎</div>
+
                     <div class="report-info">
                         <h3>Все още няма подадени сигнали</h3>
-                        <p>Когато бъде подаден първият сигнал, той ще се появи тук.</p>
+                        <p>
+                            Можеш да бъдеш първият, който ще подаде сигнал
+                            за проблем в градската среда.
+                        </p>
+
+                        <a asp-page="/Create" class="text-link">
+                            Подай първия сигнал →
+                        </a>
                     </div>
                 </article>
             }
@@ -171,17 +272,72 @@
         <div>
             <span class="section-kicker">ТВОЯТ ГРАД. ТВОЯТ ГЛАС.</span>
             <h2>Забеляза проблем?</h2>
-            <p>Скоро ще можеш да подаваш сигнали директно през CivicEye GD.</p>
+            <p>
+                Подай сигнал за проблем в градската среда
+                и помогни за по-добър Гоце Делчев.
+            </p>
         </div>
-        <a href="#reports" class="btn-civic-primary">
-            Разгледай сигналите <span>→</span>
-        </a>
-    </section>
 
-    <footer class="civic-footer">
-        <div class="footer-brand">
-            <span class="brand-eye">◎</span> CivicEye <strong>GD</strong>
+        <div>
+            <a asp-page="/Create" class="btn-civic-primary">
+                ＋ Подай сигнал
+            </a>
         </div>
-        <p>Концепция за по-добра градска среда · Гоце Делчев</p>
-    </footer>
+    </section>
 </section>
+
+<script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"></script>
+
+<script>
+    (function () {
+        function showMapError(message) {
+            const messageElement = document.getElementById("map-message");
+
+            if (messageElement) {
+                messageElement.textContent = message;
+            }
+        }
+
+        function initializeMap() {
+            const mapElement = document.getElementById("city-map");
+
+            if (!mapElement) {
+                return;
+            }
+
+            if (typeof L === "undefined") {
+                showMapError(
+                    "Leaflet не се зареди. Провери интернет връзката и достъпа до CDN."
+                );
+                console.error("Leaflet не е зареден: обектът L липсва.");
+                return;
+            }
+
+            const map = L.map("city-map").setView([41.5667, 23.7333], 15);
+
+            L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
+                maxZoom: 19,
+                attribution:
+                    '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+            }).addTo(map);
+
+            showMapError(
+                "Картата е заредена. Все още няма сигнали с координати за показване."
+            );
+
+            setTimeout(function () {
+                map.invalidateSize();
+            }, 200);
+
+            window.addEventListener("resize", function () {
+                map.invalidateSize();
+            });
+        }
+
+        if (document.readyState === "loading") {
+            document.addEventListener("DOMContentLoaded", initializeMap);
+        } else {
+            initializeMap();
+        }
+    })();
+</script>

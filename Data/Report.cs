@@ -16,4 +16,9 @@ public class Report
     public string Status { get; set; } = "Подаден";
 
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+
+    // Географски координати на сигнала
+    public double? Latitude { get; set; }
+
+    public double? Longitude { get; set; }
 }

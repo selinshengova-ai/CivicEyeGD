@@ -1,0 +1,386 @@
+
+@page
+@model CivicEyeGD.Pages.CreateModel
+
+@{
+    ViewData["Title"] = "Подай сигнал";
+}
+
+<link rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css" />
+
+<section class="civic-form-page">
+    <div class="civic-form-card">
+
+        <a asp-page="/Index"
+           class="text-link"
+           style="margin-bottom: 24px;">
+            ← Назад към началната страница
+        </a>
+
+        <div class="section-kicker">
+            CIVICEYE GD · ГОЦЕ ДЕЛЧЕВ
+        </div>
+
+        <h1>Подай сигнал</h1>
+
+        <p class="civic-form-intro">
+            Забеляза проблем в градската среда?
+            Опиши го, за да помогнеш за по-достъпен и по-добър град.
+        </p>
+
+        <div class="form-info">
+            <span class="form-info-icon">◎</span>
+            <p>
+                Попълни полетата възможно най-точно.
+                Местоположението и описанието ще помогнат
+                проблемът да бъде разбран по-добре.
+            </p>
+        </div>
+
+        <form method="post">
+            <div asp-validation-summary="ModelOnly"
+                 class="text-danger mb-3"></div>
+
+            <div class="mb-3">
+                <label asp-for="Report.Title" class="form-label">
+                    Заглавие <span class="required-mark">*</span>
+                </label>
+
+                <input asp-for="Report.Title"
+                       class="form-control"
+                       maxlength="100"
+                       placeholder="Например: Липсва рампа на тротоара" />
+
+                <span asp-validation-for="Report.Title"
+                      class="text-danger"></span>
+            </div>
+
+            <div class="mb-3">
+                <label asp-for="Report.Category" class="form-label">
+                    Категория <span class="required-mark">*</span>
+                </label>
+
+                <select asp-for="Report.Category" class="form-select">
+                    <option value="">Избери категория</option>
+                    <option value="Достъпност">Достъпност</option>
+                    <option value="Тротоари">Тротоари</option>
+                    <option value="Пешеходни пътеки">Пешеходни пътеки</option>
+                    <option value="Улично осветление">Улично осветление</option>
+                    <option value="Пътна настилка">Пътна настилка</option>
+                    <option value="Друго">Друго</option>
+                </select>
+
+                <span asp-validation-for="Report.Category"
+                      class="text-danger"></span>
+            </div>
+
+            <div class="mb-3">
+                <label asp-for="Report.Address" class="form-label">
+                    Адрес или местоположение
+                    <span class="required-mark">*</span>
+                </label>
+
+                <input asp-for="Report.Address"
+                       class="form-control"
+                       maxlength="200"
+                       placeholder="Например: ул. „Гоце Делчев“ № 10" />
+
+                <span asp-validation-for="Report.Address"
+                      class="text-danger"></span>
+
+                <span class="field-hint">
+                    Посочи улица, ориентир или близка обществена сграда.
+                </span>
+            </div>
+
+            <!-- Карта за избор на местоположение -->
+            <div class="mb-4">
+                <label class="form-label">
+                    Избери точното място на картата
+                    <span class="required-mark">*</span>
+                </label>
+
+                <p class="field-hint map-instruction">
+                    Натисни върху картата, за да поставиш маркер
+                    на мястото на проблема.
+                </p>
+
+                <div id="report-location-map"
+                     role="application"
+                     aria-label="Карта за избор на местоположение">
+                </div>
+
+                <input asp-for="Report.Latitude" type="hidden" />
+                <input asp-for="Report.Longitude" type="hidden" />
+
+                <p id="selected-location-message"
+                   class="field-hint"
+                   aria-live="polite">
+                    Все още не е избрано място на картата.
+                </p>
+            </div>
+
+            <div class="mb-4">
+                <label asp-for="Report.Description" class="form-label">
+                    Описание на проблема
+                    <span class="required-mark">*</span>
+                </label>
+
+                <textarea asp-for="Report.Description"
+                          class="form-control"
+                          rows="5"
+                          maxlength="2000"
+                          placeholder="Какъв е проблемът? Къде точно се намира? Кого затруднява?"></textarea>
+
+                <span asp-validation-for="Report.Description"
+                      class="text-danger"></span>
+
+                <span class="field-hint">
+                    Опиши проблема ясно и конкретно.
+                </span>
+            </div>
+
+            <div class="form-disclaimer">
+                <span>ⓘ</span>
+                <p>
+                    Преди изпращане провери дали въведената информация
+                    е точна и не съдържа лични данни на други хора.
+                </p>
+            </div>
+
+            <div class="civic-form-actions">
+                <button type="submit" class="btn-civic-primary">
+                    Изпрати сигнала →
+                </button>
+
+                <a asp-page="/Index" class="btn-civic-secondary">
+                    Отказ
+                </a>
+            </div>
+
+            <p class="required-note">
+                <span class="required-mark">*</span>
+                Задължителни полета
+            </p>
+        </form>
+    </div>
+</section>
+
+<style>
+    .form-info {
+        display: flex;
+        align-items: flex-start;
+        gap: 12px;
+        padding: 15px;
+        margin-bottom: 26px;
+        background: #e8f3ee;
+        border: 1px solid #d5e8dc;
+        border-radius: 12px;
+    }
+
+    .form-info-icon {
+        color: #176b57;
+        font-size: 22px;
+        line-height: 1.3;
+    }
+
+    .form-info p {
+        margin: 0;
+        color: #405b50;
+        font-size: 13px;
+    }
+
+    .required-mark {
+        color: #b54736;
+        font-weight: 700;
+    }
+
+    .field-hint {
+        display: block;
+        margin-top: 6px;
+        color: #718078;
+        font-size: 12px;
+    }
+
+    .map-instruction {
+        margin-bottom: 10px;
+    }
+
+    #report-location-map {
+        width: 100%;
+        height: 350px;
+        border: 1px solid #d5e8dc;
+        border-radius: 12px;
+        overflow: hidden;
+        z-index: 1;
+        background: #e8f3ee;
+    }
+
+    #selected-location-message {
+        margin-top: 10px;
+        overflow-wrap: anywhere;
+    }
+
+    .form-disclaimer {
+        display: flex;
+        align-items: flex-start;
+        gap: 10px;
+        padding: 13px;
+        margin-bottom: 22px;
+        background: #f6f8f6;
+        border-radius: 10px;
+        color: #718078;
+        font-size: 12px;
+    }
+
+    .form-disclaimer p {
+        margin: 0;
+    }
+
+    .civic-form-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        margin-top: 24px;
+    }
+
+    .required-note {
+        margin-top: 18px;
+        color: #718078;
+        font-size: 12px;
+    }
+
+    .civic-form-card .btn-civic-primary,
+    .civic-form-card .btn-civic-secondary {
+        min-height: 44px;
+        box-sizing: border-box;
+    }
+
+    @@media (max-width: 600px) {
+        #report-location-map {
+            height: 300px;
+        }
+
+        .civic-form-actions {
+            flex-direction: column;
+        }
+
+        .civic-form-actions .btn-civic-primary,
+        .civic-form-actions .btn-civic-secondary {
+            width: 100%;
+        }
+    }
+</style>
+
+<script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"></script>
+
+<script>
+    (function () {
+        function initializeReportMap() {
+            const mapElement =
+                document.getElementById("report-location-map");
+
+            if (!mapElement || mapElement.dataset.initialized === "true") {
+                return;
+            }
+
+            const message =
+                document.getElementById("selected-location-message");
+
+            const latitudeInput =
+                document.getElementById("Report_Latitude");
+
+            const longitudeInput =
+                document.getElementById("Report_Longitude");
+
+            if (typeof L === "undefined") {
+                message.textContent =
+                    "Картата не се зареди. Провери интернет връзката и опитай отново.";
+                return;
+            }
+
+            mapElement.dataset.initialized = "true";
+
+            const map = L.map(mapElement).setView(
+                [41.5667, 23.7333],
+                15
+            );
+
+            L.tileLayer(
+                "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
+                {
+                    maxZoom: 19,
+                    attribution:
+                        '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+                }
+            ).addTo(map);
+
+            let marker = null;
+
+            // Възстановяване на маркера, ако формата е върната
+            // заради грешка при валидация.
+            const previousLatitude = Number(latitudeInput.value);
+            const previousLongitude = Number(longitudeInput.value);
+
+            if (
+                latitudeInput.value !== "" &&
+                longitudeInput.value !== "" &&
+                Number.isFinite(previousLatitude) &&
+                Number.isFinite(previousLongitude)
+            ) {
+                const previousPosition = [
+                    previousLatitude,
+                    previousLongitude
+                ];
+
+                marker = L.marker(previousPosition).addTo(map);
+                map.setView(previousPosition, 17);
+
+                message.textContent =
+                    "Избрано местоположение: " +
+                    previousLatitude.toFixed(5) + ", " +
+                    previousLongitude.toFixed(5);
+            } else {
+                message.textContent =
+                    "Все още не е избрано място на картата.";
+            }
+
+            map.on("click", function (event) {
+                const latitude = event.latlng.lat;
+                const longitude = event.latlng.lng;
+
+                if (marker) {
+                    marker.setLatLng(event.latlng);
+                } else {
+                    marker = L.marker(event.latlng).addTo(map);
+                }
+
+                latitudeInput.value = latitude.toFixed(7);
+                longitudeInput.value = longitude.toFixed(7);
+
+                message.textContent =
+                    "Избрано местоположение: " +
+                    latitude.toFixed(5) + ", " +
+                    longitude.toFixed(5);
+            });
+
+            setTimeout(function () {
+                map.invalidateSize();
+            }, 200);
+
+            window.addEventListener("resize", function () {
+                map.invalidateSize();
+            });
+        }
+
+        if (document.readyState === "loading") {
+            document.addEventListener(
+                "DOMContentLoaded",
+                initializeReportMap
+            );
+        } else {
+            initializeReportMap();
+        }
+    })();
+</script>
