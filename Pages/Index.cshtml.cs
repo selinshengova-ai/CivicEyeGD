@@ -14,32 +14,32 @@ public class IndexModel : PageModel
         _context = context;
     }
 
-    public List<Report> Reports { get; set; } = new();
+    public List<Report> Reports { get; private set; } = new();
 
-    public int TotalReports { get; set; }
+    public int TotalReports { get; private set; }
 
-    public int NewReports { get; set; }
+    public int OpenReports { get; private set; }
 
-    public int InProgressReports { get; set; }
-
-    public int ResolvedReports { get; set; }
+    public int ResolvedReports { get; private set; }
 
     public async Task OnGetAsync()
     {
-        Reports = await _context.Reports
+        var reports = _context.Reports.AsNoTracking();
+
+        // Общ брой сигнали
+        TotalReports = await reports.CountAsync();
+
+        // Брой решени сигнали
+        ResolvedReports = await reports.CountAsync(
+            report => report.Status == "Решен");
+
+        // Брой нерешени сигнали
+        OpenReports = TotalReports - ResolvedReports;
+
+        // Последните три сигнала
+        Reports = await reports
             .OrderByDescending(report => report.CreatedAt)
-            .Take(5)
+            .Take(3)
             .ToListAsync();
-
-        TotalReports = await _context.Reports.CountAsync();
-
-        NewReports = await _context.Reports
-            .CountAsync(report => report.Status == "Подаден");
-
-        InProgressReports = await _context.Reports
-            .CountAsync(report => report.Status == "В процес");
-
-        ResolvedReports = await _context.Reports
-            .CountAsync(report => report.Status == "Решен");
     }
 }

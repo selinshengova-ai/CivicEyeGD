@@ -1,343 +1,286 @@
 ﻿
-@page
+@page "/Index"
 @model CivicEyeGD.Pages.IndexModel
+@attribute [Microsoft.AspNetCore.Authorization.Authorize]
 
 @{
     ViewData["Title"] = "Начало";
 }
 
-<link rel="stylesheet"
-      href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css" />
+<div class="home-page">
 
-<style>
-    #city-map {
-        width: 100%;
-        height: 430px;
-        min-height: 320px;
-        border-radius: 16px;
-        overflow: hidden;
-        z-index: 1;
-        background: #e8eef0;
-    }
+    <section class="home-hero">
+        <div class="home-hero-content">
 
-    .map-legend {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 16px;
-        margin-top: 14px;
-        font-size: 0.9rem;
-    }
-
-    .map-legend-item {
-        display: flex;
-        align-items: center;
-        gap: 7px;
-    }
-
-    .legend-dot {
-        width: 11px;
-        height: 11px;
-        border-radius: 50%;
-        display: inline-block;
-    }
-
-    .legend-new {
-        background: #2563eb;
-    }
-
-    .legend-progress {
-        background: #ea580c;
-    }
-
-    .legend-resolved {
-        background: #16a34a;
-    }
-
-    .map-empty-message {
-        margin-top: 12px;
-        font-size: 0.9rem;
-        color: #64748b;
-    }
-
-    @@media (max-width: 768px) {
-        #city-map {
-            height: 340px;
-        }
-    }
-</style>
-
-<section class="civic-page">
-    <div class="civic-hero">
-        <div class="hero-content">
-            <span class="eyebrow">
-                <span class="status-dot"></span>
-                CIVIC TECHNOLOGY · ГОЦЕ ДЕЛЧЕВ
+            <span class="home-eyebrow">
+                <span class="home-eyebrow-dot"></span>
+                CIVICEYE GD · ГОЦЕ ДЕЛЧЕВ
             </span>
 
-            <h1>По-добър град<br />започва с <span>един сигнал.</span></h1>
+            <h1>
+                Градът се променя,<br />
+                когато <span>действаме.</span>
+            </h1>
 
-            <p>
-                Забеляза нередност? Отбележи я на картата.
-                Заедно можем да направим градската среда по-добра.
+            <p class="home-intro">
+                Забеляза проблем в общественото пространство?
+                Подай сигнал, отбележи местоположението му и помогни
+                за по-достъпна градска среда.
             </p>
 
-            <div class="hero-actions">
-                <a asp-page="/Create" class="btn-civic-primary">
-                    ＋ Подай сигнал
-                </a>
+            <div class="home-account-actions">
+                <p>Добре дошъл в CivicEye GD!</p>
 
-                <a href="#reports" class="btn-civic-secondary">
-                    Разгледай сигналите
-                </a>
-
-                <a href="#map-section" class="btn-civic-secondary">
-                    Виж картата
-                </a>
+               
             </div>
+
+            <div class="home-hero-note">
+                <span aria-hidden="true">◎</span>
+                Всеки сигнал е стъпка към промяна.
+            </div>
+
         </div>
 
-        <div class="hero-visual" aria-label="Илюстрация на карта с градски сигнали">
-            <div class="map-orbit orbit-one"></div>
-            <div class="map-orbit orbit-two"></div>
+        <div class="home-hero-visual" aria-hidden="true">
 
-            <div class="map-symbol">
-                <span>◎</span>
+            <div class="home-visual-circle home-circle-outer"></div>
+            <div class="home-visual-circle home-circle-inner"></div>
+
+            <div class="home-visual-card">
+                <div class="home-visual-icon">⌖</div>
+
+                <div>
+                    <span class="home-visual-small">ТВОЯТ ГРАД</span>
+                    <strong>Твоят глас.</strong>
+
+                    <span class="home-visual-caption">
+                        Твоята възможност за промяна.
+                    </span>
+                </div>
             </div>
 
-            <div class="floating-label label-top">
-                <span class="mini-dot green"></span>
-                Градска среда
+            <div class="home-visual-tag home-tag-top">
+                <span class="home-tag-dot"></span>
+                Забележи
             </div>
 
-            <div class="floating-label label-bottom">
-                <span class="mini-dot blue"></span>
-                Всеки сигнал е важен
-            </div>
         </div>
-    </div>
-
-    <section class="stats-grid" aria-label="Обобщение на сигналите">
-        <article class="stat-card">
-            <div class="stat-top">
-                <span>Всички сигнали</span>
-                <span class="stat-icon">◎</span>
-            </div>
-            <div class="stat-number">@Model.TotalReports</div>
-            <div class="stat-note">Общо регистрирани сигнали</div>
-        </article>
-
-        <article class="stat-card">
-            <div class="stat-top">
-                <span>Нови сигнали</span>
-                <span class="stat-icon blue-icon">＋</span>
-            </div>
-            <div class="stat-number">@Model.NewReports</div>
-            <div class="stat-note">Очакват преглед</div>
-        </article>
-
-        <article class="stat-card">
-            <div class="stat-top">
-                <span>В процес</span>
-                <span class="stat-icon orange-icon">↻</span>
-            </div>
-            <div class="stat-number">@Model.InProgressReports</div>
-            <div class="stat-note">Работата продължава</div>
-        </article>
-
-        <article class="stat-card">
-            <div class="stat-top">
-                <span>Решени</span>
-                <span class="stat-icon green-icon">✓</span>
-            </div>
-            <div class="stat-number">@Model.ResolvedReports</div>
-            <div class="stat-note">Приключени сигнали</div>
-        </article>
     </section>
 
-    <section class="content-section" id="map-section">
-        <div class="section-heading">
+    <section class="home-statistics"
+             aria-label="Статистика на сигналите">
+
+        <article class="home-stat-card">
+            <div class="home-stat-heading">
+                <span>Всички сигнали</span>
+                <span class="home-stat-icon">◎</span>
+            </div>
+
+            <div class="home-stat-number">
+                @Model.TotalReports
+            </div>
+
+            <p>Общо регистрирани</p>
+        </article>
+
+        <article class="home-stat-card">
+            <div class="home-stat-heading">
+                <span>Очакват решение</span>
+                <span class="home-stat-icon home-stat-icon-orange">↻</span>
+            </div>
+
+            <div class="home-stat-number">
+                @Model.OpenReports
+            </div>
+
+            <p>Все още нерешени</p>
+        </article>
+
+        <article class="home-stat-card">
+            <div class="home-stat-heading">
+                <span>Решени сигнали</span>
+                <span class="home-stat-icon home-stat-icon-green">✓</span>
+            </div>
+
+            <div class="home-stat-number">
+                @Model.ResolvedReports
+            </div>
+
+            <p>Отбелязани като решени</p>
+        </article>
+
+    </section>
+
+    <section class="home-recent-section">
+
+        <div class="home-section-heading">
             <div>
-                <span class="section-kicker">РАЗГЛЕДАЙ ГРАДА</span>
-                <h2>Сигнали на картата</h2>
+                <span class="home-section-eyebrow">ОТ ОБЩНОСТТА</span>
+                <h2>Последни сигнали</h2>
+
                 <p>
-                    Разгледай градските проблеми и местоположенията
-                    на подадените сигнали.
+                    Виж какви проблеми са регистрирани в града.
                 </p>
             </div>
 
-            <span class="demo-badge">OpenStreetMap</span>
-        </div>
-
-        <div id="city-map"
-             role="application"
-             aria-label="Интерактивна карта на Гоце Делчев">
-        </div>
-
-        <div class="map-legend">
-            <span class="map-legend-item">
-                <span class="legend-dot legend-new"></span>
-                Подаден
-            </span>
-
-            <span class="map-legend-item">
-                <span class="legend-dot legend-progress"></span>
-                В процес
-            </span>
-
-            <span class="map-legend-item">
-                <span class="legend-dot legend-resolved"></span>
-                Решен
-            </span>
-        </div>
-
-        <p class="map-empty-message" id="map-message" aria-live="polite">
-            Картата се зарежда...
-        </p>
-    </section>
-
-    <section class="content-section" id="reports">
-        <div class="section-heading reports-heading">
-            <div>
-                <span class="section-kicker">ОТ ОБЩНОСТТА</span>
-                <h2>Последни сигнали</h2>
-                <p>Сигнали, заредени от базата данни на CivicEye GD.</p>
-            </div>
-
-            <a asp-page="/Create" class="text-link">
-                ＋ Нов сигнал
+            <a asp-page="/Reports" class="home-text-link">
+                Всички сигнали
+                <span aria-hidden="true">→</span>
             </a>
         </div>
 
-        <div class="reports-list">
-            @if (Model.Reports.Count > 0)
-            {
+        @if (Model.Reports.Count > 0)
+        {
+            <div class="home-reports-grid">
+
                 @foreach (var report in Model.Reports)
                 {
                     var statusClass = report.Status switch
                     {
-                        "Решен" => "status-resolved",
-                        "В процес" => "status-progress",
-                        _ => "status-new"
+                        "Решен" => "home-status-resolved",
+                        "В процес" => "home-status-progress",
+                        _ => "home-status-new"
                     };
 
-                    <article class="report-card">
-                        <div class="report-category-icon road-icon">◎</div>
+                    <article class="home-report-card">
 
-                        <div class="report-info">
-                            <div class="report-title-row">
-                                <h3>@report.Title</h3>
+                        <div class="home-report-top">
+                            <span class="home-report-category">
+                                @report.Category
+                            </span>
 
-                                <span class="report-status @statusClass">
-                                    @report.Status
-                                </span>
-                            </div>
-
-                            <p>@report.Address</p>
-
-                            <div class="report-meta">
-                                <span>@report.Category</span>
-                                <span>•</span>
-                                <span>@report.CreatedAt.ToLocalTime().ToString("dd.MM.yyyy")</span>
-                            </div>
-
-                            <p>@report.Description</p>
+                            <span class="home-report-status @statusClass">
+                                <span></span>
+                                @report.Status
+                            </span>
                         </div>
 
-                        <span class="report-arrow">→</span>
-                    </article>
-                }
-            }
-            else
-            {
-                <article class="report-card">
-                    <div class="report-category-icon road-icon">◎</div>
+                        <h3>@report.Title</h3>
 
-                    <div class="report-info">
-                        <h3>Все още няма подадени сигнали</h3>
-                        <p>
-                            Можеш да бъдеш първият, който ще подаде сигнал
-                            за проблем в градската среда.
+                        <p class="home-report-description">
+                            @report.Description
                         </p>
 
-                        <a asp-page="/Create" class="text-link">
-                            Подай първия сигнал →
-                        </a>
-                    </div>
-                </article>
-            }
-        </div>
+                        <div class="home-report-footer">
+
+                            <span class="home-report-address">
+                                <span aria-hidden="true">⌖</span>
+                                @(string.IsNullOrWhiteSpace(report.Address)
+                                    ? "Няма посочен адрес"
+                                    : report.Address)
+                            </span>
+
+                            <time datetime="@report.CreatedAt.ToString("O")">
+                                @report.CreatedAt.ToLocalTime().ToString("dd.MM.yyyy")
+                            </time>
+
+                        </div>
+
+                    </article>
+                }
+
+            </div>
+
+            <div class="home-all-reports-mobile">
+                <a asp-page="/Reports"
+                   class="home-button-secondary">
+                    Разгледай всички сигнали →
+                </a>
+            </div>
+        }
+        else
+        {
+            <div class="home-empty-state">
+
+                <div class="home-empty-icon">◎</div>
+
+                <h3>Все още няма подадени сигнали</h3>
+
+                <p>
+                    Можеш да бъдеш първият, който ще отбележи
+                    проблем в общественото пространство.
+                </p>
+
+                <a asp-page="/Create" class="home-button-primary">
+                    ＋ Подай първия сигнал
+                </a>
+
+            </div>
+        }
+
     </section>
 
-    <section class="call-to-action">
-        <div>
-            <span class="section-kicker">ТВОЯТ ГРАД. ТВОЯТ ГЛАС.</span>
-            <h2>Забеляза проблем?</h2>
+    <section class="home-how-section">
+
+        <div class="home-how-heading">
+            <span class="home-section-eyebrow">ЛЕСНО И ДОСТЪПНО</span>
+
+            <h2>Промяната започва с три стъпки.</h2>
+
             <p>
-                Подай сигнал за проблем в градската среда
-                и помогни за по-добър Гоце Делчев.
+                Не е нужно да решиш проблема сам.
+                Достатъчно е да помогнеш той да стане видим.
             </p>
         </div>
 
-        <div>
-            <a asp-page="/Create" class="btn-civic-primary">
-                ＋ Подай сигнал
-            </a>
+        <div class="home-steps">
+
+            <article class="home-step">
+                <span class="home-step-number">01</span>
+                <div class="home-step-icon">＋</div>
+
+                <h3>Подай сигнал</h3>
+
+                <p>
+                    Опиши проблема и посочи къде се намира.
+                </p>
+            </article>
+
+            <article class="home-step">
+                <span class="home-step-number">02</span>
+                <div class="home-step-icon">⌖</div>
+
+                <h3>Виж на картата</h3>
+
+                <p>
+                    Разгледай отбелязаните проблеми в града.
+                </p>
+            </article>
+
+            <article class="home-step">
+                <span class="home-step-number">03</span>
+                <div class="home-step-icon">✓</div>
+
+                <h3>Проследи статуса</h3>
+
+                <p>
+                    Провери дали сигналът е в процес или е решен.
+                </p>
+            </article>
+
         </div>
+
+        <div class="home-final-cta">
+
+            <div>
+                <span class="home-section-eyebrow">
+                    ТВОЯТ ГРАД. ТВОЯТ ГЛАС.
+                </span>
+
+                <h2>Забеляза проблем?</h2>
+
+                <p>
+                    Направи първата стъпка към по-добра градска среда.
+                </p>
+            </div>
+
+            <a asp-page="/Create" class="home-button-primary">
+                Подай сигнал
+                <span aria-hidden="true">↗</span>
+            </a>
+
+        </div>
+
     </section>
-</section>
 
-<script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"></script>
-
-<script>
-    (function () {
-        function showMapError(message) {
-            const messageElement = document.getElementById("map-message");
-
-            if (messageElement) {
-                messageElement.textContent = message;
-            }
-        }
-
-        function initializeMap() {
-            const mapElement = document.getElementById("city-map");
-
-            if (!mapElement) {
-                return;
-            }
-
-            if (typeof L === "undefined") {
-                showMapError(
-                    "Leaflet не се зареди. Провери интернет връзката и достъпа до CDN."
-                );
-                console.error("Leaflet не е зареден: обектът L липсва.");
-                return;
-            }
-
-            const map = L.map("city-map").setView([41.5667, 23.7333], 15);
-
-            L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
-                maxZoom: 19,
-                attribution:
-                    '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-            }).addTo(map);
-
-            showMapError(
-                "Картата е заредена. Все още няма сигнали с координати за показване."
-            );
-
-            setTimeout(function () {
-                map.invalidateSize();
-            }, 200);
-
-            window.addEventListener("resize", function () {
-                map.invalidateSize();
-            });
-        }
-
-        if (document.readyState === "loading") {
-            document.addEventListener("DOMContentLoaded", initializeMap);
-        } else {
-            initializeMap();
-        }
-    })();
-</script>
+</div>

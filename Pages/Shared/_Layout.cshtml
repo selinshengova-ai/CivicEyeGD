@@ -1,52 +1,308 @@
-﻿<!DOCTYPE html>
-<html lang="en">
+﻿
+<!DOCTYPE html>
+<html lang="bg" data-theme="light">
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>@ViewData["Title"] - CivicEyeGD</title>
-    <script type="importmap"></script>
-    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
-    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
-    <link rel="stylesheet" href="~/CivicEyeGD.styles.css" asp-append-version="true" />
+    <meta name="theme-color" content="#123B32" />
+
+    <title>@ViewData["Title"] — CivicEye GD</title>
+
+    <script>
+        try {
+            const savedTheme = localStorage.getItem("civic-theme");
+            document.documentElement.dataset.theme =
+                savedTheme === "dark" ? "dark" : "light";
+        } catch {
+            document.documentElement.dataset.theme = "light";
+        }
+    </script>
+
+    <link rel="stylesheet"
+          href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet"
+          href="~/css/site.css"
+          asp-append-version="true" />
+    <link rel="stylesheet"
+          href="~/CivicEyeGD.styles.css"
+          asp-append-version="true" />
 </head>
-<body>
-    <header>
-        <nav class="navbar navbar-expand-sm navbar-toggleable-sm navbar-light bg-white border-bottom box-shadow mb-3">
-            <div class="container">
-                <a class="navbar-brand" asp-area="" asp-page="/Index">CivicEyeGD</a>
-                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target=".navbar-collapse" aria-controls="navbarSupportedContent"
-                        aria-expanded="false" aria-label="Toggle navigation">
-                    <span class="navbar-toggler-icon"></span>
-                </button>
-                <div class="navbar-collapse collapse d-sm-inline-flex justify-content-between">
-                    <ul class="navbar-nav flex-grow-1">
+
+<body class="civic-site">
+
+<header class="site-header">
+    <nav class="navbar navbar-expand-lg civic-navbar">
+        <div class="container civic-nav-container">
+
+            <a class="navbar-brand civic-brand"
+               asp-page="/Index"
+               aria-label="CivicEye GD — Начало">
+
+                <span class="civic-brand-mark" aria-hidden="true">
+                    <svg viewBox="0 0 48 48"
+                         xmlns="http://www.w3.org/2000/svg">
+                        <path d="M4 22.5C9 14.5 16 10 24 10s15 4.5 20 12.5C39 30.5 32 35 24 35S9 30.5 4 22.5Z"
+                              fill="none"
+                              stroke="currentColor"
+                              stroke-width="2.8" />
+                        <circle cx="24" cy="22.5" r="7.5"
+                                fill="none"
+                                stroke="currentColor"
+                                stroke-width="2.8" />
+                        <circle cx="24" cy="22.5" r="3"
+                                fill="currentColor" />
+                        <path d="M30 29 38 39"
+                              fill="none"
+                              stroke="currentColor"
+                              stroke-width="3"
+                              stroke-linecap="round" />
+                    </svg>
+                </span>
+
+                <span class="civic-brand-copy">
+                    <span class="civic-brand-name">
+                        CivicEye <span>GD</span>
+                    </span>
+                    <span class="civic-brand-tagline">
+                        Виж проблема. Промени града.
+                    </span>
+                </span>
+            </a>
+
+            <button class="navbar-toggler civic-toggler"
+                    type="button"
+                    data-bs-toggle="collapse"
+                    data-bs-target="#civicNavigation"
+                    aria-controls="civicNavigation"
+                    aria-expanded="false"
+                    aria-label="Отвори менюто">
+                <span class="civic-toggler-lines">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </span>
+            </button>
+
+            <div class="collapse navbar-collapse civic-navigation"
+                 id="civicNavigation">
+
+                <ul class="navbar-nav civic-nav-links">
+
+                    <li class="nav-item">
+                        <a class="nav-link civic-nav-link"
+                           asp-page="/Index">
+                            <span class="civic-nav-number">01</span>
+                            <span>Начало</span>
+                        </a>
+                    </li>
+
+                    <li class="nav-item">
+                        <a class="nav-link civic-nav-link"
+                           asp-page="/Map">
+                            <span class="civic-nav-number">02</span>
+                            <span>Карта</span>
+                        </a>
+                    </li>
+
+                    <li class="nav-item">
+                        <a class="nav-link civic-nav-link"
+                           asp-page="/Reports">
+                            <span class="civic-nav-number">03</span>
+                            <span>Сигнали</span>
+                        </a>
+                    </li>
+
+                    @if (User.Identity?.IsAuthenticated == true)
+                    {
                         <li class="nav-item">
-                            <a class="nav-link text-dark" asp-area="" asp-page="/Index">Home</a>
+                            <a class="nav-link civic-nav-link"
+                               asp-page="/Reports">
+                                Моите сигнали
+                            </a>
                         </li>
-                        <li class="nav-item">
-                            <a class="nav-link text-dark" asp-area="" asp-page="/Privacy">Privacy</a>
-                        </li>
-                    </ul>
+
+                        @if (User.IsInRole("Administrator"))
+                        {
+                            <li class="nav-item">
+                                <a class="nav-link civic-nav-link"
+                                   asp-page="/Reports">
+                                    Администрация
+                                </a>
+                            </li>
+                        }
+                    }
+                </ul>
+
+                <div class="d-flex flex-column flex-lg-row
+                            align-items-stretch align-items-lg-center gap-2 ms-lg-auto">
+
+                    <button type="button"
+                            class="btn btn-outline-success"
+                            id="themeToggle"
+                            aria-pressed="false">
+                        <span id="themeIcon" aria-hidden="true">☾</span>
+                        <span id="themeLabel">Тъмна тема</span>
+                    </button>
+
+                    @if (User.Identity?.IsAuthenticated == true)
+                    {
+                        <div class="dropdown">
+                            <button class="btn btn-outline-success dropdown-toggle"
+                                    type="button"
+                                    id="accountDropdown"
+                                    data-bs-toggle="dropdown"
+                                    aria-expanded="false">
+                                <span aria-hidden="true">♙</span>
+                                Профил
+                            </button>
+
+                            <ul class="dropdown-menu dropdown-menu-end"
+                                aria-labelledby="accountDropdown">
+
+                                <li>
+                                    <span class="dropdown-item-text text-muted">
+                                        @User.Identity.Name
+                                    </span>
+                                </li>
+
+                                <li><hr class="dropdown-divider" /></li>
+
+                                <li>
+                                    <a class="dropdown-item"
+                                       asp-page="/Reports">
+                                        Моите сигнали
+                                    </a>
+                                </li>
+
+                                @if (User.IsInRole("Administrator"))
+                                {
+                                    <li>
+                                        <a class="dropdown-item"
+                                           asp-page="/Reports">
+                                            Администрация
+                                        </a>
+                                    </li>
+                                }
+
+                                <li>
+                                    <a class="dropdown-item"
+                                       href="#"
+                                       id="themeMenuToggle">
+                                        Смени темата
+                                    </a>
+                                </li>
+
+                                <li><hr class="dropdown-divider" /></li>
+
+                                <li class="px-3 py-1">
+                                    <form method="post"
+                                          asp-page="/Account/Logout">
+                                        <button type="submit"
+                                                class="btn btn-outline-danger w-100">
+                                            Изход
+                                        </button>
+                                    </form>
+                                </li>
+                            </ul>
+                        </div>
+                    }
+                    else
+                    {
+                        <a class="btn btn-outline-success"
+                           asp-page="/Account/Login">
+                            Вход
+                        </a>
+
+                        <a class="btn btn-success"
+                           asp-page="/Account/Register">
+                            Регистрация
+                        </a>
+                    }
+
+                    <a class="civic-submit-button"
+                       asp-page="/Create">
+                        <span class="civic-submit-icon">+</span>
+                        <span>Подай сигнал</span>
+                        <span class="civic-submit-arrow">↗</span>
+                    </a>
                 </div>
             </div>
-        </nav>
-    </header>
-    <div class="container">
-        <main role="main" class="pb-3">
-            @RenderBody()
-        </main>
-    </div>
-
-    <footer class="border-top footer text-muted">
-        <div class="container">
-            &copy; 2026 - CivicEyeGD - <a asp-area="" asp-page="/Privacy">Privacy</a>
         </div>
-    </footer>
+    </nav>
+</header>
 
-    <script src="~/lib/jquery/dist/jquery.min.js"></script>
-    <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="~/js/site.js" asp-append-version="true"></script>
+<main role="main" class="site-main">
+    @RenderBody()
+</main>
 
-    @await RenderSectionAsync("Scripts", required: false)
+<footer class="civic-footer">
+    <div class="container civic-footer-inner">
+        <a class="civic-footer-brand" asp-page="/Index">
+            CivicEye <span>GD</span>
+        </a>
+
+        <p class="civic-footer-text">
+            По-достъпна градска среда започва с общи усилия.
+        </p>
+
+        <a class="civic-footer-link" asp-page="/Privacy">
+            Поверителност
+        </a>
+
+        <span class="civic-footer-year">
+            © @DateTime.Now.Year
+        </span>
+    </div>
+</footer>
+
+<script src="~/lib/jquery/dist/jquery.min.js"></script>
+<script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+<script src="~/js/site.js" asp-append-version="true"></script>
+
+<script>
+    (() => {
+        const root = document.documentElement;
+        const themeButton = document.getElementById("themeToggle");
+        const themeMenuButton = document.getElementById("themeMenuToggle");
+        const themeIcon = document.getElementById("themeIcon");
+        const themeLabel = document.getElementById("themeLabel");
+
+        function applyTheme(theme) {
+            const isDark = theme === "dark";
+
+            root.dataset.theme = isDark ? "dark" : "light";
+            themeButton?.setAttribute("aria-pressed", String(isDark));
+
+            if (themeIcon) {
+                themeIcon.textContent = isDark ? "☀" : "☾";
+            }
+
+            if (themeLabel) {
+                themeLabel.textContent =
+                    isDark ? "Светла тема" : "Тъмна тема";
+            }
+
+            try {
+                localStorage.setItem("civic-theme", root.dataset.theme);
+            } catch {
+                // Темата ще важи до презареждането на страницата.
+            }
+        }
+
+        themeButton?.addEventListener("click", () => {
+            applyTheme(root.dataset.theme === "dark" ? "light" : "dark");
+        });
+
+        themeMenuButton?.addEventListener("click", (event) => {
+            event.preventDefault();
+            applyTheme(root.dataset.theme === "dark" ? "light" : "dark");
+        });
+
+        applyTheme(root.dataset.theme);
+    })();
+</script>
+
+@await RenderSectionAsync("Scripts", required: false)
+
 </body>
 </html>

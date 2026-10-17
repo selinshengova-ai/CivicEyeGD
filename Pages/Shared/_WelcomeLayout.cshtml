@@ -1,0 +1,42 @@
+
+<!DOCTYPE html>
+<html lang="bg" data-theme="light">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#123B32" />
+
+    <title>@ViewData["Title"] — CivicEye GD</title>
+
+    <script>
+        try {
+            const savedTheme = localStorage.getItem("civic-theme");
+            document.documentElement.dataset.theme =
+                savedTheme === "dark" ? "dark" : "light";
+        } catch {
+            document.documentElement.dataset.theme = "light";
+        }
+    </script>
+
+    <link rel="stylesheet"
+          href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet"
+          href="~/css/site.css"
+          asp-append-version="true" />
+    <link rel="stylesheet"
+          href="~/CivicEyeGD.styles.css"
+          asp-append-version="true" />
+</head>
+
+<body class="civic-site">
+    <main role="main" class="site-main">
+        @RenderBody()
+    </main>
+
+    <script src="~/lib/jquery/dist/jquery.min.js"></script>
+    <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="~/js/site.js" asp-append-version="true"></script>
+
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>

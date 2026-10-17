@@ -1,0 +1,222 @@
+
+@page
+@model CivicEyeGD.Pages.MapModel
+
+@{
+    ViewData["Title"] = "Карта";
+}
+
+<section class="map-page">
+    <div class="container py-5">
+
+        <div class="map-heading">
+            <div>
+                <span class="map-eyebrow">CIVICEYE GD / КАРТА</span>
+
+                <h1>Виж града <span>по нов начин.</span></h1>
+
+                <p>
+                    Разглеждай подадените сигнали за препятствия
+                    и проблеми с достъпността в обществените пространства.
+                </p>
+            </div>
+
+            <a class="map-report-button" asp-page="/Create">
+                <span>+</span>
+                Подай сигнал
+            </a>
+        </div>
+
+        <div class="map-info">
+            <div class="map-info-icon">↗</div>
+
+            <div>
+                <strong>Всеки сигнал има значение.</strong>
+
+                <p>
+                    Натисни маркер върху картата, за да видиш
+                    подробности за съответния сигнал.
+                </p>
+            </div>
+        </div>
+
+        <div class="map-card">
+
+            <div class="map-card-header">
+                <div>
+                    <span class="map-card-label">
+                        ИНТЕРАКТИВНА КАРТА
+                    </span>
+
+                    <h2>Достъпност в Гоце Делчев</h2>
+
+                    <p class="mb-0 mt-2 text-secondary">
+                        Сигнали с местоположение:
+                        <strong>@Model.ReportsCount</strong>
+                    </p>
+                </div>
+
+                <span class="map-live-indicator">
+                    <span></span>
+                    OpenStreetMap
+                </span>
+            </div>
+
+            <div id="civicMap"
+                 role="application"
+                 aria-label="Интерактивна карта със сигнали">
+            </div>
+
+            <div id="mapMessage"
+                 class="px-4 py-3 text-secondary"
+                 role="status"
+                 aria-live="polite">
+                Зареждане на сигналите...
+            </div>
+
+            <div class="map-card-footer">
+                <span>© OpenStreetMap contributors</span>
+
+                <a href="https://www.openstreetmap.org/copyright"
+                   target="_blank"
+                   rel="noopener noreferrer">
+                    За картографските данни
+                </a>
+            </div>
+        </div>
+
+        <div class="map-bottom">
+            <div>
+                <span class="map-bottom-number">01</span>
+                <h3>Разгледай</h3>
+                <p>Намери отбелязаните проблеми в града.</p>
+            </div>
+
+            <div>
+                <span class="map-bottom-number">02</span>
+                <h3>Подай сигнал</h3>
+                <p>Отбележи проблем, който си забелязал.</p>
+            </div>
+
+            <div>
+                <span class="map-bottom-number">03</span>
+                <h3>Промени средата</h3>
+                <p>Помогни за по-достъпни обществени пространства.</p>
+            </div>
+        </div>
+
+    </div>
+</section>
+
+@section Scripts {
+    <link rel="stylesheet"
+          href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+          crossorigin="anonymous" />
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+            crossorigin="anonymous"></script>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            const mapElement = document.getElementById("civicMap");
+            const messageElement = document.getElementById("mapMessage");
+
+            if (!mapElement || typeof L === "undefined") {
+                messageElement.textContent =
+                    "Картата не можа да се зареди. Провери интернет връзката.";
+                return;
+            }
+
+            // Данните идват от SQLite чрез MapModel.
+            const reports = @Html.Raw(Model.ReportsJson);
+
+            // Начален изглед: Гоце Делчев.
+            const map = L.map("civicMap").setView(
+                [41.5667, 23.7333],
+                14
+            );
+
+            L.tileLayer(
+                "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+                {
+                    maxZoom: 19,
+                    attribution:
+                        '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+                }
+            ).addTo(map);
+
+            const markers = [];
+
+            reports.forEach(function (report) {
+                const latitude = Number(report.latitude);
+                const longitude = Number(report.longitude);
+
+                if (
+                    !Number.isFinite(latitude) ||
+                    !Number.isFinite(longitude) ||
+                    latitude < -90 ||
+                    latitude > 90 ||
+                    longitude < -180 ||
+                    longitude > 180
+                ) {
+                    return;
+                }
+
+                const marker = L.marker([latitude, longitude])
+                    .addTo(map);
+
+                // Използваме textContent, за да не третираме
+                // въведените от потребителите данни като HTML.
+                const popup = document.createElement("div");
+
+                const title = document.createElement("strong");
+                title.textContent = report.title || "Сигнал без заглавие";
+                popup.appendChild(title);
+
+                const category = document.createElement("p");
+                category.textContent =
+                    "Категория: " + (report.category || "Не е посочена");
+                popup.appendChild(category);
+
+                const description = document.createElement("p");
+                description.textContent =
+                    report.description || "Няма описание.";
+                popup.appendChild(description);
+
+                const address = document.createElement("p");
+                address.textContent =
+                    "Адрес: " + (report.address || "Не е посочен");
+                popup.appendChild(address);
+
+                const status = document.createElement("p");
+                status.textContent =
+                    "Статус: " + (report.status || "Не е посочен");
+                popup.appendChild(status);
+
+                marker.bindPopup(popup);
+                markers.push(marker);
+            });
+
+            if (markers.length > 0) {
+                const markerGroup = L.featureGroup(markers);
+
+                map.fitBounds(markerGroup.getBounds(), {
+                    padding: [35, 35],
+                    maxZoom: 16
+                });
+
+                messageElement.textContent =
+                    "Показани са " + markers.length +
+                    " сигнала с координати.";
+            } else {
+                messageElement.textContent =
+                    "Все още няма сигнали със записани координати. " +
+                    "Когато подадеш сигнал с местоположение, той ще се появи тук.";
+            }
+
+            setTimeout(function () {
+                map.invalidateSize();
+            }, 200);
+        });
+    </script>
+}

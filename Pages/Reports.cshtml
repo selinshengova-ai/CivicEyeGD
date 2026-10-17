@@ -1,0 +1,153 @@
+
+@page
+@model CivicEyeGD.Pages.ReportsModel
+
+@{
+    ViewData["Title"] = "Сигнали";
+}
+
+<section class="reports-page">
+    <div class="reports-container">
+
+        <div class="reports-heading">
+            <div>
+                <span class="reports-eyebrow">CIVICEYE GD / ГРАЖДАНСКИ СИГНАЛИ</span>
+                <h1>Сигнали за по-достъпен град.</h1>
+                <p>Разгледай регистрираните проблеми и проследи техния статус.</p>
+            </div>
+
+            <a class="reports-create-btn" asp-page="/Create">
+                <span>+</span> Подай сигнал
+            </a>
+        </div>
+
+        <div class="reports-summary">
+            <div class="reports-summary-card">
+                <span>Намерени сигнали</span>
+                <strong>@Model.Reports.Count</strong>
+            </div>
+            <div class="reports-summary-card">
+                <span>Категории в системата</span>
+                <strong>@Model.Categories.Count</strong>
+            </div>
+            <div class="reports-summary-card">
+                <span>Статуси в системата</span>
+                <strong>@Model.Statuses.Count</strong>
+            </div>
+        </div>
+
+        <form method="get" class="reports-filters">
+            <div class="reports-search">
+                <label for="search">Търсене</label>
+                <input id="search"
+                       name="search"
+                       value="@Model.Search"
+                       placeholder="Заглавие, описание или адрес..." />
+            </div>
+
+            <div>
+                <label for="category">Категория</label>
+                <select id="category" name="category">
+                    <option value="">Всички категории</option>
+                    @foreach (var item in Model.Categories)
+                    {
+                        <option value="@item"
+                                selected="@(Model.Category == item)">
+                            @item
+                        </option>
+                    }
+                </select>
+            </div>
+
+            <div>
+                <label for="status">Статус</label>
+                <select id="status" name="status">
+                    <option value="">Всички статуси</option>
+                    @foreach (var item in Model.Statuses)
+                    {
+                        <option value="@item"
+                                selected="@(Model.Status == item)">
+                            @item
+                        </option>
+                    }
+                </select>
+            </div>
+
+            <button type="submit" class="reports-filter-btn">
+                Филтрирай
+            </button>
+
+            <a asp-page="/Reports" class="reports-reset-btn">
+                Изчисти
+            </a>
+        </form>
+
+        <div class="reports-list-heading">
+            <h2>Регистрирани сигнали</h2>
+            <span>@Model.Reports.Count резултата</span>
+        </div>
+
+        @if (Model.Reports.Count == 0)
+        {
+            <div class="reports-empty">
+                <div class="reports-empty-icon">◎</div>
+                <h3>Няма намерени сигнали</h3>
+                <p>Промени критериите за търсене или подай нов сигнал.</p>
+                <a asp-page="/Create" class="reports-create-btn">
+                    Подай сигнал
+                </a>
+            </div>
+        }
+        else
+        {
+            <div class="reports-list">
+                @foreach (var report in Model.Reports)
+                {
+                    <article class="report-card">
+                        <div class="report-card-top">
+                            <span class="report-category">
+                                @report.Category
+                            </span>
+                            <span class="report-id">
+                                #@report.Id
+                            </span>
+                        </div>
+
+                        <h3>@report.Title</h3>
+                        <p class="report-description">
+                            @report.Description
+                        </p>
+
+                        <div class="report-meta">
+                            <span>
+                                <strong>Място:</strong> @report.Address
+                            </span>
+                            <span>
+                                <strong>Дата:</strong>
+                                @report.CreatedAt.ToLocalTime().ToString("dd.MM.yyyy")
+                            </span>
+                        </div>
+
+                        <div class="report-card-bottom">
+                            <span class="report-status">
+                                @report.Status
+                            </span>
+
+                            @if (report.Latitude.HasValue &&
+                                 report.Longitude.HasValue)
+                            {
+                                <a class="report-map-link"
+                                   href="https://www.openstreetmap.org/?mlat=@report.Latitude.Value.ToString(System.Globalization.CultureInfo.InvariantCulture)&mlon=@report.Longitude.Value.ToString(System.Globalization.CultureInfo.InvariantCulture)#map=18/@report.Latitude.Value.ToString(System.Globalization.CultureInfo.InvariantCulture)/@report.Longitude.Value.ToString(System.Globalization.CultureInfo.InvariantCulture)"
+                                   target="_blank"
+                                   rel="noopener noreferrer">
+                                    Виж местоположението ↗
+                                </a>
+                            }
+                        </div>
+                    </article>
+                }
+            </div>
+        }
+
+    </div>
+</section>

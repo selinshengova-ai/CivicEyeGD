@@ -1,0 +1,80 @@
+
+@page "/Welcome"
+@attribute [Microsoft.AspNetCore.Authorization.AllowAnonymous]
+
+@{
+    Layout = "_WelcomeLayout";
+    ViewData["Title"] = "Добре дошли";
+}
+
+<div class="home-page">
+    <section class="home-hero">
+
+        <div class="home-hero-content">
+
+            <span class="home-eyebrow">
+                <span class="home-eyebrow-dot"></span>
+                CIVICEYE GD · ГОЦЕ ДЕЛЧЕВ
+            </span>
+
+            <h1>Виж проблема. Промени града.</h1>
+
+            <p class="home-intro">
+                Всяка промяна започва с някого, който забелязва
+                проблема. Присъедини се към общността и помогни
+                за по-достъпна градска среда.
+            </p>
+
+            <div class="home-account-actions">
+                <p>Твоят град. Твоят глас. Твоята промяна.</p>
+
+                <div class="home-account-buttons">
+
+                    <a asp-page="/Account/Login"
+                       class="home-button-primary">
+                        Вход
+                        <span aria-hidden="true">→</span>
+                    </a>
+
+                    <a asp-page="/Account/Register"
+                       class="home-button-secondary">
+                        Регистрация
+                    </a>
+
+                </div>
+            </div>
+
+            <div class="home-hero-note">
+                <span aria-hidden="true">◎</span>
+                По-достъпна градска среда започва с общи усилия.
+            </div>
+
+        </div>
+
+        <div class="home-hero-visual" aria-hidden="true">
+
+            <div class="home-visual-circle home-circle-outer"></div>
+            <div class="home-visual-circle home-circle-inner"></div>
+
+            <div class="home-visual-card">
+                <div class="home-visual-icon">⌖</div>
+
+                <div>
+                    <span class="home-visual-small">ТВОЯТ ГРАД</span>
+                    <strong>Твоят глас.</strong>
+
+                    <span class="home-visual-caption">
+                        Твоята възможност за промяна.
+                    </span>
+                </div>
+            </div>
+
+            <div class="home-visual-tag home-tag-top">
+                <span class="home-tag-dot"></span>
+                Забележи
+            </div>
+
+        </div>
+
+    </section>
+</div>

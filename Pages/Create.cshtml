@@ -11,56 +11,33 @@
 
 <section class="civic-form-page">
     <div class="civic-form-card">
-
-        <a asp-page="/Index"
-           class="text-link"
-           style="margin-bottom: 24px;">
-            ← Назад към началната страница
+        <a asp-page="/Index" class="text-link back-link">
+            <span aria-hidden="true">←</span> Начало
         </a>
 
-        <div class="section-kicker">
-            CIVICEYE GD · ГОЦЕ ДЕЛЧЕВ
-        </div>
-
+        <div class="section-kicker">CIVICEYE GD · ГОЦЕ ДЕЛЧЕВ</div>
         <h1>Подай сигнал</h1>
-
-        <p class="civic-form-intro">
-            Забеляза проблем в градската среда?
-            Опиши го, за да помогнеш за по-достъпен и по-добър град.
-        </p>
-
-        <div class="form-info">
-            <span class="form-info-icon">◎</span>
-            <p>
-                Попълни полетата възможно най-точно.
-                Местоположението и описанието ще помогнат
-                проблемът да бъде разбран по-добре.
-            </p>
-        </div>
 
         <form method="post">
             <div asp-validation-summary="ModelOnly"
-                 class="text-danger mb-3"></div>
+                 class="text-danger validation-summary"></div>
 
-            <div class="mb-3">
+            <div class="form-field">
                 <label asp-for="Report.Title" class="form-label">
                     Заглавие <span class="required-mark">*</span>
                 </label>
-
                 <input asp-for="Report.Title"
                        class="form-control"
                        maxlength="100"
-                       placeholder="Например: Липсва рампа на тротоара" />
-
+                       placeholder="Заглавие на сигнала" />
                 <span asp-validation-for="Report.Title"
                       class="text-danger"></span>
             </div>
 
-            <div class="mb-3">
+            <div class="form-field">
                 <label asp-for="Report.Category" class="form-label">
                     Категория <span class="required-mark">*</span>
                 </label>
-
                 <select asp-for="Report.Category" class="form-select">
                     <option value="">Избери категория</option>
                     <option value="Достъпност">Достъпност</option>
@@ -70,125 +47,198 @@
                     <option value="Пътна настилка">Пътна настилка</option>
                     <option value="Друго">Друго</option>
                 </select>
-
                 <span asp-validation-for="Report.Category"
                       class="text-danger"></span>
             </div>
 
-            <div class="mb-3">
+            <div class="form-field">
                 <label asp-for="Report.Address" class="form-label">
                     Адрес или местоположение
                     <span class="required-mark">*</span>
                 </label>
-
                 <input asp-for="Report.Address"
                        class="form-control"
                        maxlength="200"
-                       placeholder="Например: ул. „Гоце Делчев“ № 10" />
-
+                       placeholder="Улица, номер или ориентир" />
                 <span asp-validation-for="Report.Address"
                       class="text-danger"></span>
-
-                <span class="field-hint">
-                    Посочи улица, ориентир или близка обществена сграда.
-                </span>
             </div>
 
-            <!-- Карта за избор на местоположение -->
-            <div class="mb-4">
+            <div class="form-field location-field">
                 <label class="form-label">
-                    Избери точното място на картата
+                    Местоположение
                     <span class="required-mark">*</span>
                 </label>
 
-                <p class="field-hint map-instruction">
-                    Натисни върху картата, за да поставиш маркер
-                    на мястото на проблема.
-                </p>
+                <div class="map-search">
+                    <input id="map-address-search"
+                           type="search"
+                           class="form-control"
+                           maxlength="200"
+                           placeholder="Търси адрес в Гоце Делчев"
+                           aria-label="Търсене на адрес" />
 
-                <div id="report-location-map"
-                     role="application"
-                     aria-label="Карта за избор на местоположение">
+                    <button id="map-search-button"
+                            type="button"
+                            class="btn-civic-secondary">
+                        Търси
+                    </button>
+                </div>
+
+                <p id="map-search-message"
+                   class="status-message"
+                   aria-live="polite"></p>
+
+                <div class="map-actions">
+                    <button id="zoom-in-button"
+                            type="button"
+                            class="map-action-button"
+                            aria-label="Приближи картата">+</button>
+                    <button id="zoom-out-button"
+                            type="button"
+                            class="map-action-button"
+                            aria-label="Отдалечи картата">−</button>
+                    <button id="reset-map-button"
+                            type="button"
+                            class="map-action-button">
+                        Гоце Делчев
+                    </button>
+                </div>
+
+                <div class="map-streetview-grid">
+                    <div class="map-panel">
+                        <div class="panel-heading">
+                            <span class="panel-icon" aria-hidden="true">⌖</span>
+                            <h2>Карта</h2>
+                        </div>
+
+                        <div id="report-location-map"
+                             role="application"
+                             aria-label="Карта за избор на местоположение"></div>
+
+                        <p id="selected-location-message"
+                           class="status-message"
+                           aria-live="polite"></p>
+                    </div>
+
+                    <div class="street-view-panel">
+                        <div class="panel-heading">
+                            <span class="panel-icon" aria-hidden="true">360°</span>
+                            <h2>Уличен изглед</h2>
+                        </div>
+
+                        <div id="street-view-container">
+                            <div id="street-view-placeholder">
+                                <span class="street-view-symbol"
+                                      aria-hidden="true">360°</span>
+                                <p>Уличният изглед не е наличен в момента.</p>
+                                <a id="open-google-maps"
+                                   href="https://www.google.com/maps"
+                                   target="_blank"
+                                   rel="noopener noreferrer">
+                                    Отвори Google Карти ↗
+                                </a>
+                            </div>
+                        </div>
+                    </div>
                 </div>
 
                 <input asp-for="Report.Latitude" type="hidden" />
                 <input asp-for="Report.Longitude" type="hidden" />
-
-                <p id="selected-location-message"
-                   class="field-hint"
-                   aria-live="polite">
-                    Все още не е избрано място на картата.
-                </p>
             </div>
 
-            <div class="mb-4">
+            <div class="form-field">
                 <label asp-for="Report.Description" class="form-label">
                     Описание на проблема
                     <span class="required-mark">*</span>
                 </label>
 
                 <textarea asp-for="Report.Description"
-                          class="form-control"
+                          class="form-control description-input"
                           rows="5"
                           maxlength="2000"
-                          placeholder="Какъв е проблемът? Къде точно се намира? Кого затруднява?"></textarea>
+                          placeholder="Описание на проблема"></textarea>
 
                 <span asp-validation-for="Report.Description"
                       class="text-danger"></span>
-
-                <span class="field-hint">
-                    Опиши проблема ясно и конкретно.
-                </span>
             </div>
 
-            <div class="form-disclaimer">
-                <span>ⓘ</span>
-                <p>
-                    Преди изпращане провери дали въведената информация
-                    е точна и не съдържа лични данни на други хора.
-                </p>
-            </div>
-
-            <div class="civic-form-actions">
+            <div class="form-actions">
                 <button type="submit" class="btn-civic-primary">
-                    Изпрати сигнала →
+                    Изпрати сигнала <span aria-hidden="true">→</span>
                 </button>
-
-                <a asp-page="/Index" class="btn-civic-secondary">
+                <a asp-page="/Index" class="btn-civic-secondary cancel-button">
                     Отказ
                 </a>
             </div>
 
             <p class="required-note">
-                <span class="required-mark">*</span>
-                Задължителни полета
+                <span class="required-mark">*</span> Задължителни полета
             </p>
         </form>
     </div>
 </section>
 
 <style>
-    .form-info {
-        display: flex;
-        align-items: flex-start;
-        gap: 12px;
-        padding: 15px;
-        margin-bottom: 26px;
-        background: #e8f3ee;
-        border: 1px solid #d5e8dc;
-        border-radius: 12px;
+    .civic-form-page {
+        min-height: 100vh;
+        padding: 40px 20px 64px;
+        background: #f4f7f4;
+        color: #263a30;
     }
 
-    .form-info-icon {
-        color: #176b57;
-        font-size: 22px;
-        line-height: 1.3;
+    .civic-form-card {
+        width: 100%;
+        max-width: 1080px;
+        margin: 0 auto;
+        padding: clamp(22px, 4vw, 44px);
+        background: #fff;
+        border: 1px solid #e0e9e2;
+        border-radius: 20px;
+        box-shadow: 0 12px 36px rgba(27, 77, 62, .07);
     }
 
-    .form-info p {
-        margin: 0;
-        color: #405b50;
+    .back-link {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 28px;
+        color: #527565;
         font-size: 13px;
+        text-decoration: none;
+    }
+
+    .back-link:hover {
+        color: #1b4d3e;
+    }
+
+    .section-kicker {
+        margin-bottom: 10px;
+        color: #527565;
+        font-size: 11px;
+        font-weight: 750;
+        letter-spacing: 1.8px;
+    }
+
+    .civic-form-card h1 {
+        margin: 0 0 32px;
+        color: #1b4d3e;
+        font-size: clamp(30px, 4vw, 42px);
+        font-weight: 750;
+        letter-spacing: -1px;
+    }
+
+    .form-field {
+        min-width: 0;
+        margin-bottom: 23px;
+    }
+
+    .form-label {
+        display: block;
+        margin-bottom: 8px;
+        color: #243b31;
+        font-size: 13px;
+        font-weight: 650;
     }
 
     .required-mark {
@@ -196,79 +246,296 @@
         font-weight: 700;
     }
 
-    .field-hint {
+    .civic-form-card .form-control,
+    .civic-form-card .form-select {
+        width: 100%;
+        min-height: 46px;
+        padding: 11px 13px;
+        border: 1px solid #d9e4dc;
+        border-radius: 10px;
+        background-color: #fff;
+        color: #263a30;
+        font-size: 14px;
+        box-shadow: none;
+        box-sizing: border-box;
+        transition: border-color .18s ease, box-shadow .18s ease;
+    }
+
+    .civic-form-card .form-control:focus,
+    .civic-form-card .form-select:focus {
+        border-color: #43836b;
+        outline: none;
+        box-shadow: 0 0 0 3px rgba(67, 131, 107, .13);
+    }
+
+    .civic-form-card textarea.form-control {
+        min-height: 130px;
+        resize: vertical;
+    }
+
+    .civic-form-card .text-danger {
         display: block;
-        margin-top: 6px;
-        color: #718078;
+        margin-top: 5px;
         font-size: 12px;
     }
 
-    .map-instruction {
-        margin-bottom: 10px;
+    .validation-summary:empty {
+        display: none;
     }
 
-    #report-location-map {
-        width: 100%;
-        height: 350px;
-        border: 1px solid #d5e8dc;
-        border-radius: 12px;
-        overflow: hidden;
-        z-index: 1;
-        background: #e8f3ee;
+    .map-search {
+        display: flex;
+        gap: 9px;
     }
 
-    #selected-location-message {
-        margin-top: 10px;
+    .map-search input {
+        flex: 1;
+        min-width: 0;
+    }
+
+    .map-search button {
+        flex-shrink: 0;
+    }
+
+    .status-message {
+        min-height: 0;
+        margin: 7px 0 0;
+        color: #718078;
+        font-size: 12px;
+        line-height: 1.5;
         overflow-wrap: anywhere;
     }
 
-    .form-disclaimer {
+    .status-message:empty {
+        display: none;
+    }
+
+    .map-actions {
         display: flex;
-        align-items: flex-start;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin: 13px 0;
+    }
+
+    .map-action-button {
+        min-width: 38px;
+        min-height: 36px;
+        padding: 7px 12px;
+        border: 1px solid #d9e4dc;
+        border-radius: 8px;
+        background: #fff;
+        color: #1b4d3e;
+        font-size: 13px;
+        cursor: pointer;
+    }
+
+    .map-action-button:hover {
+        background: #e8f2ec;
+    }
+
+    .map-streetview-grid {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+        gap: 20px;
+        align-items: start;
+        margin-top: 8px;
+    }
+
+    .map-panel,
+    .street-view-panel {
+        min-width: 0;
+        padding: 14px;
+        border: 1px solid #e0e9e2;
+        border-radius: 14px;
+        background: #fbfcfb;
+    }
+
+    .panel-heading {
+        display: flex;
+        align-items: center;
         gap: 10px;
-        padding: 13px;
-        margin-bottom: 22px;
-        background: #f6f8f6;
-        border-radius: 10px;
-        color: #718078;
-        font-size: 12px;
+        margin-bottom: 12px;
     }
 
-    .form-disclaimer p {
+    .panel-heading h2 {
         margin: 0;
+        color: #1b4d3e;
+        font-size: 14px;
+        font-weight: 700;
     }
 
-    .civic-form-actions {
+    .panel-icon {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 32px;
+        height: 32px;
+        padding: 0 5px;
+        border-radius: 9px;
+        background: #e8f2ec;
+        color: #1b4d3e;
+        font-size: 12px;
+        font-weight: 750;
+    }
+
+    #report-location-map,
+    #street-view-container {
+        position: relative;
+        width: 100%;
+        height: 390px;
+        overflow: hidden;
+        border: 1px solid #d9e4dc;
+        border-radius: 10px;
+        background: #e8f2ec;
+        box-sizing: border-box;
+    }
+
+    #report-location-map {
+        z-index: 1;
+    }
+
+    #street-view-placeholder {
+        position: absolute;
+        inset: 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 12px;
+        padding: 20px;
+        text-align: center;
+        background:
+            radial-gradient(ellipse at top, #f7faf7 0%, #e8f2ec 75%);
+        color: #53675d;
+    }
+
+    .street-view-symbol {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 76px;
+        height: 76px;
+        border: 1px solid #c7dbce;
+        border-radius: 50%;
+        background: #fff;
+        color: #1b4d3e;
+        font-size: 21px;
+        font-weight: 750;
+        box-shadow: 0 6px 20px rgba(27, 77, 62, .08);
+    }
+
+    #street-view-placeholder p {
+        max-width: 230px;
+        margin: 0;
+        font-size: 13px;
+        line-height: 1.6;
+    }
+
+    #open-google-maps {
+        color: #1b4d3e;
+        font-size: 12px;
+        font-weight: 650;
+        text-decoration: none;
+    }
+
+    #open-google-maps:hover {
+        text-decoration: underline;
+    }
+
+    .form-actions {
         display: flex;
         flex-wrap: wrap;
         gap: 12px;
-        margin-top: 24px;
-    }
-
-    .required-note {
-        margin-top: 18px;
-        color: #718078;
-        font-size: 12px;
+        margin-top: 30px;
     }
 
     .civic-form-card .btn-civic-primary,
     .civic-form-card .btn-civic-secondary {
-        min-height: 44px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 9px;
+        min-height: 46px;
+        padding: 12px 20px;
+        border: 1px solid #1b4d3e;
+        border-radius: 10px;
         box-sizing: border-box;
+        font-size: 13px;
+        font-weight: 650;
+        text-decoration: none;
+        cursor: pointer;
+        transition: background .18s ease, transform .18s ease;
+    }
+
+    .civic-form-card .btn-civic-primary {
+        background: #1b4d3e;
+        color: #fff;
+    }
+
+    .civic-form-card .btn-civic-primary:hover {
+        background: #143b30;
+        transform: translateY(-1px);
+    }
+
+    .civic-form-card .btn-civic-secondary {
+        border-color: #d9e4dc;
+        background: #fff;
+        color: #1b4d3e;
+    }
+
+    .civic-form-card .btn-civic-secondary:hover {
+        background: #e8f2ec;
+    }
+
+    .required-note {
+        margin: 18px 0 0;
+        color: #718078;
+        font-size: 12px;
+    }
+
+    @@media (max-width: 800px) {
+        .civic-form-page {
+            padding: 20px 12px 36px;
+        }
+
+        .map-streetview-grid {
+            grid-template-columns: 1fr;
+        }
+
+        #report-location-map,
+        #street-view-container {
+            height: 340px;
+        }
     }
 
     @@media (max-width: 600px) {
-        #report-location-map {
-            height: 300px;
-        }
-
-        .civic-form-actions {
+        .map-search {
             flex-direction: column;
         }
 
-        .civic-form-actions .btn-civic-primary,
-        .civic-form-actions .btn-civic-secondary {
+        .map-search button {
             width: 100%;
+        }
+
+        .form-actions {
+            flex-direction: column;
+        }
+
+        .form-actions > * {
+            width: 100%;
+        }
+
+        .map-panel,
+        .street-view-panel {
+            padding: 10px;
+        }
+    }
+
+    @@media (prefers-reduced-motion: reduce) {
+        .civic-form-card *,
+        .civic-form-card *::before,
+        .civic-form-card *::after {
+            transition: none !important;
         }
     }
 </style>
@@ -278,48 +545,102 @@
 <script>
     (function () {
         function initializeReportMap() {
-            const mapElement =
-                document.getElementById("report-location-map");
+            const mapElement = document.getElementById("report-location-map");
 
             if (!mapElement || mapElement.dataset.initialized === "true") {
                 return;
             }
 
-            const message =
-                document.getElementById("selected-location-message");
+            const message = document.getElementById("selected-location-message");
+            const searchInput = document.getElementById("map-address-search");
+            const searchButton = document.getElementById("map-search-button");
+            const searchMessage = document.getElementById("map-search-message");
+            const latitudeInput = document.getElementById("Report_Latitude");
+            const longitudeInput = document.getElementById("Report_Longitude");
 
-            const latitudeInput =
-                document.getElementById("Report_Latitude");
-
-            const longitudeInput =
-                document.getElementById("Report_Longitude");
+            const initialPosition = [41.5667, 23.7333];
 
             if (typeof L === "undefined") {
-                message.textContent =
-                    "Картата не се зареди. Провери интернет връзката и опитай отново.";
+                message.textContent = "Картата не се зареди. Провери интернет връзката.";
                 return;
             }
 
             mapElement.dataset.initialized = "true";
 
-            const map = L.map(mapElement).setView(
-                [41.5667, 23.7333],
-                15
-            );
+            const map = L.map(mapElement, {
+                zoomControl: true,
+                maxZoom: 22
+            }).setView(initialPosition, 16);
 
-            L.tileLayer(
+            const streetLayer = L.tileLayer(
                 "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
                 {
-                    maxZoom: 19,
+                    maxZoom: 22,
+                    maxNativeZoom: 19,
                     attribution:
-                        '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+                        '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a>'
+                }
+            );
+
+            const satelliteLayer = L.tileLayer(
+                "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
+                {
+                    maxZoom: 22,
+                    maxNativeZoom: 19,
+                    attribution:
+                        'Imagery &copy; <a href="https://www.esri.com/" target="_blank" rel="noopener">Esri</a>'
+                }
+            );
+
+            streetLayer.addTo(map);
+
+            L.control.layers(
+                {
+                    "Улична карта": streetLayer,
+                    "Сателитна карта": satelliteLayer
+                },
+                null,
+                {
+                    collapsed: false,
+                    position: "topright"
                 }
             ).addTo(map);
 
-            let marker = null;
+            let selectedMarker = null;
+            let searchMarker = null;
 
-            // Възстановяване на маркера, ако формата е върната
-            // заради грешка при валидация.
+            function saveCoordinates(latitude, longitude) {
+                latitudeInput.value = latitude.toFixed(7);
+                longitudeInput.value = longitude.toFixed(7);
+
+                message.textContent =
+                    "Избрано местоположение: " +
+                    latitude.toFixed(6) + ", " +
+                    longitude.toFixed(6);
+            }
+
+            function selectLocation(latitude, longitude, zoom) {
+                const position = [latitude, longitude];
+
+                if (!selectedMarker) {
+                    selectedMarker = L.marker(position, {
+                        draggable: true,
+                        title: "Място на сигнала"
+                    }).addTo(map);
+
+                    selectedMarker.on("dragend", function (event) {
+                        const moved = event.target.getLatLng();
+                        saveCoordinates(moved.lat, moved.lng);
+                    });
+                } else {
+                    selectedMarker.setLatLng(position);
+                }
+
+                map.setView(position, zoom);
+                saveCoordinates(latitude, longitude);
+            }
+
+            // Възстановява координати, ако формата е върната от сървъра.
             const previousLatitude = Number(latitudeInput.value);
             const previousLongitude = Number(longitudeInput.value);
 
@@ -327,43 +648,149 @@
                 latitudeInput.value !== "" &&
                 longitudeInput.value !== "" &&
                 Number.isFinite(previousLatitude) &&
-                Number.isFinite(previousLongitude)
+                Number.isFinite(previousLongitude) &&
+                Math.abs(previousLatitude) <= 90 &&
+                Math.abs(previousLongitude) <= 180
             ) {
-                const previousPosition = [
-                    previousLatitude,
-                    previousLongitude
-                ];
+                selectedMarker = L.marker(
+                    [previousLatitude, previousLongitude],
+                    {
+                        draggable: true,
+                        title: "Място на сигнала"
+                    }
+                ).addTo(map);
 
-                marker = L.marker(previousPosition).addTo(map);
-                map.setView(previousPosition, 17);
+                selectedMarker.on("dragend", function (event) {
+                    const moved = event.target.getLatLng();
+                    saveCoordinates(moved.lat, moved.lng);
+                });
 
+                map.setView([previousLatitude, previousLongitude], 19);
                 message.textContent =
                     "Избрано местоположение: " +
-                    previousLatitude.toFixed(5) + ", " +
-                    previousLongitude.toFixed(5);
-            } else {
-                message.textContent =
-                    "Все още не е избрано място на картата.";
+                    previousLatitude.toFixed(6) + ", " +
+                    previousLongitude.toFixed(6);
             }
 
             map.on("click", function (event) {
-                const latitude = event.latlng.lat;
-                const longitude = event.latlng.lng;
+                selectLocation(
+                    event.latlng.lat,
+                    event.latlng.lng,
+                    map.getZoom()
+                );
+            });
 
-                if (marker) {
-                    marker.setLatLng(event.latlng);
-                } else {
-                    marker = L.marker(event.latlng).addTo(map);
+            async function searchAddress() {
+                const query = searchInput.value.trim();
+
+                if (!query) {
+                    searchMessage.textContent = "Въведи адрес или улица.";
+                    searchInput.focus();
+                    return;
                 }
 
-                latitudeInput.value = latitude.toFixed(7);
-                longitudeInput.value = longitude.toFixed(7);
+                searchButton.disabled = true;
+                searchButton.textContent = "Търсене...";
+                searchMessage.textContent = "";
 
-                message.textContent =
-                    "Избрано местоположение: " +
-                    latitude.toFixed(5) + ", " +
-                    longitude.toFixed(5);
+                try {
+                    const url = new URL(
+                        "https://nominatim.openstreetmap.org/search"
+                    );
+
+                    url.searchParams.set(
+                        "q",
+                        query + ", Гоце Делчев, България"
+                    );
+                    url.searchParams.set("format", "jsonv2");
+                    url.searchParams.set("limit", "1");
+                    url.searchParams.set("countrycodes", "bg");
+                    url.searchParams.set(
+                        "viewbox",
+                        "23.65,41.62,23.82,41.50"
+                    );
+                    url.searchParams.set("bounded", "1");
+
+                    const response = await fetch(url.toString(), {
+                        headers: { "Accept": "application/json" }
+                    });
+
+                    if (!response.ok) {
+                        throw new Error("Search failed");
+                    }
+
+                    const results = await response.json();
+
+                    if (!results.length) {
+                        searchMessage.textContent =
+                            "Адресът не е намерен. Опитай с друго име на улица.";
+                        return;
+                    }
+
+                    const result = results[0];
+                    const latitude = Number(result.lat);
+                    const longitude = Number(result.lon);
+
+                    if (!Number.isFinite(latitude) ||
+                        !Number.isFinite(longitude)) {
+                        throw new Error("Invalid coordinates");
+                    }
+
+                    if (searchMarker) {
+                        map.removeLayer(searchMarker);
+                    }
+
+                    searchMarker = L.circleMarker(
+                        [latitude, longitude],
+                        {
+                            radius: 8,
+                            color: "#1b4d3e",
+                            weight: 3,
+                            fillColor: "#8db8a0",
+                            fillOpacity: 0.9
+                        }
+                    ).addTo(map);
+
+                    searchMarker.bindPopup("Намерен адрес").openPopup();
+                    map.setView([latitude, longitude], 19);
+
+                    searchMessage.textContent =
+                        "Намерено: " + result.display_name +
+                        ". Избери точката на самия проблем върху картата.";
+
+                    // Търсенето не задава автоматично координатите на сигнала.
+                } catch (error) {
+                    searchMessage.textContent =
+                        "Търсенето не успя. Провери връзката и опитай отново.";
+                } finally {
+                    searchButton.disabled = false;
+                    searchButton.textContent = "Търси";
+                }
+            }
+
+            searchButton.addEventListener("click", searchAddress);
+
+            searchInput.addEventListener("keydown", function (event) {
+                if (event.key === "Enter") {
+                    event.preventDefault();
+                    searchAddress();
+                }
             });
+
+            document.getElementById("zoom-in-button")
+                .addEventListener("click", function () {
+                    map.zoomIn();
+                });
+
+            document.getElementById("zoom-out-button")
+                .addEventListener("click", function () {
+                    map.zoomOut();
+                });
+
+            document.getElementById("reset-map-button")
+                .addEventListener("click", function () {
+                    map.setView(initialPosition, 16);
+                });
 
             setTimeout(function () {
                 map.invalidateSize();
