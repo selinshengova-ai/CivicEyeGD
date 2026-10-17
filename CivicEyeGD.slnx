@@ -1,0 +1,6 @@
+<Solution>
+  <Folder Name="/Tests/">
+    <Project Path="Tests/CivicEyeGD.Tests/CivicEyeGD.Tests.csproj" />
+  </Folder>
+  <Project Path="CivicEyeGD.csproj" />
+</Solution>

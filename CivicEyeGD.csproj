@@ -1,20 +1,58 @@
-﻿<Project Sdk="Microsoft.NET.Sdk.Web">
+<Project Sdk="Microsoft.NET.Sdk.Web">
 
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <UserSecretsId>a040f00c-bef4-49e8-b9a3-7de26380e5e4</UserSecretsId>
+    <!-- Безплатните IIS басейни са 32-битови, а publish-ът е win-x64:
+         при inprocess модулът зарежда x86 coreclr в w3wp и x64 e_sqlite3.dll
+         не може да се качи в него. Извънпроцесният хост вдига собствен
+         dotnet процес и сборката тръгва и при двата режима на пула. -->
+    <AspNetCoreHostingModel>OutOfProcess</AspNetCoreHostingModel>
+    <!-- Антивирусът изтрива генерирания неподписан apphost.exe и build-ът
+         спира. Сайтът се задвижва с dotnet CivicEyeGD.dll, затова
+         изпълнимият файл не е нужен. -->
+    <UseAppHost>false</UseAppHost>
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="ClosedXML" Version="0.105.1" />
     <PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="10.0.13" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.13">
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
     <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="10.0.13" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="10.0.13" />
+    <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.0.2" />
+    <PackageReference Include="QuestPDF" Version="2026.9.1" />
     <PackageReference Include="System.Security.Cryptography.Pkcs" Version="9.0.21" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Remove="Tests\**" />
+    <Content Remove="Tests\**" />
+    <EmbeddedResource Remove="Tests\**" />
+    <None Remove="Tests\**" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- App_Data носи локалната база, снимките и паролите на демо
+         акаунтите. Нищо от него не трябва да попадне в publish
+         архива, затова е изключен изрично. -->
+    <Content Remove="App_Data\**" />
+    <None Remove="App_Data\**" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Старите publish папки са артефакти, а не съдържание на сайта.
+         Без изключването им dotnet publish ги копира вътре в новия
+         архив, и на хоста би се отворил път от рода
+         /publish-.../appsettings.json — заедно с пароли, които по
+         принцип не трябва да напускат локалната машина. -->
+    <Content Remove="publish*\**" />
+    <None Remove="publish*\**" />
   </ItemGroup>
 
 </Project>
