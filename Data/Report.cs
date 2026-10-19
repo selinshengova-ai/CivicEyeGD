@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Identity;
 using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace CivicEyeGD.Data;
 
@@ -41,8 +42,36 @@ public class Report
     // Снимки
     public ICollection<ReportImage> Images { get; set; } = new List<ReportImage>();
 
-    // --- НОВИ КОЛЕКЦИИ (тези редове липсваха) ---
+    // Обратни навигации за оценките, потвържденията и историята на статуса.
     public ICollection<SeverityRating> SeverityRatings { get; set; } = new List<SeverityRating>();
     public ICollection<Confirmation> Confirmations { get; set; } = new List<Confirmation>();
     public ICollection<StatusHistory> StatusHistories { get; set; } = new List<StatusHistory>();
+
+    // Оценките и потвържденията на подателя не участват в приоритета.
+    // Без това правило един човек вдига собствения си сигнал до
+    // „висок приоритет" с един клик, а точността на йерархията е
+    // целият смисъл на системата за общината.
+    //
+    // [NotMapped] е задължителен: EF Core иначе разбира
+    // IndependentRatings като втора навигация към SeverityRatings и
+    // създава сянка външен ключ ReportId1, което развали миграцията.
+    [NotMapped]
+    public IEnumerable<SeverityRating> IndependentRatings =>
+        SeverityRatings.Where(rating => rating.UserId != UserId);
+
+    [NotMapped]
+    public int IndependentRaterCount => IndependentRatings.Count();
+
+    [NotMapped]
+    public double IndependentAverageSeverity =>
+        IndependentRaterCount > 0
+            ? Math.Round(IndependentRatings.Average(rating => rating.Rating), 2)
+            : 0;
+
+    [NotMapped]
+    public int IndependentConfirmationCount =>
+        Confirmations.Count(confirmation => confirmation.UserId != UserId);
+
+    public bool WasSubmittedBy(string? userId) =>
+        userId is not null && UserId == userId;
 }
