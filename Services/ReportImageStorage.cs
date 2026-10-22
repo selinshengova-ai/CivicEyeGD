@@ -96,13 +96,24 @@ public sealed class ReportImageStorage
 
         var fullPath = Path.Combine(_rootDirectory, storedFileName);
 
+        byte[] cleaned;
+
+        using (var source = file.OpenReadStream())
+        using (var memory = new MemoryStream())
+        {
+            await source.CopyToAsync(memory);
+            cleaned = ImageMetadataScrubber.Scrub(memory.ToArray(), detectedType)
+                ?? throw new InvalidOperationException(
+                    "Структурата на снимката не може да се прочете — "
+                    + "файлът е отказан, за да не остане с координати в себе си.");
+        }
+
         try
         {
             await using (var target = new FileStream(
                 fullPath, FileMode.CreateNew, FileAccess.Write, FileShare.None))
             {
-                using var source = file.OpenReadStream();
-                await source.CopyToAsync(target);
+                await target.WriteAsync(cleaned);
             }
         }
         catch
@@ -112,7 +123,7 @@ public sealed class ReportImageStorage
             throw;
         }
 
-        return new StoredImage(storedFileName, detectedType, file.Length);
+        return new StoredImage(storedFileName, detectedType, cleaned.LongLength);
     }
 
     // Връща пълния път до файла само ако съществува и е в нашата папка.
