@@ -1,0 +1,139 @@
+@page "{id:int}"
+@model CivicEyeGD.Pages.DetailsModel
+@{
+    ViewData["Title"] = Model.Report?.Title ?? "Сигнал";
+}
+
+<section class="details-page">
+    <div class="details-container">
+
+        @if (Model.ErrorMessage is not null)
+        {
+            <div class="details-alert details-alert-error">@Model.ErrorMessage</div>
+        }
+        @if (Model.SuccessMessage is not null)
+        {
+            <div class="details-alert details-alert-success">@Model.SuccessMessage</div>
+        }
+
+        <a asp-page="/Reports" class="details-back">
+            <span aria-hidden="true">←</span> Всички сигнали
+        </a>
+
+        @if (Model.Report is not null)
+        {
+            <div class="details-header">
+                <div>
+                    <span class="details-category">@Model.Report.Category</span>
+                    <h1>@Model.Report.Title</h1>
+                    <p class="details-address">
+                        <span aria-hidden="true">⌖</span> @Model.Report.Address
+                    </p>
+                </div>
+                <div class="details-priority">
+                    <span class="details-priority-label">@Model.PriorityLabel</span>
+                    <span class="details-priority-score">@Model.PriorityScore / 100</span>
+                </div>
+            </div>
+
+            <div class="details-grid">
+                <div class="details-main">
+                    <div class="details-description">
+                        <h2>Описание</h2>
+                        <p>@Model.Report.Description</p>
+                    </div>
+
+                    @if (Model.Report.Images.Count > 0)
+                    {
+                        <div class="details-images">
+                            <h2>Снимки</h2>
+                            <div class="details-images-grid">
+                                @foreach (var image in Model.Report.Images)
+                                {
+                                    <a href="/report-images/@image.Id" target="_blank">
+                                        <img src="/report-images/@image.Id" alt="Снимка към сигнала" />
+                                    </a>
+                                }
+                            </div>
+                        </div>
+                    }
+
+                    <div class="details-history">
+                        <h2>История на статуса</h2>
+                        @if (Model.Report.StatusHistories.Count == 0)
+                        {
+                            <p class="details-muted">Все още няма промени по статуса.</p>
+                        }
+                        else
+                        {
+                            <ul class="details-history-list">
+                                @foreach (var entry in Model.Report.StatusHistories.OrderByDescending(h => h.ChangedAt))
+                                {
+                                    <li>
+                                        <strong>@entry.NewStatus</strong>
+                                        <span>@entry.ChangedAt.ToLocalTime().ToString("dd.MM.yyyy HH:mm")</span>
+                                    </li>
+                                }
+                            </ul>
+                        }
+                    </div>
+                </div>
+
+                <aside class="details-sidebar">
+                    <div class="details-card">
+                        <h2>Оценка за сериозност</h2>
+                        <div class="details-rating-display">
+                            <span class="details-rating-number">@Model.AverageSeverity.ToString("0.0")</span>
+                            <span class="details-rating-scale">/ 5</span>
+                        </div>
+                        <p class="details-muted">@Model.Report.SeverityRatings.Count оценки</p>
+
+                        <form method="post" asp-page-handler="Rate" asp-route-id="@Model.Report.Id">
+                            <p class="details-rating-prompt">
+                                @(Model.CurrentUserHasRated ? "Твоята оценка (можеш да я промениш):" : "Дай своята оценка:")
+                            </p>
+                            <div class="details-rating-buttons">
+                                @for (int i = 1; i <= 5; i++)
+                                {
+                                    <button type="submit" name="rating" value="@i"
+                                            class="details-rating-button @(Model.CurrentUserRating == i ? "is-selected" : "")">
+                                        @i
+                                    </button>
+                                }
+                            </div>
+                        </form>
+                    </div>
+
+                    <div class="details-card">
+                        <h2>Потвърждения</h2>
+                        <div class="details-rating-number">@Model.ConfirmationCount</div>
+                        <p class="details-muted">граждани потвърждават, че проблемът съществува.</p>
+
+                        @if (Model.CurrentUserHasConfirmed)
+                        {
+                            <p class="details-confirmed-note">✓ Вече си потвърдил този проблем.</p>
+                        }
+                        else
+                        {
+                            <form method="post" asp-page-handler="Confirm" asp-route-id="@Model.Report.Id">
+                                <button type="submit" class="details-confirm-button">Потвърди този проблем</button>
+                            </form>
+                        }
+                    </div>
+
+                    @if (Model.Report.Latitude.HasValue && Model.Report.Longitude.HasValue)
+                    {
+                        <div class="details-card">
+                            <h2>Местоположение</h2>
+                            <a class="details-map-link"
+                               href="https://www.openstreetmap.org/?mlat=@Model.Report.Latitude.Value.ToString(System.Globalization.CultureInfo.InvariantCulture)&mlon=@Model.Report.Longitude.Value.ToString(System.Globalization.CultureInfo.InvariantCulture)#map=18/@Model.Report.Latitude.Value.ToString(System.Globalization.CultureInfo.InvariantCulture)/@Model.Report.Longitude.Value.ToString(System.Globalization.CultureInfo.InvariantCulture)"
+                               target="_blank" rel="noopener noreferrer">
+                                Отвори на картата ↗
+                            </a>
+                        </div>
+                    }
+                </aside>
+            </div>
+        }
+    </div>
+</section>

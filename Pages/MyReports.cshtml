@@ -1,0 +1,69 @@
+@page
+@model CivicEyeGD.Pages.MyReportsModel
+@{
+    ViewData["Title"] = "Моите сигнали";
+}
+
+<section class="reports-page">
+    <div class="reports-container">
+        <div class="reports-heading">
+            <div>
+                <span class="reports-eyebrow">CIVICEYE GD / ЛИЧЕН ПРОФИЛ</span>
+                <h1>Моите сигнали.</h1>
+                <p>Тук виждаш всички проблеми, които ти си докладвал.</p>
+            </div>
+            <a class="reports-create-btn" asp-page="/Create">
+                <span>+</span> Подай сигнал
+            </a>
+        </div>
+
+        <div class="reports-list-heading" style="margin-top: 30px;">
+            <h2>История на твоите сигнали</h2>
+            <span>@Model.Reports.Count резултата</span>
+        </div>
+
+        @if (Model.Reports.Count == 0)
+        {
+            <div class="reports-empty">
+                <div class="reports-empty-icon">◎</div>
+                <h3>Все още не си подал сигнали</h3>
+                <p>Ако забележиш проблем в града, не се колебай да го докладваш.</p>
+                <a asp-page="/Create" class="reports-create-btn">Подай първия си сигнал</a>
+            </div>
+        }
+        else
+        {
+            <div class="reports-list">
+                @foreach (var report in Model.Reports)
+                {
+                    <article class="report-card">
+                        <div class="report-card-top">
+                            <span class="report-category">@report.Category</span>
+                            <span class="report-id">#@report.Id</span>
+                        </div>
+
+                        <h3>
+                            <a asp-page="/Details" asp-route-id="@report.Id" class="report-title-link">
+                                @report.Title
+                            </a>
+                        </h3>
+
+                        <p class="report-description">@report.Description</p>
+
+                        <div class="report-meta">
+                            <span><strong>Място:</strong> @report.Address</span>
+                            <span><strong>Дата:</strong> @report.CreatedAt.ToLocalTime().ToString("dd.MM.yyyy")</span>
+                        </div>
+
+                        <div class="report-card-bottom">
+                            <span class="report-status">@report.Status</span>
+                            <a class="report-details-link" asp-page="/Details" asp-route-id="@report.Id">
+                                Виж детайли →
+                            </a>
+                        </div>
+                    </article>
+                }
+            </div>
+        }
+    </div>
+</section>

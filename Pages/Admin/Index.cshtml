@@ -1,0 +1,82 @@
+@page
+@model CivicEyeGD.Pages.Admin.IndexModel
+@{
+    ViewData["Title"] = "Администрация";
+}
+
+<section class="reports-page">
+    <div class="reports-container">
+        <div class="reports-heading">
+            <div>
+                <span class="reports-eyebrow" style="color: #c2413b;">CIVICEYE GD / СИСТЕМА</span>
+                <h1>Административно табло.</h1>
+                <p>Управление, смяна на статуси и проверка на снимки.</p>
+            </div>
+        </div>
+
+        <div class="reports-list-heading" style="margin-top: 30px;">
+            <h2>Всички сигнали (@Model.Reports.Count)</h2>
+        </div>
+
+        <div class="reports-list" style="display: flex; flex-direction: column; gap: 15px;">
+            @foreach (var report in Model.Reports)
+            {
+                <article class="report-card" style="display: flex; flex-direction: row; justify-content: space-between; align-items: flex-start; gap: 20px;">
+                    
+                    <!-- Лява част: Информация -->
+                    <div style="flex: 1;">
+                        <div class="report-card-top" style="display: flex; gap: 10px; margin-bottom: 10px;">
+                            <span class="report-category">@report.Category</span>
+                            <span class="report-id">#@report.Id</span>
+                        </div>
+
+                        <h3 style="margin: 0 0 10px 0;">
+                            <a asp-page="/Details" asp-route-id="@report.Id" class="report-title-link">
+                                @report.Title
+                            </a>
+                        </h3>
+
+                        <p class="report-description" style="margin-bottom: 10px;">@report.Description</p>
+
+                        <!-- Показване на снимките -->
+                        @if (report.Images.Any())
+                        {
+                            <div style="display: flex; gap: 10px; margin-bottom: 15px;">
+                                @foreach (var image in report.Images)
+                                {
+                                    <a href="/report-images/@image.Id" target="_blank">
+                                        <img src="/report-images/@image.Id" alt="Снимка" style="width: 80px; height: 80px; object-fit: cover; border-radius: 8px; border: 1px solid #ccc;" />
+                                    </a>
+                                }
+                            </div>
+                        }
+
+                        <div class="report-meta">
+                            <span><strong>Адрес:</strong> @report.Address</span>
+                            <span><strong>Дата:</strong> @report.CreatedAt.ToLocalTime().ToString("dd.MM.yyyy")</span>
+                        </div>
+                    </div>
+
+                    <!-- Дясна част: Действия -->
+                    <div style="display: flex; flex-direction: column; gap: 10px; min-width: 180px;">
+                        <span style="font-size: 12px; color: var(--dark-text-muted); font-weight: bold;">СМЯНА НА СТАТУС:</span>
+                        
+                        <form method="post" asp-page-handler="ChangeStatus" asp-route-id="@report.Id">
+                            <select name="newStatus" class="form-select" style="margin-bottom: 10px;" onchange="this.form.submit()">
+                                <!option value="Подаден" @(report.Status == "Подаден" ? "selected" : "")>Подаден</!option>
+                                <!option value="В процес" @(report.Status == "В процес" ? "selected" : "")>В процес</!option>
+                                <!option value="Решен" @(report.Status == "Решен" ? "selected" : "")>Решен</!option>
+                                <!option value="Отхвърлен" @(report.Status == "Отхвърлен" ? "selected" : "")>Отхвърлен</!option>
+                            </select>
+                        </form>
+
+                        <!-- Оправеният бутон "Виж детайли" -->
+                        <a asp-page="/Details" asp-route-id="@report.Id" class="btn btn-outline-success w-100" style="display: block; margin-top: 5px; text-align: center; font-weight: bold;">
+                            Виж детайли →
+                        </a>
+                    </div>
+                </article>
+            }
+        </div>
+    </div>
+</section>
