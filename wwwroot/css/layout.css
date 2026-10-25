@@ -1,0 +1,147 @@
+/* =========================================================
+   CIVICEYE GD — ОСНОВЕН СТИЛ (Layout, Навигация, Футър)
+   ========================================================= */
+
+:root {
+    color-scheme: light;
+    --civic-green: #1b4d3e;
+    --civic-green-dark: #12392e;
+    --civic-green-hover: #24634e;
+    --civic-green-light: #e8f2ec;
+    --civic-green-soft: #f0f6f1;
+    --civic-blue: #3978e8;
+    --civic-orange: #d97732;
+    --civic-success: #258453;
+    --civic-danger: #c2413b;
+    --civic-text: #1d3028;
+    --civic-muted: #66766d;
+    --civic-border: #e0e8e1;
+    --civic-background: #f6f8f5;
+    --civic-white: #ffffff;
+    --civic-radius-sm: 10px;
+    --civic-radius: 16px;
+    --civic-radius-lg: 22px;
+    --civic-shadow-sm: 0 3px 12px rgba(24, 59, 45, 0.04);
+    --civic-shadow: 0 8px 26px rgba(24, 59, 45, 0.06);
+    --civic-shadow-hover: 0 14px 34px rgba(24, 59, 45, 0.10);
+    --civic-transition: 180ms ease;
+}
+
+html {
+    position: relative;
+    min-height: 100%;
+    font-size: 16px;
+    scroll-behavior: smooth;
+    scroll-padding-top: 24px;
+}
+
+body {
+    min-height: 100vh;
+    margin: 0;
+    background: var(--civic-background);
+    color: var(--civic-text);
+    font-family: "Segoe UI", Inter, Arial, sans-serif;
+    font-size: 15px;
+    line-height: 1.65;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+
+h1, h2, h3, h4, h5, h6 {
+    color: var(--civic-text);
+    font-weight: 750;
+    line-height: 1.2;
+    letter-spacing: -0.035em;
+    overflow-wrap: anywhere;
+}
+
+p { overflow-wrap: anywhere; }
+
+a {
+    color: var(--civic-green);
+    text-decoration: none;
+    transition: color var(--civic-transition), background-color var(--civic-transition), border-color var(--civic-transition);
+}
+a:hover { color: var(--civic-green-hover); }
+
+button, input, select, textarea { font: inherit; }
+::selection { color: var(--civic-green-dark); background: #cfe7d5; }
+
+:focus-visible { outline: 3px solid #6ca88b; outline-offset: 3px; }
+.btn:focus, .btn:active:focus, .btn-link.nav-link:focus, .form-control:focus, .form-check-input:focus {
+    box-shadow: 0 0 0 3px rgba(27, 77, 62, 0.15);
+}
+
+/* Навигация */
+body.civic-site { display: flex; flex-direction: column; }
+.site-header { position: relative; z-index: 1000; background: var(--civic-white); border-bottom: 1px solid var(--civic-border); }
+.civic-navbar { min-height: 88px; padding: 12px 0; background: var(--civic-white); }
+.civic-nav-container { max-width: 1440px; padding-right: 32px; padding-left: 32px; }
+.civic-brand { display: inline-flex; align-items: center; gap: 12px; margin-right: 36px; color: var(--civic-green); text-decoration: none; }
+.civic-brand-mark { display: grid; width: 48px; height: 48px; flex: 0 0 48px; place-items: center; border-radius: 15px; background: var(--civic-green); color: #d7f36b; }
+.civic-brand-mark svg { width: 34px; height: 34px; }
+.civic-brand-copy { display: flex; flex-direction: column; line-height: 1.2; }
+.civic-brand-name { font-size: 23px; font-weight: 800; letter-spacing: -0.8px; }
+.civic-brand-name span { color: #72952E; }
+.civic-brand-tagline { margin-top: 5px; color: var(--civic-muted); font-size: 11px; font-weight: 500; letter-spacing: 0.15px; }
+.civic-navigation { align-items: center; justify-content: flex-end; gap: 30px; }
+.civic-nav-links { align-items: center; gap: 8px; }
+.civic-nav-link { display: inline-flex; align-items: center; gap: 9px; padding: 12px 14px !important; border-radius: 12px; color: #53635B; font-size: 14px; font-weight: 650; transition: background 0.2s ease, color 0.2s ease; }
+.civic-nav-link:hover, .civic-nav-link:focus-visible { background: var(--civic-background); color: var(--civic-green); }
+.civic-nav-number { color: #9AA69C; font-size: 10px; font-weight: 800; letter-spacing: 0.5px; }
+.civic-submit-button { display: inline-flex; min-height: 48px; align-items: center; justify-content: center; gap: 10px; padding: 12px 17px; border: 1px solid var(--civic-green); border-radius: 13px; background: var(--civic-green); color: var(--civic-white); font-size: 13px; font-weight: 750; text-decoration: none; white-space: nowrap; transition: transform 0.2s ease, background 0.2s ease; }
+.civic-submit-button:hover, .civic-submit-button:focus-visible { transform: translateY(-2px); background: var(--civic-green-light); color: var(--civic-white); }
+.civic-submit-icon { display: grid; width: 23px; height: 23px; place-items: center; border-radius: 7px; background: var(--civic-lime); color: var(--civic-green); font-size: 19px; line-height: 1; }
+.civic-submit-arrow { margin-left: 3px; color: var(--civic-lime); font-size: 16px; }
+.civic-toggler { padding: 10px; border: 1px solid var(--civic-border); border-radius: 12px; box-shadow: none !important; }
+.civic-toggler:focus { box-shadow: 0 0 0 3px rgba(215, 243, 107, 0.5) !important; }
+.civic-toggler-lines { display: flex; width: 23px; flex-direction: column; gap: 5px; }
+.civic-toggler-lines span { display: block; width: 100%; height: 2px; border-radius: 2px; background: var(--civic-green); }
+
+/* Основно съдържание */
+.site-main { width: 100%; flex: 1 0 auto; padding-top: 32px; padding-bottom: 56px; }
+body.civic-site a { transition: color 0.2s ease, background 0.2s ease; }
+body.civic-site button { cursor: pointer; }
+
+/* Футър */
+.civic-footer { margin-top: auto; border-top: 1px solid var(--civic-border); background: var(--civic-white); }
+.civic-footer-inner { display: flex; min-height: 90px; align-items: center; justify-content: space-between; gap: 20px; padding-top: 20px; padding-bottom: 20px; }
+.civic-footer-brand { color: var(--civic-green); font-size: 19px; font-weight: 850; letter-spacing: -0.5px; text-decoration: none; white-space: nowrap; }
+.civic-footer-brand span { color: #72952E; }
+.civic-footer-text { margin: 0; color: var(--civic-muted); font-size: 12px; text-align: center; }
+.civic-footer-link { color: var(--civic-green); font-size: 12px; font-weight: 650; text-decoration: none; white-space: nowrap; }
+.civic-footer-link:hover { color: #72952E; }
+.civic-footer-year { color: #8B968E; font-size: 12px; white-space: nowrap; }
+
+/* Адаптивност за навигация */
+@media (max-width: 991.98px) {
+    .civic-navbar { min-height: 76px; }
+    .civic-nav-container { padding-right: 22px; padding-left: 22px; }
+    .civic-brand { margin-right: 0; }
+    .civic-navigation { align-items: stretch; gap: 12px; padding: 18px 0 8px; }
+    .civic-nav-links { align-items: stretch; gap: 4px; }
+    .civic-nav-link { width: 100%; padding: 13px 14px !important; }
+    .civic-desktop-cta { display: none; }
+    .civic-mobile-cta { display: block; margin-top: 8px; }
+    .civic-mobile-cta .civic-submit-button { width: 100%; }
+    .civic-footer-inner { flex-wrap: wrap; justify-content: center; gap: 12px 22px; }
+    .civic-footer-text { flex-basis: 100%; order: 2; }
+}
+
+@media (max-width: 575.98px) {
+    .civic-nav-container { padding-right: 16px; padding-left: 16px; }
+    .civic-brand { gap: 9px; }
+    .civic-brand-mark { width: 42px; height: 42px; flex-basis: 42px; border-radius: 12px; }
+    .civic-brand-mark svg { width: 30px; height: 30px; }
+    .civic-brand-name { font-size: 20px; }
+    .civic-brand-tagline { max-width: 190px; font-size: 10px; }
+    .site-main { padding-top: 22px; padding-bottom: 36px; }
+    .civic-footer-inner { padding-top: 22px; padding-bottom: 22px; }
+    .civic-footer-text { line-height: 1.5; }
+}
+/* Фикс за иконата "+" в бутона за подаване на сигнал */
+.civic-submit-icon {
+    color: #123B32 !important; 
+}

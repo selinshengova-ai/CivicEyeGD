@@ -1,0 +1,218 @@
+/* =========================================================
+   CIVICEYE GD — ФОРМИ (Create, Login, Register)
+   ========================================================= */
+
+/* --- Основни форми --- */
+.civic-form-page {
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    padding: 40px 20px;
+    background: transparent !important;
+}
+
+.civic-form-card {
+    width: 100%;
+    max-width: 1180px; /* Увеличено, за да е колкото началната страница */
+    padding: 32px;
+    background: #fff;
+    border-radius: 16px;
+    box-sizing: border-box;
+    border: 1px solid var(--civic-border);
+    box-shadow: 0 12px 36px rgba(27, 77, 62, .07);
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+}
+
+/* Заглавие и текст */
+.back-link { align-self: center; display: inline-flex; align-items: center; gap: 8px; margin-bottom: 28px; color: #527565; font-size: 13px; text-decoration: none; }
+.back-link:hover { color: #1b4d3e; }
+.section-kicker { align-self: center; margin-bottom: 10px; color: #527565; font-size: 11px; font-weight: 750; letter-spacing: 1.8px; }
+.civic-form-card h1 { align-self: center; margin: 0 0 32px; color: #1b4d3e; font-size: clamp(30px, 4vw, 42px); font-weight: 750; letter-spacing: -1px; text-align: center; }
+
+/* Полета (тесни и центрирани) */
+.form-field,
+.location-field,
+.photo-field {
+    width: 100%;
+    max-width: 700px;
+    margin: 0 auto 16px auto;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+}
+
+.form-label { display: block; margin-bottom: 8px; color: #243b31; font-size: 13px; font-weight: 650; }
+.required-mark { color: #b54736; font-weight: 700; }
+
+.civic-form-card .form-control,
+.civic-form-card .form-select {
+    display: block;
+    width: 100%;
+    height: 38px;
+    padding: 8px 12px;
+    border: 1px solid #d9e4dc;
+    border-radius: 10px;
+    background-color: #fff;
+    color: #263a30;
+    font-size: 14px;
+    box-shadow: none;
+    box-sizing: border-box;
+    transition: border-color .18s ease, box-shadow .18s ease;
+}
+
+.civic-form-card textarea.form-control {
+    max-width: 100%;
+    height: 100px;
+    resize: vertical;
+}
+
+.civic-form-card .form-control:focus,
+.civic-form-card .form-select:focus {
+    border-color: #43836b;
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(67, 131, 107, .13);
+}
+
+.civic-form-card .text-danger { display: block; margin-top: 5px; font-size: 12px; }
+.validation-summary:empty { display: none; }
+
+/* Оценка за сериозност */
+.severity-rating-group { display: flex; gap: 10px; margin-top: 10px; }
+.severity-radio { cursor: pointer; }
+.severity-radio input { display: none; }
+.severity-radio span {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 44px; height: 44px; border: 1px solid #d9e4dc; border-radius: 8px;
+    font-weight: bold; color: #315b47; transition: all 0.2s;
+}
+.severity-radio input:checked + span { background: #1b4d3e; color: white; border-color: #1b4d3e; }
+.severity-radio span:hover { background: #e8f2ec; }
+
+/* Снимки */
+.photo-hint { color: #718078; font-size: 12px; font-weight: 500; }
+.photo-picker { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
+.photo-input { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); border: 0; }
+.photo-picker-button { display: inline-flex; align-items: center; gap: 9px; min-height: 46px; padding: 12px 20px; border: 1px dashed #9dbfae; border-radius: 10px; background: #f4f9f6; color: #1b4d3e; font-size: 13px; font-weight: 650; cursor: pointer; transition: background .18s ease, border-color .18s ease; }
+.photo-picker-button:hover { background: #e8f2ec; border-color: #43836b; }
+.photo-message { min-height: 0; margin: 8px 0 0; color: #718078; font-size: 12px; line-height: 1.5; }
+.photo-message:empty { display: none; }
+.photo-message.photo-error { color: #b54736; }
+.photo-preview-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 12px; margin: 14px 0 0; padding: 0; list-style: none; }
+.photo-preview-item { overflow: hidden; border: 1px solid #e0e9e2; border-radius: 12px; background: #fbfcfb; }
+.photo-preview-item img { display: block; width: 100%; height: 110px; object-fit: cover; background: #e8f2ec; }
+.photo-preview-meta { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 7px 9px; }
+.photo-preview-name { overflow: hidden; color: #53675d; font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }
+.photo-remove-button { flex-shrink: 0; padding: 4px 8px; border: 1px solid #e4cfca; border-radius: 7px; background: #fff; color: #b54736; font-size: 11px; font-weight: 650; cursor: pointer; }
+
+/* Карта и Уличен изглед */
+.map-search { display: flex; gap: 9px; width: 100%; max-width: 700px; margin: 0 auto; }
+.map-search input { flex: 1; min-width: 0; }
+.map-search button { flex-shrink: 0; }
+.status-message { min-height: 0; margin: 7px 0 0; color: #718078; font-size: 12px; line-height: 1.5; overflow-wrap: anywhere; text-align: center; }
+.status-message:empty { display: none; }
+
+/* Карти (разпънати на цялата ширина на картата) */
+.civic-form-card .map-streetview-grid {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr !important;
+    gap: 24px !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    margin-top: 15px !important;
+    margin-bottom: 25px !important;
+}
+.civic-form-card .map-panel,
+.civic-form-card .street-view-panel {
+    min-width: 0;
+    padding: 20px;
+    border: 1px solid #e0e9e2;
+    border-radius: 14px;
+    background: #fbfcfb;
+}
+.panel-heading { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+.panel-heading h2 { margin: 0; color: #1b4d3e; font-size: 14px; font-weight: 700; }
+.panel-icon { display: inline-flex; align-items: center; justify-content: center; min-width: 32px; height: 32px; padding: 0 5px; border-radius: 9px; background: #e8f2ec; color: #1b4d3e; font-size: 12px; font-weight: 750; }
+.civic-form-card #report-location-map,
+.civic-form-card #street-view-container {
+    position: relative; width: 100%; height: 600px;
+    overflow: hidden;
+    border: 1px solid #d9e4dc; border-radius: 10px; background: #e8f2ec; box-sizing: border-box;
+}
+#report-location-map { z-index: 1; }
+#street-view-placeholder { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; padding: 20px; text-align: center; background: radial-gradient(ellipse at top, #f7faf7 0%, #e8f2ec 75%); color: #53675d; }
+.street-view-symbol { display: flex; align-items: center; justify-content: center; width: 76px; height: 76px; border: 1px solid #c7dbce; border-radius: 50%; background: #fff; color: #1b4d3e; font-size: 21px; font-weight: 750; box-shadow: 0 6px 20px rgba(27, 77, 62, .08); }
+#street-view-placeholder p { max-width: 230px; margin: 0; font-size: 13px; line-height: 1.6; }
+#open-google-maps { color: #1b4d3e; font-size: 12px; font-weight: 650; text-decoration: none; }
+#open-google-maps:hover { text-decoration: underline; }
+
+/* Бутони */
+.form-actions { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 30px; justify-content: center; width: 100%; max-width: 700px; margin-left: auto; margin-right: auto; }
+.civic-form-card .btn-civic-primary, .civic-form-card .btn-civic-secondary {
+    display: inline-flex; align-items: center; justify-content: center; gap: 9px;
+    min-height: 46px; padding: 12px 20px; border: 1px solid #1b4d3e; border-radius: 10px;
+    box-sizing: border-box; font-size: 13px; font-weight: 650; text-decoration: none; cursor: pointer;
+    transition: background .18s ease, transform .18s ease;
+}
+.civic-form-card .btn-civic-primary { background: #1b4d3e; color: #fff; }
+.civic-form-card .btn-civic-primary:hover { background: #143b30; transform: translateY(-1px); }
+.civic-form-card .btn-civic-secondary { border-color: #d9e4dc; background: #fff; color: #1b4d3e; }
+.civic-form-card .btn-civic-secondary:hover { background: #e8f2ec; }
+.required-note { margin: 18px 0 0; color: #718078; font-size: 12px; text-align: center; }
+
+/* Тъмна тема */
+html[data-theme="dark"] .civic-form-page,
+html[data-theme="dark"] .civic-form-card {
+    background: var(--dark-surface) !important;
+    border-color: var(--dark-border) !important;
+    color: var(--dark-text) !important;
+}
+html[data-theme="dark"] .civic-form-card h1,
+html[data-theme="dark"] .civic-form-card .section-kicker,
+html[data-theme="dark"] .civic-form-card .form-label,
+html[data-theme="dark"] .panel-heading h2,
+html[data-theme="dark"] .back-link { color: var(--dark-text) !important; }
+html[data-theme="dark"] .civic-form-card .form-control,
+html[data-theme="dark"] .civic-form-card .form-select {
+    background-color: var(--dark-surface-2) !important;
+    border-color: var(--dark-border-strong) !important;
+    color: var(--dark-text) !important;
+}
+html[data-theme="dark"] .civic-form-card .form-control::placeholder { color: var(--dark-text-dim) !important; }
+html[data-theme="dark"] .civic-form-card .map-panel,
+html[data-theme="dark"] .civic-form-card .street-view-panel {
+    background: var(--dark-surface-2) !important;
+    border-color: var(--dark-border) !important;
+}
+html[data-theme="dark"] .civic-form-card .btn-civic-secondary,
+html[data-theme="dark"] .map-action-button {
+    background: var(--dark-surface) !important;
+    border-color: var(--dark-border) !important;
+    color: var(--dark-text) !important;
+}
+html[data-theme="dark"] .severity-radio span {
+    background: var(--dark-surface-2) !important;
+    border-color: var(--dark-border) !important;
+    color: var(--dark-text) !important;
+}
+html[data-theme="dark"] .severity-radio input:checked + span {
+    background: var(--dark-accent) !important;
+    border-color: var(--dark-accent) !important;
+    color: var(--dark-accent-text) !important;
+}
+
+/* Адаптивност */
+@media (max-width: 800px) {
+    .civic-form-page { padding: 20px 0 36px; }
+    .civic-form-card { width: min(100% - 32px, 1180px); }
+    .civic-form-card .map-streetview-grid { grid-template-columns: 1fr !important; }
+    .civic-form-card #report-location-map, .civic-form-card #street-view-container { height: 400px; }
+}
+@media (max-width: 600px) {
+    .map-search { flex-direction: column; }
+    .map-search button { width: 100%; }
+    .form-actions { flex-direction: column; }
+    .form-actions > * { width: 100%; }
+    .map-panel, .street-view-panel { padding: 10px; }
+}

@@ -1,0 +1,263 @@
+/* =========================================================
+   CIVICEYE GD — ТЪМНА ТЕМА (Global Overrides)
+   ========================================================= */
+
+html[data-theme="dark"] {
+    color-scheme: dark;
+    --dark-bg: #0c1611;
+    --dark-surface: #14241d;
+    --dark-surface-2: #1a2d25;
+    --dark-border: #2b4639;
+    --dark-border-strong: #355847;
+    --dark-text: #f7f9f8;
+    --dark-text-muted: #b7c4bc;
+    --dark-text-dim: #9fb3a7;
+    --dark-accent: #d7f36b;
+    --dark-accent-hover: #e5ff91;
+    --dark-accent-text: #123b32;
+}
+
+/* --- 1. Основа и Навигация --- */
+html[data-theme="dark"] body,
+body[data-theme="dark"] {
+    background: radial-gradient(1600px 1100px at 50% 0%, #162b22 0%, #0c1611 55%, #08100c 100%) !important;
+    color: var(--dark-text) !important;
+}
+html[data-theme="dark"] .site-header,
+html[data-theme="dark"] .civic-navbar,
+html[data-theme="dark"] .navbar {
+    background: rgba(9, 19, 15, 0.98) !important;
+    border-bottom: 1px solid var(--dark-border) !important;
+}
+html[data-theme="dark"] .civic-brand-name,
+html[data-theme="dark"] .civic-brand-tagline,
+html[data-theme="dark"] .civic-nav-link { color: var(--dark-text-muted) !important; }
+html[data-theme="dark"] .civic-nav-link:hover,
+html[data-theme="dark"] .civic-nav-link:focus-visible { background: var(--dark-surface) !important; color: var(--dark-text) !important; }
+
+/* --- 2. Начална страница (Index / Welcome) --- */
+html[data-theme="dark"] .home-page,
+html[data-theme="dark"] body .home-page,
+html[data-theme="dark"] .home-page .home-recent-section,
+html[data-theme="dark"] .home-page .home-how-section,
+html[data-theme="dark"] .home-page .content-section {
+    background: transparent !important;
+    background-color: transparent !important;
+}
+html[data-theme="dark"] .home-page .home-hero {
+    background: linear-gradient(135deg, #14241d 0%, #0f1b16 100%) !important;
+    border-color: var(--dark-border) !important;
+}
+html[data-theme="dark"] .home-page .home-hero h1,
+html[data-theme="dark"] .home-page .home-section-heading h2,
+html[data-theme="dark"] .home-page .home-how-heading h2,
+html[data-theme="dark"] .home-page .home-report-card h3,
+html[data-theme="dark"] .home-page .home-step h3,
+html[data-theme="dark"] .home-page .home-text-link,
+html[data-theme="dark"] .home-page .home-account-actions > p { color: var(--dark-text) !important; }
+
+/* Лек блясък на ключовата дума */
+html[data-theme="dark"] .home-page .home-hero h1 span { 
+    color: var(--dark-accent) !important; 
+    text-shadow: 0 0 20px rgba(215, 243, 107, 0.3);
+}
+
+html[data-theme="dark"] .home-page .home-intro,
+html[data-theme="dark"] .home-page .home-hero-note,
+html[data-theme="dark"] .home-page .home-report-description,
+html[data-theme="dark"] .home-page .home-report-address,
+html[data-theme="dark"] .home-page .home-step p,
+html[data-theme="dark"] .home-page .home-stat-card p,
+html[data-theme="dark"] .home-page .home-section-heading p,
+html[data-theme="dark"] .home-page .home-how-heading > p,
+html[data-theme="dark"] .home-page .home-section-eyebrow { color: var(--dark-text-muted) !important; }
+
+/* По-добър контраст за картите */
+html[data-theme="dark"] .home-page .home-stat-card,
+html[data-theme="dark"] .home-page .home-report-card,
+html[data-theme="dark"] .home-page .home-step,
+html[data-theme="dark"] .home-page .home-visual-card {
+    background: var(--dark-surface-2) !important;
+    border-color: var(--dark-border-strong) !important;
+    color: var(--dark-text) !important;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4) !important;
+}
+
+/* Правим "Твоят глас" да изпъква */
+html[data-theme="dark"] .home-page .home-visual-card strong {
+    color: var(--dark-accent) !important;
+}
+
+html[data-theme="dark"] .home-page .home-stat-number { color: var(--dark-accent) !important; }
+
+html[data-theme="dark"] .home-page .home-visual-tag { 
+    background: var(--dark-surface) !important; 
+    color: var(--dark-text) !important; 
+    border-color: var(--dark-border) !important; 
+}
+
+/* По-ярък основен бутон */
+html[data-theme="dark"] .home-page .home-button-primary,
+html[data-theme="dark"] .civic-submit-button {
+    background: var(--dark-accent) !important;
+    color: var(--dark-accent-text) !important;
+    border-color: var(--dark-accent) !important;
+    box-shadow: 0 4px 15px rgba(215, 243, 107, 0.2) !important;
+}
+html[data-theme="dark"] .home-page .home-button-primary:hover,
+html[data-theme="dark"] .civic-submit-button:hover {
+    background: var(--dark-accent-hover) !important;
+    box-shadow: 0 6px 20px rgba(215, 243, 107, 0.4) !important;
+}
+
+/* --- 3. Форми, Инпути и Бутони (Глобално) --- */
+html[data-theme="dark"] input,
+html[data-theme="dark"] select,
+html[data-theme="dark"] textarea,
+html[data-theme="dark"] .form-control,
+html[data-theme="dark"] .form-select {
+    background-color: var(--dark-surface-2) !important;
+    border-color: var(--dark-border-strong) !important;
+    color: var(--dark-text) !important;
+}
+html[data-theme="dark"] input::placeholder,
+html[data-theme="dark"] textarea::placeholder { color: var(--dark-text-dim) !important; }
+html[data-theme="dark"] .form-label { color: var(--dark-text-muted) !important; }
+html[data-theme="dark"] select option { background-color: var(--dark-surface-2) !important; color: var(--dark-text) !important; }
+
+/* --- 4. Страници: Карта (Map) и Сигнали (Reports) --- */
+html[data-theme="dark"] .map-page,
+html[data-theme="dark"] .reports-page,
+html[data-theme="dark"] .details-page {
+    background: transparent !important;
+    color: var(--dark-text) !important;
+}
+html[data-theme="dark"] .map-heading h1,
+html[data-theme="dark"] .map-card-header h2,
+html[data-theme="dark"] .map-bottom h3,
+html[data-theme="dark"] .reports-heading h1,
+html[data-theme="dark"] .reports-list-heading h2,
+html[data-theme="dark"] .reports-summary-card strong,
+html[data-theme="dark"] .report-card h3,
+html[data-theme="dark"] .report-title-link { color: var(--dark-text) !important; }
+html[data-theme="dark"] .map-heading h1 span { color: var(--dark-accent) !important; }
+html[data-theme="dark"] .map-heading p,
+html[data-theme="dark"] .map-info p,
+html[data-theme="dark"] .map-bottom p,
+html[data-theme="dark"] .reports-heading p,
+html[data-theme="dark"] .reports-list-heading > span,
+html[data-theme="dark"] .reports-summary-card span,
+html[data-theme="dark"] .report-description,
+html[data-theme="dark"] .report-meta,
+html[data-theme="dark"] .report-meta strong { color: var(--dark-text-muted) !important; }
+html[data-theme="dark"] .map-info,
+html[data-theme="dark"] .map-card,
+html[data-theme="dark"] .map-bottom > div,
+html[data-theme="dark"] .reports-summary-card,
+html[data-theme="dark"] .reports-filters,
+html[data-theme="dark"] .report-card,
+html[data-theme="dark"] .reports-empty {
+    background: var(--dark-surface) !important;
+    border-color: var(--dark-border) !important;
+}
+html[data-theme="dark"] .report-meta { border-top-color: var(--dark-border) !important; }
+html[data-theme="dark"] .report-category,
+html[data-theme="dark"] .report-status {
+    background: var(--dark-surface-2) !important;
+    border-color: var(--dark-border) !important;
+    color: var(--dark-text-muted) !important;
+}
+html[data-theme="dark"] .report-details-link { color: var(--dark-accent) !important; font-weight: bold; text-decoration: none; }
+
+/* --- 5. Страница Създаване (Create) --- */
+html[data-theme="dark"] .civic-form-card {
+    background: var(--dark-surface) !important;
+    border-color: var(--dark-border) !important;
+    color: var(--dark-text) !important;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3) !important;
+}
+html[data-theme="dark"] .civic-form-card h1,
+html[data-theme="dark"] .civic-form-card .section-kicker,
+html[data-theme="dark"] .panel-heading h2,
+html[data-theme="dark"] .back-link { color: var(--dark-text) !important; }
+html[data-theme="dark"] .civic-form-card .btn-civic-secondary,
+html[data-theme="dark"] .civic-form-card .map-action-button {
+    background: var(--dark-surface-2) !important;
+    border-color: var(--dark-border) !important;
+    color: var(--dark-text) !important;
+}
+html[data-theme="dark"] .map-panel,
+html[data-theme="dark"] .street-view-panel {
+    background: var(--dark-surface-2) !important;
+    border-color: var(--dark-border) !important;
+}
+html[data-theme="dark"] .severity-radio span { border-color: var(--dark-border); color: var(--dark-text); background: var(--dark-surface-2); }
+html[data-theme="dark"] .severity-radio input:checked + span { background: var(--dark-accent); color: var(--dark-accent-text); border-color: var(--dark-accent); }
+
+/* --- 6. Вход и Регистрация (Login & Register) --- */
+html[data-theme="dark"] .card { background: var(--dark-surface) !important; border: 1px solid var(--dark-border) !important; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4) !important; }
+html[data-theme="dark"] .card-body h1,
+html[data-theme="dark"] .card-body .h3,
+html[data-theme="dark"] .card-body .fw-bold,
+html[data-theme="dark"] .card-body .text-dark,
+html[data-theme="dark"] .form-check-label { color: var(--dark-text) !important; }
+html[data-theme="dark"] .card-body p,
+html[data-theme="dark"] .card-body .text-muted { color: var(--dark-text-muted) !important; }
+html[data-theme="dark"] .card-body a.text-success { color: var(--dark-accent) !important; }
+html[data-theme="dark"] .auth-card { background: var(--dark-surface) !important; border-color: var(--dark-border) !important; }
+html[data-theme="dark"] .auth-card h1, html[data-theme="dark"] .auth-card .form-label { color: var(--dark-text) !important; }
+html[data-theme="dark"] .auth-description, html[data-theme="dark"] .auth-switch { color: var(--dark-text-muted) !important; }
+html[data-theme="dark"] .auth-switch a { color: var(--dark-accent) !important; }
+
+/* --- 7. Детайли (Details) --- */
+html[data-theme="dark"] .details-description,
+html[data-theme="dark"] .details-images,
+html[data-theme="dark"] .details-history,
+html[data-theme="dark"] .details-card {
+    background: var(--dark-surface) !important;
+    border-color: var(--dark-border) !important;
+}
+html[data-theme="dark"] .details-header h1,
+html[data-theme="dark"] .details-description h2,
+html[data-theme="dark"] .details-images h2,
+html[data-theme="dark"] .details-history h2,
+html[data-theme="dark"] .details-card h2,
+html[data-theme="dark"] .details-rating-number { color: var(--dark-text) !important; }
+html[data-theme="dark"] .details-description p,
+html[data-theme="dark"] .details-address,
+html[data-theme="dark"] .details-muted { color: var(--dark-text-muted) !important; }
+html[data-theme="dark"] .details-header { border-bottom-color: var(--dark-border) !important; }
+html[data-theme="dark"] .details-category { background: var(--dark-surface-2) !important; color: var(--dark-accent) !important; }
+html[data-theme="dark"] .details-rating-button { background: var(--dark-surface-2) !important; border-color: var(--dark-border) !important; color: var(--dark-text) !important; }
+html[data-theme="dark"] .details-rating-button.is-selected { background: var(--dark-accent) !important; color: var(--dark-accent-text) !important; border-color: var(--dark-accent) !important; }
+
+/* --- 8. Бутони и Акценти --- */
+html[data-theme="dark"] .reports-create-btn,
+html[data-theme="dark"] .reports-filter-btn,
+html[data-theme="dark"] .details-confirm-button,
+html[data-theme="dark"] .btn-success { background: var(--dark-accent) !important; color: var(--dark-accent-text) !important; border-color: var(--dark-accent) !important; }
+html[data-theme="dark"] .reports-create-btn:hover,
+html[data-theme="dark"] .reports-filter-btn:hover,
+html[data-theme="dark"] .details-confirm-button:hover,
+html[data-theme="dark"] .btn-success:hover { background: var(--dark-accent-hover) !important; }
+html[data-theme="dark"] .reports-reset-btn { background: var(--dark-surface-2) !important; color: var(--dark-text-muted) !important; border: 1px solid var(--dark-border) !important; }
+html[data-theme="dark"] .report-card a.btn-outline-success { color: var(--dark-accent) !important; border-color: var(--dark-accent) !important; background: transparent !important; }
+html[data-theme="dark"] .report-card a.btn-outline-success:hover { background: var(--dark-accent) !important; color: var(--dark-accent-text) !important; }
+
+/* --- 9. Footer --- */
+html[data-theme="dark"] .civic-footer { background: linear-gradient(180deg, #0c1611 0%, #060d09 100%) !important; border-top: 1px solid var(--dark-border) !important; color: var(--dark-text-muted) !important; }
+html[data-theme="dark"] .civic-footer-text,
+html[data-theme="dark"] .civic-footer-year { color: var(--dark-text-muted) !important; }
+
+/* Leaflet карта */
+html[data-theme="dark"] .leaflet-container { background: #0f1b16 !important; filter: brightness(0.9) contrast(1.05); }
+
+/* Статуси */
+.report-status[data-status="Подаден"] { background-color: #edf3ff; color: #2858a3; }
+.report-status[data-status="В процес"] { background-color: #fff1e5; color: #a65319; }
+.report-status[data-status="Решен"] { background-color: #e9f7ee; color: #18764b; }
+.report-status[data-status="Отхвърлен"] { background-color: #fff0ef; color: #a32f2a; }
+html[data-theme="dark"] .report-status[data-status="Подаден"] { background-color: rgba(40, 88, 163, 0.2); color: #a5c2f5; }
+html[data-theme="dark"] .report-status[data-status="В процес"] { background-color: rgba(166, 83, 25, 0.2); color: #f5b88c; }
+html[data-theme="dark"] .report-status[data-status="Решен"] { background-color: rgba(24, 118, 75, 0.2); color: #90e0b1; }
+html[data-theme="dark"] .report-status[data-status="Отхвърлен"] { background-color: rgba(163, 47, 42, 0.2); color: #f5a3a0; }
