@@ -4,10 +4,12 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
+using Microsoft.AspNetCore.RateLimiting;
 
 namespace CivicEyeGD.Pages.Account;
 
 [AllowAnonymous]
+[EnableRateLimiting("forms")]
 public class RegisterModel : PageModel
 {
     private readonly UserManager<IdentityUser> _userManager;

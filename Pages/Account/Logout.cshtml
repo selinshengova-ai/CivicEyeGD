@@ -1,3 +1,66 @@
-
 @page
 @model CivicEyeGD.Pages.Account.LogoutModel
+@{
+    Layout = "_WelcomeLayout";
+    ViewData["Title"] = "Изход";
+    var isSignedIn = User.Identity?.IsAuthenticated == true;
+}
+
+<div class="home-page">
+    <section class="home-hero">
+        <div class="home-hero-content">
+
+            <span class="home-eyebrow">
+                <span class="home-eyebrow-dot"></span>
+                CIVICEYE GD · СЕСИЯ
+            </span>
+
+            @if (isSignedIn)
+            {
+                <h1>Излизаш от акаунта</h1>
+
+                <p class="home-intro">
+                    Изходът минава през POST форма с предпазен токен, затова
+                    бутона е тук, а не в обикновена връзка: така никоя външна
+                    страница не може да те изкара от акаунта ти.
+                </p>
+
+                <form method="post" class="home-account-actions">
+                    <div class="home-account-buttons">
+                        <button type="submit" class="home-button-primary">
+                            Излез сега
+                            <span aria-hidden="true">→</span>
+                        </button>
+
+                        <a asp-page="/Reports" class="home-button-secondary">
+                            Остави ме вътре
+                        </a>
+                    </div>
+                </form>
+            }
+            else
+            {
+                <h1>Не си влязъл в акаунта</h1>
+
+                <p class="home-intro">
+                    Нямаш активна сесия, няма какво да затваряме. Сигналите и
+                    картата се гледат и без вход.
+                </p>
+
+                <div class="home-account-actions">
+                    <div class="home-account-buttons">
+                        <a asp-page="/Account/Login" class="home-button-primary">
+                            Вход
+                            <span aria-hidden="true">→</span>
+                        </a>
+
+                        <a asp-page="/Reports" class="home-button-secondary">
+                            Към сигналите
+                        </a>
+                    </div>
+                </div>
+            }
+
+        </div>
+    </section>
+</div>

@@ -30,6 +30,8 @@
                     </div>
 
                     <form method="post">
+                        <input type="hidden" asp-for="ReturnUrl" />
+
                         <div asp-validation-summary="ModelOnly"
                              class="text-danger small mb-3">
                         </div>

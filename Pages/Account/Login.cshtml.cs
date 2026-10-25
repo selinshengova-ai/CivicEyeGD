@@ -4,10 +4,12 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
+using Microsoft.AspNetCore.RateLimiting;
 
 namespace CivicEyeGD.Pages.Account;
 
 [AllowAnonymous]
+[EnableRateLimiting("forms")]
 public class LoginModel : PageModel
 {
     private readonly SignInManager<IdentityUser> _signInManager;
@@ -19,6 +21,12 @@ public class LoginModel : PageModel
 
     [BindProperty]
     public LoginInput Input { get; set; } = new();
+
+    // Къде да пратим потребителя след вход. Идва като query параметър,
+    // затова SupportsGet; без него вход от „влез, за да гласуваш“
+    // връща човека към началната страница вместо към сигнала.
+    [BindProperty(SupportsGet = true)]
+    public string? ReturnUrl { get; set; }
 
     public class LoginInput
     {
@@ -48,11 +56,23 @@ public class LoginModel : PageModel
             Input.Email,
             Input.Password,
             Input.RememberMe,
-            lockoutOnFailure: false);
+            lockoutOnFailure: true);
 
         if (result.Succeeded)
         {
-            return RedirectToPage("/Index");
+            return RedirectToLocal(ReturnUrl);
+        }
+
+        if (result.IsLockedOut)
+        {
+            // Същото правило е записано и в документацията: 5 опита,
+            // 10 минути изчакване.
+            ModelState.AddModelError(
+                string.Empty,
+                "Акаунтът е временно заключен след 5 неуспешни опита. "
+                + "Опитай отново след 10 минути.");
+
+            return Page();
         }
 
         ModelState.AddModelError(
@@ -60,5 +80,17 @@ public class LoginModel : PageModel
             "Входът е неуспешен. Провери имейла и паролата.");
 
         return Page();
+    }
+
+    // Пренасочва само към адрес от собствения сайт: отворен редирект
+    // би позволил вход да изпрати потребителя към чужда страница.
+    private IActionResult RedirectToLocal(string? returnUrl)
+    {
+        if (!string.IsNullOrWhiteSpace(returnUrl) && Url.IsLocalUrl(returnUrl))
+        {
+            return Redirect(returnUrl);
+        }
+
+        return RedirectToPage("/Index");
     }
 }

@@ -1,0 +1,41 @@
+@page
+@model CivicEyeGD.Pages.Account.AccessDeniedModel
+@{
+    Layout = "_WelcomeLayout";
+    ViewData["Title"] = "Нямаш достъп";
+}
+
+<div class="home-page">
+    <section class="home-hero">
+        <div class="home-hero-content">
+
+            <span class="home-eyebrow">
+                <span class="home-eyebrow-dot"></span>
+                CIVICEYE GD · ГРЕШКА 403
+            </span>
+
+            <h1>Нямаш достъп</h1>
+
+            <p class="home-intro">
+                Тази част от системата е само за оторизирани потребители.
+                Админското табло виждат единствено служители с права на общината.
+            </p>
+
+            <div class="home-account-actions">
+                <p>Върни се там, където имаш работа.</p>
+
+                <div class="home-account-buttons">
+                    <a asp-page="/Reports" class="home-button-primary">
+                        Към сигналите
+                        <span aria-hidden="true">→</span>
+                    </a>
+
+                    <a asp-page="/Welcome" class="home-button-secondary">
+                        Публична страница
+                    </a>
+                </div>
+            </div>
+
+        </div>
+    </section>
+</div>
