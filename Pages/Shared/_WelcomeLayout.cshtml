@@ -1,42 +1,77 @@
-
 <!DOCTYPE html>
 <html lang="bg" data-theme="light">
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="theme-color" content="#123B32" />
-
     <title>@ViewData["Title"] — CivicEye GD</title>
-
+    
     <script>
         try {
             const savedTheme = localStorage.getItem("civic-theme");
-            document.documentElement.dataset.theme =
-                savedTheme === "dark" ? "dark" : "light";
+            const theme = savedTheme === "dark" ? "dark" : "light";
+            document.documentElement.setAttribute("data-theme", theme);
+            document.addEventListener("DOMContentLoaded", function () {
+                if (document.body) {
+                    document.body.setAttribute("data-theme", theme);
+                }
+            });
         } catch {
-            document.documentElement.dataset.theme = "light";
+            document.documentElement.setAttribute("data-theme", "light");
         }
     </script>
-
-    <link rel="stylesheet"
-          href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
-    <link rel="stylesheet"
-          href="~/css/site.css"
-          asp-append-version="true" />
-    <link rel="stylesheet"
-          href="~/CivicEyeGD.styles.css"
-          asp-append-version="true" />
+    
+    <!-- Bootstrap -->
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    
+    <!-- Новите разделени CSS файлове -->
+    <link rel="stylesheet" href="~/css/layout.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/home.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/pages.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/create.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/dark-theme.css" asp-append-version="true" />
+    
+    <link rel="stylesheet" href="~/CivicEyeGD.styles.css" asp-append-version="true" />
 </head>
-
 <body class="civic-site">
+
+    <!-- Тук няма хедър и футър, за да изглежда Welcome страницата като самостоятелен екран -->
     <main role="main" class="site-main">
         @RenderBody()
     </main>
 
     <script src="~/lib/jquery/dist/jquery.min.js"></script>
     <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="~/js/site.js" asp-append-version="true"></script>
+    
+    <!-- Скрипт за смяна на темата (ако решиш да добавиш бутон на Welcome страницата) -->
+    <script>
+        (() => {
+            const root = document.documentElement;
+            const themeButton = document.getElementById("themeToggle"); // Ако има такъв бутон
 
+            function applyTheme(theme) {
+                const isDark = theme === "dark";
+                const themeValue = isDark ? "dark" : "light";
+
+                root.setAttribute("data-theme", themeValue);
+                if (document.body) {
+                    document.body.setAttribute("data-theme", themeValue);
+                }
+
+                themeButton?.setAttribute("aria-pressed", String(isDark));
+                try { localStorage.setItem("civic-theme", themeValue); } catch {}
+            }
+
+            themeButton?.addEventListener("click", () => {
+                const newTheme = root.getAttribute("data-theme") === "dark" ? "light" : "dark";
+                applyTheme(newTheme);
+            });
+
+            const savedTheme = localStorage.getItem("civic-theme") || root.getAttribute("data-theme") || "light";
+            applyTheme(savedTheme);
+        })();
+    </script>
+    
     @await RenderSectionAsync("Scripts", required: false)
 </body>
 </html>
