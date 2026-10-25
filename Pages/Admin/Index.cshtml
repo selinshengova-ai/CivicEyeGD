@@ -14,17 +14,37 @@
             </div>
         </div>
 
+        <!-- Статистики (кликаеми) -->
+        <div class="admin-stats">
+            <a asp-page="/Admin/Index" asp-route-filterStatus="" class="admin-stat-card">
+                <span>Всички активни</span>
+                <strong>@Model.TotalActiveCount</strong>
+            </a>
+            <a asp-page="/Admin/Index" asp-route-filterStatus="Подаден" class="admin-stat-card">
+                <span>Нови</span>
+                <strong>@Model.NewCount</strong>
+            </a>
+            <a asp-page="/Admin/Index" asp-route-filterStatus="В процес" class="admin-stat-card">
+                <span>В процес</span>
+                <strong>@Model.InProgressCount</strong>
+            </a>
+            <a asp-page="/Admin/Index" asp-route-filterStatus="Решен" class="admin-stat-card">
+                <span>Решени / Отхвърлени</span>
+                <strong>@Model.ResolvedCount</strong>
+            </a>
+        </div>
+
         <div class="reports-list-heading" style="margin-top: 30px;">
-            <h2>Всички сигнали (@Model.Reports.Count)</h2>
+            <h2>Активни сигнали (@Model.Reports.Count)</h2>
         </div>
 
         <div class="reports-list" style="display: flex; flex-direction: column; gap: 15px;">
             @foreach (var report in Model.Reports)
             {
-                <article class="report-card" style="display: flex; flex-direction: row; justify-content: space-between; align-items: flex-start; gap: 20px;">
+                <article class="report-card admin-report-card">
                     
                     <!-- Лява част: Информация -->
-                    <div style="flex: 1;">
+                    <div class="admin-report-info">
                         <div class="report-card-top" style="display: flex; gap: 10px; margin-bottom: 10px;">
                             <span class="report-category">@report.Category</span>
                             <span class="report-id">#@report.Id</span>
@@ -38,14 +58,16 @@
 
                         <p class="report-description" style="margin-bottom: 10px;">@report.Description</p>
 
-                        <!-- Показване на снимките -->
+                        <!-- Показване на снимките с модал -->
                         @if (report.Images.Any())
                         {
                             <div style="display: flex; gap: 10px; margin-bottom: 15px;">
                                 @foreach (var image in report.Images)
                                 {
-                                    <a href="/report-images/@image.Id" target="_blank">
-                                        <img src="/report-images/@image.Id" alt="Снимка" style="width: 80px; height: 80px; object-fit: cover; border-radius: 8px; border: 1px solid #ccc;" />
+                                    <a href="javascript:void(0)" 
+                                       class="open-image-modal" 
+                                       data-image-src="/report-images/@image.Id">
+                                        <img src="/report-images/@image.Id" alt="Снимка" style="width: 80px; height: 80px; object-fit: cover; border-radius: 8px; border: 1px solid #ccc; cursor: pointer;" />
                                     </a>
                                 }
                             </div>
@@ -58,11 +80,13 @@
                     </div>
 
                     <!-- Дясна част: Действия -->
-                    <div style="display: flex; flex-direction: column; gap: 10px; min-width: 180px;">
+                    <div class="admin-report-actions">
                         <span style="font-size: 12px; color: var(--dark-text-muted); font-weight: bold;">СМЯНА НА СТАТУС:</span>
                         
                         <form method="post" asp-page-handler="ChangeStatus" asp-route-id="@report.Id">
-                            <select name="newStatus" class="form-select" style="margin-bottom: 10px;" onchange="this.form.submit()">
+                            <!-- ПРОМЕНЕНО: добавен е confirm() диалог -->
+                            <select name="newStatus" class="form-select" style="margin-bottom: 10px;" 
+                                    onchange="if(confirm('Сигурни ли сте, че искате да смените статуса на този сигнал?')) { this.form.submit(); } else { this.value = '@report.Status'; }">
                                 <!option value="Подаден" @(report.Status == "Подаден" ? "selected" : "")>Подаден</!option>
                                 <!option value="В процес" @(report.Status == "В процес" ? "selected" : "")>В процес</!option>
                                 <!option value="Решен" @(report.Status == "Решен" ? "selected" : "")>Решен</!option>
@@ -70,7 +94,6 @@
                             </select>
                         </form>
 
-                        <!-- Оправеният бутон "Виж детайли" -->
                         <a asp-page="/Details" asp-route-id="@report.Id" class="btn btn-outline-success w-100" style="display: block; margin-top: 5px; text-align: center; font-weight: bold;">
                             Виж детайли →
                         </a>
@@ -80,3 +103,48 @@
         </div>
     </div>
 </section>
+
+<!-- Модален прозорец за снимки -->
+<div id="imageModal" class="image-modal">
+    <span class="image-modal-close">&times;</span>
+    <img class="image-modal-content" id="modalImage" src="" alt="Преглед на снимка" />
+</div>
+
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        const modal = document.getElementById("imageModal");
+        const modalImg = document.getElementById("modalImage");
+        const closeBtn = document.querySelector(".image-modal-close");
+        const imageLinks = document.querySelectorAll(".open-image-modal");
+
+        imageLinks.forEach(link => {
+            link.addEventListener("click", function (e) {
+                e.preventDefault();
+                const src = this.getAttribute("data-image-src");
+                if (src) {
+                    modal.style.display = "block";
+                    modalImg.src = src;
+                }
+            });
+        });
+
+        closeBtn.addEventListener("click", function () {
+            modal.style.display = "none";
+            modalImg.src = "";
+        });
+
+        modal.addEventListener("click", function (e) {
+            if (e.target === modal) {
+                modal.style.display = "none";
+                modalImg.src = "";
+            }
+        });
+
+        document.addEventListener("keydown", function (e) {
+            if (e.key === "Escape" && modal.style.display === "block") {
+                modal.style.display = "none";
+                modalImg.src = "";
+            }
+        });
+    });
+</script>
