@@ -24,3 +24,6 @@ obj/
 # OS files
 .DS_Store
 Thumbs.db
+
+# Качени файлове (снимки към сигнали)
+App_Data/
