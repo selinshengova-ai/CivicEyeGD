@@ -161,3 +161,243 @@
     .reports-filter-btn, .reports-reset-btn { width: 100%; }
     .report-card { padding: 18px; }
 }
+/* Модален прозорец за снимки */
+.image-modal {
+    display: none; /* Скрит по подразбиране */
+    position: fixed;
+    z-index: 10000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    overflow: auto;
+    background-color: rgba(0, 0, 0, 0.85); /* Тъмен фон */
+    backdrop-filter: blur(5px);
+}
+
+.image-modal-content {
+    margin: auto;
+    display: block;
+    max-width: 90%;
+    max-height: 90vh;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    border-radius: 8px;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+}
+
+.image-modal-close {
+    position: absolute;
+    top: 20px;
+    right: 40px;
+    color: #fff;
+    font-size: 40px;
+    font-weight: bold;
+    cursor: pointer;
+    z-index: 10001;
+    transition: color 0.2s;
+}
+
+.image-modal-close:hover,
+.image-modal-close:focus {
+    color: var(--dark-accent, #d7f36b);
+    text-decoration: none;
+    cursor: pointer;
+}
+/* =========================================
+   АДМИН ПАНЕЛ — СТАТИСТИКИ
+   ========================================= */
+
+.admin-stats {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+    margin-bottom: 28px;
+    margin-top: 20px;
+}
+
+.admin-stat-card {
+    background: #fff;
+    padding: 18px 20px;
+    border-radius: 14px;
+    border: 1px solid var(--civic-border, #e0e8e1);
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    box-shadow: 0 4px 14px rgba(18, 59, 50, 0.03);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.admin-stat-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(18, 59, 50, 0.06);
+}
+
+.admin-stat-card span {
+    font-size: 12px;
+    font-weight: 650;
+    color: var(--civic-muted, #66766d);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.admin-stat-card strong {
+    font-size: 32px;
+    font-weight: 800;
+    color: var(--civic-green-dark, #12392e);
+    line-height: 1.1;
+}
+
+/* Тъмна тема */
+html[data-theme="dark"] .admin-stat-card {
+    background: var(--dark-surface);
+    border-color: var(--dark-border);
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.3);
+}
+
+html[data-theme="dark"] .admin-stat-card:hover {
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+}
+
+html[data-theme="dark"] .admin-stat-card span {
+    color: var(--dark-text-muted);
+}
+
+html[data-theme="dark"] .admin-stat-card strong {
+    color: var(--dark-accent);
+}
+
+/* Адаптивност за мобилни */
+@media (max-width: 900px) {
+    .admin-stats {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (max-width: 500px) {
+    .admin-stats {
+        grid-template-columns: 1fr;
+    }
+    .admin-stat-card strong {
+        font-size: 26px;
+    }
+}
+/* =========================================
+   АДМИН ПАНЕЛ
+   ========================================= */
+
+/* Статистики */
+.admin-stats {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 15px;
+    margin-bottom: 25px;
+}
+.admin-stat-card {
+    background: #fff;
+    padding: 15px;
+    border-radius: 12px;
+    border: 1px solid var(--civic-border);
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    text-decoration: none;
+    color: inherit;
+    cursor: pointer;
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+.admin-stat-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(18, 59, 50, 0.06);
+}
+.admin-stat-card span {
+    font-size: 13px;
+    color: var(--civic-muted);
+}
+.admin-stat-card strong {
+    font-size: 28px;
+    color: var(--civic-green-dark);
+}
+html[data-theme="dark"] .admin-stat-card {
+    background: var(--dark-surface);
+    border-color: var(--dark-border);
+}
+html[data-theme="dark"] .admin-stat-card strong {
+    color: var(--dark-accent);
+}
+
+/* Админ карти */
+.admin-report-card {
+    display: flex;
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 20px;
+}
+.admin-report-info { flex: 1; }
+.admin-report-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    min-width: 180px;
+}
+
+/* Модален прозорец */
+.image-modal {
+    display: none;
+    position: fixed;
+    z-index: 10000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    overflow: auto;
+    background-color: rgba(0, 0, 0, 0.85);
+    backdrop-filter: blur(5px);
+}
+.image-modal-content {
+    margin: auto;
+    display: block;
+    max-width: 90%;
+    max-height: 90vh;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    border-radius: 8px;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+}
+.image-modal-close {
+    position: absolute;
+    top: 20px;
+    right: 40px;
+    color: #fff;
+    font-size: 40px;
+    font-weight: bold;
+    cursor: pointer;
+    z-index: 10001;
+    transition: color 0.2s;
+}
+.image-modal-close:hover {
+    color: var(--civic-lime, #d7f36b);
+}
+
+/* Мобилна адаптивност */
+@media (max-width: 768px) {
+    .admin-report-card {
+        flex-direction: column;
+    }
+    .admin-report-actions {
+        width: 100%;
+    }
+    .admin-stats {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+@media (max-width: 500px) {
+    .admin-stats {
+        grid-template-columns: 1fr;
+    }
+}
