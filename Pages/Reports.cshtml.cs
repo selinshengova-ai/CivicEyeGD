@@ -1,4 +1,3 @@
-
 using CivicEyeGD.Data;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.EntityFrameworkCore;
@@ -51,7 +50,10 @@ public class ReportsModel : PageModel
             .OrderBy(s => s)
             .ToListAsync();
 
-        var query = _context.Reports.AsNoTracking();
+        // ВАЖНО: Include за Confirmations, за да покажем броя им в списъка
+        var query = _context.Reports
+            .Include(r => r.Confirmations)
+            .AsNoTracking();
 
         if (!string.IsNullOrWhiteSpace(Search))
         {

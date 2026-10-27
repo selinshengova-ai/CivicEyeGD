@@ -1,4 +1,3 @@
-
 @page
 @model CivicEyeGD.Pages.ReportsModel
 
@@ -113,7 +112,14 @@
                             </span>
                         </div>
 
-                        <h3>@report.Title</h3>
+                        <h3>
+                            <a asp-page="/Details"
+                               asp-route-id="@report.Id"
+                               class="report-title-link">
+                                @report.Title
+                            </a>
+                        </h3>
+
                         <p class="report-description">
                             @report.Description
                         </p>
@@ -126,6 +132,12 @@
                                 <strong>Дата:</strong>
                                 @report.CreatedAt.ToLocalTime().ToString("dd.MM.yyyy")
                             </span>
+                            @if (report.Confirmations.Any())
+                            {
+                                <span>
+                                    <strong>Потвърден от:</strong> @report.Confirmations.Count граждани
+                                </span>
+                            }
                         </div>
 
                         <div class="report-card-bottom">
@@ -133,16 +145,11 @@
                                 @report.Status
                             </span>
 
-                            @if (report.Latitude.HasValue &&
-                                 report.Longitude.HasValue)
-                            {
-                                <a class="report-map-link"
-                                   href="https://www.openstreetmap.org/?mlat=@report.Latitude.Value.ToString(System.Globalization.CultureInfo.InvariantCulture)&mlon=@report.Longitude.Value.ToString(System.Globalization.CultureInfo.InvariantCulture)#map=18/@report.Latitude.Value.ToString(System.Globalization.CultureInfo.InvariantCulture)/@report.Longitude.Value.ToString(System.Globalization.CultureInfo.InvariantCulture)"
-                                   target="_blank"
-                                   rel="noopener noreferrer">
-                                    Виж местоположението ↗
-                                </a>
-                            }
+                            <a class="report-details-link"
+                               asp-page="/Details"
+                               asp-route-id="@report.Id">
+                                Виж детайли →
+                            </a>
                         </div>
                     </article>
                 }

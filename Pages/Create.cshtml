@@ -1,4 +1,3 @@
-
 @page
 @model CivicEyeGD.Pages.CreateModel
 
@@ -6,8 +5,9 @@
     ViewData["Title"] = "Подай сигнал";
 }
 
-<link rel="stylesheet"
-      href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css" />
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css" />
+<!-- Google Maps API (замени ТВОЯТ_API_КЛЮЧ с истинския) -->
+<script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyAU0bnkSUJZ5h1loC25nXlAg9nzJKs-zW8"></script>
 
 <section class="civic-form-page">
     <div class="civic-form-card">
@@ -18,20 +18,15 @@
         <div class="section-kicker">CIVICEYE GD · ГОЦЕ ДЕЛЧЕВ</div>
         <h1>Подай сигнал</h1>
 
-        <form method="post">
-            <div asp-validation-summary="ModelOnly"
-                 class="text-danger validation-summary"></div>
+        <form method="post" enctype="multipart/form-data">
+            <div asp-validation-summary="ModelOnly" class="text-danger validation-summary"></div>
 
             <div class="form-field">
                 <label asp-for="Report.Title" class="form-label">
                     Заглавие <span class="required-mark">*</span>
                 </label>
-                <input asp-for="Report.Title"
-                       class="form-control"
-                       maxlength="100"
-                       placeholder="Заглавие на сигнала" />
-                <span asp-validation-for="Report.Title"
-                      class="text-danger"></span>
+                <input asp-for="Report.Title" class="form-control" maxlength="100" placeholder="Заглавие на сигнала" />
+                <span asp-validation-for="Report.Title" class="text-danger"></span>
             </div>
 
             <div class="form-field">
@@ -47,767 +42,392 @@
                     <option value="Пътна настилка">Пътна настилка</option>
                     <option value="Друго">Друго</option>
                 </select>
-                <span asp-validation-for="Report.Category"
-                      class="text-danger"></span>
+                <span asp-validation-for="Report.Category" class="text-danger"></span>
             </div>
 
             <div class="form-field">
                 <label asp-for="Report.Address" class="form-label">
-                    Адрес или местоположение
-                    <span class="required-mark">*</span>
+                    Адрес или местоположение <span class="required-mark">*</span>
                 </label>
-                <input asp-for="Report.Address"
-                       class="form-control"
-                       maxlength="200"
-                       placeholder="Улица, номер или ориентир" />
-                <span asp-validation-for="Report.Address"
-                      class="text-danger"></span>
+                <input asp-for="Report.Address" class="form-control" maxlength="200" placeholder="Улица, номер или ориентир" />
+                <span asp-validation-for="Report.Address" class="text-danger"></span>
             </div>
 
             <div class="form-field location-field">
                 <label class="form-label">
-                    Местоположение
-                    <span class="required-mark">*</span>
+                    Местоположение <span class="required-mark">*</span>
                 </label>
 
                 <div class="map-search">
-                    <input id="map-address-search"
-                           type="search"
-                           class="form-control"
-                           maxlength="200"
-                           placeholder="Търси адрес в Гоце Делчев"
-                           aria-label="Търсене на адрес" />
-
-                    <button id="map-search-button"
-                            type="button"
-                            class="btn-civic-secondary">
-                        Търси
-                    </button>
+                    <input id="map-address-search" type="search" class="form-control" maxlength="200" placeholder="Търси адрес в Гоце Делчев" aria-label="Търсене на адрес" />
+                    <button id="map-search-button" type="button" class="btn-civic-secondary">Търси</button>
                 </div>
 
-                <p id="map-search-message"
-                   class="status-message"
-                   aria-live="polite"></p>
-
-                <div class="map-actions">
-                    <button id="zoom-in-button"
-                            type="button"
-                            class="map-action-button"
-                            aria-label="Приближи картата">+</button>
-                    <button id="zoom-out-button"
-                            type="button"
-                            class="map-action-button"
-                            aria-label="Отдалечи картата">−</button>
-                    <button id="reset-map-button"
-                            type="button"
-                            class="map-action-button">
-                        Гоце Делчев
-                    </button>
-                </div>
-
-                <div class="map-streetview-grid">
-                    <div class="map-panel">
-                        <div class="panel-heading">
-                            <span class="panel-icon" aria-hidden="true">⌖</span>
-                            <h2>Карта</h2>
-                        </div>
-
-                        <div id="report-location-map"
-                             role="application"
-                             aria-label="Карта за избор на местоположение"></div>
-
-                        <p id="selected-location-message"
-                           class="status-message"
-                           aria-live="polite"></p>
-                    </div>
-
-                    <div class="street-view-panel">
-                        <div class="panel-heading">
-                            <span class="panel-icon" aria-hidden="true">360°</span>
-                            <h2>Уличен изглед</h2>
-                        </div>
-
-                        <div id="street-view-container">
-                            <div id="street-view-placeholder">
-                                <span class="street-view-symbol"
-                                      aria-hidden="true">360°</span>
-                                <p>Уличният изглед не е наличен в момента.</p>
-                                <a id="open-google-maps"
-                                   href="https://www.google.com/maps"
-                                   target="_blank"
-                                   rel="noopener noreferrer">
-                                    Отвори Google Карти ↗
-                                </a>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+                <p id="map-search-message" class="status-message" aria-live="polite"></p>
 
                 <input asp-for="Report.Latitude" type="hidden" />
                 <input asp-for="Report.Longitude" type="hidden" />
             </div>
 
+            <!-- Карти и Street View -->
+            <div class="map-streetview-grid">
+                <div class="map-panel">
+                    <div class="panel-heading">
+                        <span class="panel-icon" aria-hidden="true">⌖</span>
+                        <h2>Карта</h2>
+                    </div>
+                    <div id="report-location-map" role="application" aria-label="Карта за избор на местоположение"></div>
+                    <p id="selected-location-message" class="status-message" aria-live="polite"></p>
+                </div>
+
+                <div class="street-view-panel">
+                    <div class="panel-heading">
+                        <span class="panel-icon" aria-hidden="true">360°</span>
+                        <h2>Уличен изглед</h2>
+                    </div>
+                    <!-- Тук Google Street View ще се зареди -->
+                    <div id="street-view-container"></div>
+                </div>
+            </div>
+
             <div class="form-field">
                 <label asp-for="Report.Description" class="form-label">
-                    Описание на проблема
-                    <span class="required-mark">*</span>
+                    Описание на проблема <span class="required-mark">*</span>
                 </label>
+                <textarea asp-for="Report.Description" class="form-control description-input" rows="5" maxlength="2000" placeholder="Описание на проблема"></textarea>
+                <span asp-validation-for="Report.Description" class="text-danger"></span>
+            </div>
 
-                <textarea asp-for="Report.Description"
-                          class="form-control description-input"
-                          rows="5"
-                          maxlength="2000"
-                          placeholder="Описание на проблема"></textarea>
+            <div class="form-field">
+                <label class="form-label">
+                    Оценка за сериозност (1-5) <span class="required-mark">*</span>
+                </label>
+                <div class="severity-rating-group">
+                    @for (int i = 1; i <= 5; i++)
+                    {
+                        <label class="severity-radio">
+                            <input type="radio" asp-for="Report.Severity" value="@i" required />
+                            <span>@i</span>
+                        </label>
+                    }
+                </div>
+                <span asp-validation-for="Report.Severity" class="text-danger"></span>
+            </div>
 
-                <span asp-validation-for="Report.Description"
-                      class="text-danger"></span>
+            <div class="form-field photo-field">
+                <label class="form-label" for="photo-input">
+                    Снимки <span class="photo-hint">(незадължително · до 3 снимки · макс. 5 MB)</span>
+                </label>
+                <div class="photo-picker">
+                    <input id="photo-input" name="Photos" type="file" class="photo-input" accept="image/*" capture="environment" multiple />
+                    <label for="photo-input" class="photo-picker-button">
+                        <span aria-hidden="true">＋</span> Избери или снимай
+                    </label>
+                </div>
+                <p id="photo-message" class="photo-message" role="status" aria-live="polite"></p>
+                <ul id="photo-preview-list" class="photo-preview-list"></ul>
+                <span asp-validation-for="Photos" class="text-danger"></span>
             </div>
 
             <div class="form-actions">
                 <button type="submit" class="btn-civic-primary">
                     Изпрати сигнала <span aria-hidden="true">→</span>
                 </button>
-                <a asp-page="/Index" class="btn-civic-secondary cancel-button">
-                    Отказ
-                </a>
+                <a asp-page="/Index" class="btn-civic-secondary cancel-button">Отказ</a>
             </div>
 
-            <p class="required-note">
-                <span class="required-mark">*</span> Задължителни полета
-            </p>
+            <p class="required-note"><span class="required-mark">*</span> Задължителни полета</p>
         </form>
     </div>
 </section>
 
-<style>
-    .civic-form-page {
-        min-height: 100vh;
-        padding: 40px 20px 64px;
-        background: #f4f7f4;
-        color: #263a30;
-    }
-
-    .civic-form-card {
-        width: 100%;
-        max-width: 1080px;
-        margin: 0 auto;
-        padding: clamp(22px, 4vw, 44px);
-        background: #fff;
-        border: 1px solid #e0e9e2;
-        border-radius: 20px;
-        box-shadow: 0 12px 36px rgba(27, 77, 62, .07);
-    }
-
-    .back-link {
-        display: inline-flex;
-        align-items: center;
-        gap: 8px;
-        margin-bottom: 28px;
-        color: #527565;
-        font-size: 13px;
-        text-decoration: none;
-    }
-
-    .back-link:hover {
-        color: #1b4d3e;
-    }
-
-    .section-kicker {
-        margin-bottom: 10px;
-        color: #527565;
-        font-size: 11px;
-        font-weight: 750;
-        letter-spacing: 1.8px;
-    }
-
-    .civic-form-card h1 {
-        margin: 0 0 32px;
-        color: #1b4d3e;
-        font-size: clamp(30px, 4vw, 42px);
-        font-weight: 750;
-        letter-spacing: -1px;
-    }
-
-    .form-field {
-        min-width: 0;
-        margin-bottom: 23px;
-    }
-
-    .form-label {
-        display: block;
-        margin-bottom: 8px;
-        color: #243b31;
-        font-size: 13px;
-        font-weight: 650;
-    }
-
-    .required-mark {
-        color: #b54736;
-        font-weight: 700;
-    }
-
-    .civic-form-card .form-control,
-    .civic-form-card .form-select {
-        width: 100%;
-        min-height: 46px;
-        padding: 11px 13px;
-        border: 1px solid #d9e4dc;
-        border-radius: 10px;
-        background-color: #fff;
-        color: #263a30;
-        font-size: 14px;
-        box-shadow: none;
-        box-sizing: border-box;
-        transition: border-color .18s ease, box-shadow .18s ease;
-    }
-
-    .civic-form-card .form-control:focus,
-    .civic-form-card .form-select:focus {
-        border-color: #43836b;
-        outline: none;
-        box-shadow: 0 0 0 3px rgba(67, 131, 107, .13);
-    }
-
-    .civic-form-card textarea.form-control {
-        min-height: 130px;
-        resize: vertical;
-    }
-
-    .civic-form-card .text-danger {
-        display: block;
-        margin-top: 5px;
-        font-size: 12px;
-    }
-
-    .validation-summary:empty {
-        display: none;
-    }
-
-    .map-search {
-        display: flex;
-        gap: 9px;
-    }
-
-    .map-search input {
-        flex: 1;
-        min-width: 0;
-    }
-
-    .map-search button {
-        flex-shrink: 0;
-    }
-
-    .status-message {
-        min-height: 0;
-        margin: 7px 0 0;
-        color: #718078;
-        font-size: 12px;
-        line-height: 1.5;
-        overflow-wrap: anywhere;
-    }
-
-    .status-message:empty {
-        display: none;
-    }
-
-    .map-actions {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 8px;
-        margin: 13px 0;
-    }
-
-    .map-action-button {
-        min-width: 38px;
-        min-height: 36px;
-        padding: 7px 12px;
-        border: 1px solid #d9e4dc;
-        border-radius: 8px;
-        background: #fff;
-        color: #1b4d3e;
-        font-size: 13px;
-        cursor: pointer;
-    }
-
-    .map-action-button:hover {
-        background: #e8f2ec;
-    }
-
-    .map-streetview-grid {
-        display: grid;
-        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-        gap: 20px;
-        align-items: start;
-        margin-top: 8px;
-    }
-
-    .map-panel,
-    .street-view-panel {
-        min-width: 0;
-        padding: 14px;
-        border: 1px solid #e0e9e2;
-        border-radius: 14px;
-        background: #fbfcfb;
-    }
-
-    .panel-heading {
-        display: flex;
-        align-items: center;
-        gap: 10px;
-        margin-bottom: 12px;
-    }
-
-    .panel-heading h2 {
-        margin: 0;
-        color: #1b4d3e;
-        font-size: 14px;
-        font-weight: 700;
-    }
-
-    .panel-icon {
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        min-width: 32px;
-        height: 32px;
-        padding: 0 5px;
-        border-radius: 9px;
-        background: #e8f2ec;
-        color: #1b4d3e;
-        font-size: 12px;
-        font-weight: 750;
-    }
-
-    #report-location-map,
-    #street-view-container {
-        position: relative;
-        width: 100%;
-        height: 390px;
-        overflow: hidden;
-        border: 1px solid #d9e4dc;
-        border-radius: 10px;
-        background: #e8f2ec;
-        box-sizing: border-box;
-    }
-
-    #report-location-map {
-        z-index: 1;
-    }
-
-    #street-view-placeholder {
-        position: absolute;
-        inset: 0;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        gap: 12px;
-        padding: 20px;
-        text-align: center;
-        background:
-            radial-gradient(ellipse at top, #f7faf7 0%, #e8f2ec 75%);
-        color: #53675d;
-    }
-
-    .street-view-symbol {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        width: 76px;
-        height: 76px;
-        border: 1px solid #c7dbce;
-        border-radius: 50%;
-        background: #fff;
-        color: #1b4d3e;
-        font-size: 21px;
-        font-weight: 750;
-        box-shadow: 0 6px 20px rgba(27, 77, 62, .08);
-    }
-
-    #street-view-placeholder p {
-        max-width: 230px;
-        margin: 0;
-        font-size: 13px;
-        line-height: 1.6;
-    }
-
-    #open-google-maps {
-        color: #1b4d3e;
-        font-size: 12px;
-        font-weight: 650;
-        text-decoration: none;
-    }
-
-    #open-google-maps:hover {
-        text-decoration: underline;
-    }
-
-    .form-actions {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 12px;
-        margin-top: 30px;
-    }
-
-    .civic-form-card .btn-civic-primary,
-    .civic-form-card .btn-civic-secondary {
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        gap: 9px;
-        min-height: 46px;
-        padding: 12px 20px;
-        border: 1px solid #1b4d3e;
-        border-radius: 10px;
-        box-sizing: border-box;
-        font-size: 13px;
-        font-weight: 650;
-        text-decoration: none;
-        cursor: pointer;
-        transition: background .18s ease, transform .18s ease;
-    }
-
-    .civic-form-card .btn-civic-primary {
-        background: #1b4d3e;
-        color: #fff;
-    }
-
-    .civic-form-card .btn-civic-primary:hover {
-        background: #143b30;
-        transform: translateY(-1px);
-    }
-
-    .civic-form-card .btn-civic-secondary {
-        border-color: #d9e4dc;
-        background: #fff;
-        color: #1b4d3e;
-    }
-
-    .civic-form-card .btn-civic-secondary:hover {
-        background: #e8f2ec;
-    }
-
-    .required-note {
-        margin: 18px 0 0;
-        color: #718078;
-        font-size: 12px;
-    }
-
-    @@media (max-width: 800px) {
-        .civic-form-page {
-            padding: 20px 12px 36px;
-        }
-
-        .map-streetview-grid {
-            grid-template-columns: 1fr;
-        }
-
-        #report-location-map,
-        #street-view-container {
-            height: 340px;
-        }
-    }
-
-    @@media (max-width: 600px) {
-        .map-search {
-            flex-direction: column;
-        }
-
-        .map-search button {
-            width: 100%;
-        }
-
-        .form-actions {
-            flex-direction: column;
-        }
-
-        .form-actions > * {
-            width: 100%;
-        }
-
-        .map-panel,
-        .street-view-panel {
-            padding: 10px;
-        }
-    }
-
-    @@media (prefers-reduced-motion: reduce) {
-        .civic-form-card *,
-        .civic-form-card *::before,
-        .civic-form-card *::after {
-            transition: none !important;
-        }
-    }
-</style>
-
 <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"></script>
 
 <script>
-    (function () {
-        function initializeReportMap() {
-            const mapElement = document.getElementById("report-location-map");
+    document.addEventListener("DOMContentLoaded", function () {
+        // --- 1. Leaflet Карта ---
+        const mapElement = document.getElementById("report-location-map");
+        if (!mapElement) return;
 
-            if (!mapElement || mapElement.dataset.initialized === "true") {
-                return;
-            }
+        const message = document.getElementById("selected-location-message");
+        const searchInput = document.getElementById("map-address-search");
+        const searchButton = document.getElementById("map-search-button");
+        const searchMessage = document.getElementById("map-search-message");
+        const latitudeInput = document.getElementById("Report_Latitude");
+        const longitudeInput = document.getElementById("Report_Longitude");
 
-            const message = document.getElementById("selected-location-message");
-            const searchInput = document.getElementById("map-address-search");
-            const searchButton = document.getElementById("map-search-button");
-            const searchMessage = document.getElementById("map-search-message");
-            const latitudeInput = document.getElementById("Report_Latitude");
-            const longitudeInput = document.getElementById("Report_Longitude");
+        const initialPosition = [41.5667, 23.7333];
 
-            const initialPosition = [41.5667, 23.7333];
+        const map = L.map(mapElement).setView(initialPosition, 16);
+        window.reportMap = map;
 
-            if (typeof L === "undefined") {
-                message.textContent = "Картата не се зареди. Провери интернет връзката.";
-                return;
-            }
+        L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
+            maxZoom: 22, maxNativeZoom: 19,
+            attribution: '&copy; OpenStreetMap'
+        }).addTo(map);
 
-            mapElement.dataset.initialized = "true";
+        let selectedMarker = null;
 
-            const map = L.map(mapElement, {
-                zoomControl: true,
-                maxZoom: 22
-            }).setView(initialPosition, 16);
+        // --- 2. Google Street View ---
+        // Уверяваме се, че контейнерът съществува
+        const streetViewContainer = document.getElementById("street-view-container");
+        let panorama = null;
 
-            const streetLayer = L.tileLayer(
-                "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
+        // Проверяваме дали Google Maps API е заредено (ако ключът е валиден)
+        if (typeof google !== 'undefined' && streetViewContainer) {
+            panorama = new google.maps.StreetViewPanorama(
+                streetViewContainer,
                 {
-                    maxZoom: 22,
-                    maxNativeZoom: 19,
-                    attribution:
-                        '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a>'
+                    position: { lat: initialPosition[0], lng: initialPosition[1] },
+                    pov: { heading: 0, pitch: 0 },
+                    zoom: 1,
+                    visible: true
                 }
             );
+        }
 
-            const satelliteLayer = L.tileLayer(
-                "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
-                {
-                    maxZoom: 22,
-                    maxNativeZoom: 19,
-                    attribution:
-                        'Imagery &copy; <a href="https://www.esri.com/" target="_blank" rel="noopener">Esri</a>'
-                }
-            );
+        // --- 3. Функция за обновяване на локацията ---
+        function updateLocation(lat, lng) {
+            // Записваме в скритите полета
+            latitudeInput.value = lat.toFixed(7);
+            longitudeInput.value = lng.toFixed(7);
 
-            streetLayer.addTo(map);
-
-            L.control.layers(
-                {
-                    "Улична карта": streetLayer,
-                    "Сателитна карта": satelliteLayer
-                },
-                null,
-                {
-                    collapsed: false,
-                    position: "topright"
-                }
-            ).addTo(map);
-
-            let selectedMarker = null;
-            let searchMarker = null;
-
-            function saveCoordinates(latitude, longitude) {
-                latitudeInput.value = latitude.toFixed(7);
-                longitudeInput.value = longitude.toFixed(7);
-
-                message.textContent =
-                    "Избрано местоположение: " +
-                    latitude.toFixed(6) + ", " +
-                    longitude.toFixed(6);
+            if (message) {
+                message.textContent = `Избрано местоположение: ${lat.toFixed(6)}, ${lng.toFixed(6)}`;
             }
 
-            function selectLocation(latitude, longitude, zoom) {
-                const position = [latitude, longitude];
-
-                if (!selectedMarker) {
-                    selectedMarker = L.marker(position, {
-                        draggable: true,
-                        title: "Място на сигнала"
-                    }).addTo(map);
-
-                    selectedMarker.on("dragend", function (event) {
-                        const moved = event.target.getLatLng();
-                        saveCoordinates(moved.lat, moved.lng);
-                    });
-                } else {
-                    selectedMarker.setLatLng(position);
-                }
-
-                map.setView(position, zoom);
-                saveCoordinates(latitude, longitude);
+            // Местим Street View
+            if (panorama) {
+                panorama.setPosition({ lat: lat, lng: lng });
             }
+        }
 
-            // Възстановява координати, ако формата е върната от сървъра.
-            const previousLatitude = Number(latitudeInput.value);
-            const previousLongitude = Number(longitudeInput.value);
+        // --- 4. Клик на Leaflet картата ---
+        map.on("click", function (e) {
+            const lat = e.latlng.lat;
+            const lng = e.latlng.lng;
 
-            if (
-                latitudeInput.value !== "" &&
-                longitudeInput.value !== "" &&
-                Number.isFinite(previousLatitude) &&
-                Number.isFinite(previousLongitude) &&
-                Math.abs(previousLatitude) <= 90 &&
-                Math.abs(previousLongitude) <= 180
-            ) {
-                selectedMarker = L.marker(
-                    [previousLatitude, previousLongitude],
-                    {
-                        draggable: true,
-                        title: "Място на сигнала"
-                    }
-                ).addTo(map);
-
+            if (!selectedMarker) {
+                selectedMarker = L.marker([lat, lng], { draggable: true }).addTo(map);
                 selectedMarker.on("dragend", function (event) {
                     const moved = event.target.getLatLng();
-                    saveCoordinates(moved.lat, moved.lng);
+                    updateLocation(moved.lat, moved.lng);
                 });
-
-                map.setView([previousLatitude, previousLongitude], 19);
-                message.textContent =
-                    "Избрано местоположение: " +
-                    previousLatitude.toFixed(6) + ", " +
-                    previousLongitude.toFixed(6);
+            } else {
+                selectedMarker.setLatLng([lat, lng]);
             }
 
-            map.on("click", function (event) {
-                selectLocation(
-                    event.latlng.lat,
-                    event.latlng.lng,
-                    map.getZoom()
-                );
+            updateLocation(lat, lng);
+        });
+
+        // Възстановяване на предишни координати (при връщане на формата)
+        const prevLat = Number(latitudeInput.value);
+        const prevLng = Number(longitudeInput.value);
+        if (latitudeInput.value && longitudeInput.value && Number.isFinite(prevLat) && Number.isFinite(prevLng)) {
+            selectedMarker = L.marker([prevLat, prevLng], { draggable: true }).addTo(map);
+            selectedMarker.on("dragend", function (event) {
+                const moved = event.target.getLatLng();
+                updateLocation(moved.lat, moved.lng);
             });
+            updateLocation(prevLat, prevLng);
+        }
 
-            async function searchAddress() {
-                const query = searchInput.value.trim();
+        // --- 5. Търсене на адрес (Nominatim) ---
+        async function searchAddress() {
+            const query = searchInput.value.trim();
+            if (!query) {
+                searchMessage.textContent = "Въведи адрес или улица.";
+                searchInput.focus();
+                return;
+            }
 
-                if (!query) {
-                    searchMessage.textContent = "Въведи адрес или улица.";
-                    searchInput.focus();
+            searchButton.disabled = true;
+            searchButton.textContent = "Търсене...";
+            searchMessage.textContent = "";
+
+            try {
+                const url = new URL("https://nominatim.openstreetmap.org/search");
+                url.searchParams.set("q", query + ", Гоце Делчев, България");
+                url.searchParams.set("format", "jsonv2");
+                url.searchParams.set("limit", "1");
+                url.searchParams.set("countrycodes", "bg");
+                url.searchParams.set("viewbox", "23.65,41.62,23.82,41.50");
+                url.searchParams.set("bounded", "1");
+
+                const response = await fetch(url.toString(), { headers: { "Accept": "application/json" } });
+                if (!response.ok) throw new Error("Search failed");
+
+                const results = await response.json();
+                if (!results.length) {
+                    searchMessage.textContent = "Адресът не е намерен. Опитай с друго име на улица.";
                     return;
                 }
 
-                searchButton.disabled = true;
-                searchButton.textContent = "Търсене...";
-                searchMessage.textContent = "";
+                const result = results[0];
+                const lat = Number(result.lat);
+                const lng = Number(result.lon);
 
-                try {
-                    const url = new URL(
-                        "https://nominatim.openstreetmap.org/search"
-                    );
+                if (!Number.isFinite(lat) || !Number.isFinite(lng)) throw new Error("Invalid coordinates");
 
-                    url.searchParams.set(
-                        "q",
-                        query + ", Гоце Делчев, България"
-                    );
-                    url.searchParams.set("format", "jsonv2");
-                    url.searchParams.set("limit", "1");
-                    url.searchParams.set("countrycodes", "bg");
-                    url.searchParams.set(
-                        "viewbox",
-                        "23.65,41.62,23.82,41.50"
-                    );
-                    url.searchParams.set("bounded", "1");
-
-                    const response = await fetch(url.toString(), {
-                        headers: { "Accept": "application/json" }
+                map.setView([lat, lng], 19);
+                // Извикваме updateLocation, за да преместим и маркера, и Street View
+                if (!selectedMarker) {
+                    selectedMarker = L.marker([lat, lng], { draggable: true }).addTo(map);
+                    selectedMarker.on("dragend", function (event) {
+                        const moved = event.target.getLatLng();
+                        updateLocation(moved.lat, moved.lng);
                     });
-
-                    if (!response.ok) {
-                        throw new Error("Search failed");
-                    }
-
-                    const results = await response.json();
-
-                    if (!results.length) {
-                        searchMessage.textContent =
-                            "Адресът не е намерен. Опитай с друго име на улица.";
-                        return;
-                    }
-
-                    const result = results[0];
-                    const latitude = Number(result.lat);
-                    const longitude = Number(result.lon);
-
-                    if (!Number.isFinite(latitude) ||
-                        !Number.isFinite(longitude)) {
-                        throw new Error("Invalid coordinates");
-                    }
-
-                    if (searchMarker) {
-                        map.removeLayer(searchMarker);
-                    }
-
-                    searchMarker = L.circleMarker(
-                        [latitude, longitude],
-                        {
-                            radius: 8,
-                            color: "#1b4d3e",
-                            weight: 3,
-                            fillColor: "#8db8a0",
-                            fillOpacity: 0.9
-                        }
-                    ).addTo(map);
-
-                    searchMarker.bindPopup("Намерен адрес").openPopup();
-                    map.setView([latitude, longitude], 19);
-
-                    searchMessage.textContent =
-                        "Намерено: " + result.display_name +
-                        ". Избери точката на самия проблем върху картата.";
-
-                    // Търсенето не задава автоматично координатите на сигнала.
-                } catch (error) {
-                    searchMessage.textContent =
-                        "Търсенето не успя. Провери връзката и опитай отново.";
-                } finally {
-                    searchButton.disabled = false;
-                    searchButton.textContent = "Търси";
+                } else {
+                    selectedMarker.setLatLng([lat, lng]);
                 }
+                updateLocation(lat, lng);
+
+                searchMessage.textContent = "Намерено: " + result.display_name + ". Избери точката на самия проблем върху картата.";
+            } catch (error) {
+                searchMessage.textContent = "Търсенето не успя. Провери връзката и опитай отново.";
+            } finally {
+                searchButton.disabled = false;
+                searchButton.textContent = "Търси";
+            }
+        }
+
+        searchButton.addEventListener("click", searchAddress);
+        searchInput.addEventListener("keydown", function (event) {
+            if (event.key === "Enter") {
+                event.preventDefault();
+                searchAddress();
+            }
+        });
+
+        setTimeout(() => map.invalidateSize(), 200);
+        window.addEventListener("resize", () => map.invalidateSize());
+    });
+
+    // --- 6. Визуализация на снимки ---
+    (function () {
+        const input = document.getElementById("photo-input");
+        const list = document.getElementById("photo-preview-list");
+        const message = document.getElementById("photo-message");
+
+        if (!input || !list || !message) return;
+
+        const MAX_FILES = 3;
+        const MAX_SIZE = 5 * 1024 * 1024;
+        const ALLOWED_TYPES = ["image/jpeg", "image/jpg", "image/png", "image/webp"];
+        const ALLOWED_EXTENSIONS = [".jpg", ".jpeg", ".png", ".webp"];
+
+        function isAllowedFile(file) {
+            const type = (file.type || "").toLowerCase();
+            if (ALLOWED_TYPES.includes(type)) return true;
+            const name = (file.name || "").toLowerCase();
+            return ALLOWED_EXTENSIONS.some(ext => name.endsWith(ext));
+        }
+
+        let files = [];
+        let objectUrls = [];
+
+        function showMessage(text, isError) {
+            message.textContent = text || "";
+            message.classList.toggle("photo-error", Boolean(isError) && text !== "");
+        }
+
+        function syncInput() {
+            const transfer = new DataTransfer();
+            files.forEach(file => transfer.items.add(file));
+            input.files = transfer.files;
+        }
+
+        function releaseUrls() {
+            objectUrls.forEach(url => URL.revokeObjectURL(url));
+            objectUrls = [];
+        }
+
+        function render() {
+            releaseUrls();
+            list.innerHTML = "";
+
+            files.forEach(function (file, index) {
+                const url = URL.createObjectURL(file);
+                objectUrls.push(url);
+
+                const item = document.createElement("li");
+                item.className = "photo-preview-item";
+
+                const image = document.createElement("img");
+                image.src = url;
+                image.alt = "Преглед на " + file.name;
+
+                const meta = document.createElement("div");
+                meta.className = "photo-preview-meta";
+
+                const name = document.createElement("span");
+                name.className = "photo-preview-name";
+                name.textContent = file.name;
+
+                const remove = document.createElement("button");
+                remove.type = "button";
+                remove.className = "photo-remove-button";
+                remove.textContent = "Премахни";
+                remove.setAttribute("aria-label", "Премахни " + file.name);
+
+                remove.addEventListener("click", function () {
+                    files.splice(index, 1);
+                    syncInput();
+                    render();
+                    updateMessage();
+                });
+
+                meta.appendChild(name);
+                meta.appendChild(remove);
+                item.appendChild(image);
+                item.appendChild(meta);
+                list.appendChild(item);
+            });
+        }
+
+        function updateMessage() {
+            if (files.length === 0) {
+                showMessage("", false);
+                return;
+            }
+            showMessage("Избрани снимки: " + files.length + " / " + MAX_FILES, false);
+        }
+
+        input.addEventListener("change", function () {
+            const incoming = Array.from(input.files);
+            const errors = [];
+            const valid = [];
+
+            incoming.forEach(function (file) {
+                if (!isAllowedFile(file)) {
+                    errors.push("„" + file.name + "“ не е сред поддържаните формати (JPG, PNG, WEBP).");
+                    return;
+                }
+                if (file.size > MAX_SIZE) {
+                    errors.push("„" + file.name + "“ е по-голям от 5 MB.");
+                    return;
+                }
+                valid.push(file);
+            });
+
+            files.forEach(function (existing) {
+                const duplicate = valid.some(file => file.name === existing.name && file.size === existing.size && file.lastModified === existing.lastModified);
+                if (!duplicate) valid.push(existing);
+            });
+
+            if (valid.length > MAX_FILES) {
+                errors.push("Може да прикачиш най-много " + MAX_FILES + " снимки.");
             }
 
-            searchButton.addEventListener("click", searchAddress);
+            files = valid.slice(0, MAX_FILES);
+            syncInput();
+            render();
 
-            searchInput.addEventListener("keydown", function (event) {
-                if (event.key === "Enter") {
-                    event.preventDefault();
-                    searchAddress();
-                }
-            });
-
-            document.getElementById("zoom-in-button")
-                .addEventListener("click", function () {
-                    map.zoomIn();
-                });
-
-            document.getElementById("zoom-out-button")
-                .addEventListener("click", function () {
-                    map.zoomOut();
-                });
-
-            document.getElementById("reset-map-button")
-                .addEventListener("click", function () {
-                    map.setView(initialPosition, 16);
-                });
-
-            setTimeout(function () {
-                map.invalidateSize();
-            }, 200);
-
-            window.addEventListener("resize", function () {
-                map.invalidateSize();
-            });
-        }
-
-        if (document.readyState === "loading") {
-            document.addEventListener(
-                "DOMContentLoaded",
-                initializeReportMap
-            );
-        } else {
-            initializeReportMap();
-        }
+            if (errors.length > 0) {
+                showMessage(errors.join(" "), true);
+            } else {
+                updateMessage();
+            }
+        });
     })();
 </script>
