@@ -1,10 +1,14 @@
 
 using CivicEyeGD.Data;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.EntityFrameworkCore;
 
 namespace CivicEyeGD.Pages;
 
+// Витрината на платформата се гледа и без акаунт: журито и гражданинът
+// трябва да видят сигнала, преди да решат дали да регистрират.
+[AllowAnonymous]
 public class IndexModel : PageModel
 {
     private readonly ApplicationDbContext _context;
@@ -31,10 +35,13 @@ public class IndexModel : PageModel
 
         // Брой решени сигнали
         ResolvedReports = await reports.CountAsync(
-            report => report.Status == "Решен");
+            report => report.Status == ReportStatuses.Resolved);
 
-        // Брой нерешени сигнали
-        OpenReports = TotalReports - ResolvedReports;
+        // Отворените са тези, които все още чакат действие: отхвърлените
+        // също са приключили и не бива да се броят като нерешени.
+        OpenReports = await reports.CountAsync(
+            report => report.Status != ReportStatuses.Resolved
+                && report.Status != ReportStatuses.Rejected);
 
         // Последните три сигнала
         Reports = await reports

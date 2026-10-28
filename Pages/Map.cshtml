@@ -54,6 +54,15 @@
                         Сигнали с местоположение:
                         <strong>@Model.ReportsCount</strong>
                     </p>
+
+                    @if (Model.UrgentCount > 0)
+                    {
+                        <p class="map-urgent-summary mb-0 mt-1">
+                            <span class="urgent-dot-static" aria-hidden="true"></span>
+                            <strong>@Model.UrgentCount</strong>
+                            от тях чакат спешно решение.
+                        </p>
+                    }
                 </div>
 
                 <span class="map-live-indicator">
@@ -62,9 +71,29 @@
                 </span>
             </div>
 
-            <div id="civicMap"
-                 role="application"
-                 aria-label="Интерактивна карта със сигнали">
+            <div class="map-panes-grid">
+                <div class="map-pane">
+                    <div class="panel-heading">
+                        <span class="panel-icon" aria-hidden="true">⌖</span>
+                        <h2>Картата на сигналите</h2>
+                    </div>
+
+                    <div id="civicMap"
+                         role="application"
+                         aria-label="Интерактивна карта със сигнали">
+                    </div>
+                </div>
+            </div>
+
+            <div class="map-legend" aria-label="Цвят на маркерите по сериозност">
+                <span><i class="legend-dot legend-dot-low"></i>сериозност 1–2</span>
+                <span><i class="legend-dot legend-dot-mid"></i>сериозност 3</span>
+                <span><i class="legend-dot legend-dot-high"></i>сериозност 4–5</span>
+                <span><i class="legend-dot legend-dot-none"></i>без оценки</span>
+                <span class="map-legend-note">
+                    Пулсиращият маркер е сигнал с оценка 4 или 5,
+                    който все още не е решен.
+                </span>
             </div>
 
             <div id="mapMessage"
@@ -146,6 +175,42 @@
             ).addTo(map);
 
             const markers = [];
+            let urgentMarkers = 0;
+
+            // Цветът на маркера идва от средната сериозност, а пулсацията
+            // показва, че сигналът още не е приключен.
+            const PIN_COLORS = {
+                none: "#6B7280",
+                low: "#2E7D5B",
+                mid: "#D9A406",
+                high: "#C2413B"
+            };
+
+            function severityBand(severity) {
+                if (!(severity >= 1)) return "none";
+                if (severity >= 4) return "high";
+                if (severity >= 3) return "mid";
+                return "low";
+            }
+
+            function civicPinIcon(severity, urgent) {
+                const color = PIN_COLORS[severityBand(severity)];
+                const pin =
+                    '<svg class="civic-pin" viewBox="0 0 26 36" width="26" height="36" focusable="false" aria-hidden="true">' +
+                    '<path d="M13 1.2C6.9 1.2 2 6.1 2 12.2 2 20.7 13 34.8 13 34.8S24 20.7 24 12.2C24 6.1 19.1 1.2 13 1.2z" ' +
+                    'fill="' + color + '" stroke="#FFFFFF" stroke-width="1.6"/>' +
+                    '<circle cx="13" cy="12.3" r="4.3" fill="#FFFFFF"/>' +
+                    '</svg>';
+
+                return L.divIcon({
+                    className: "civic-pin-wrap",
+                    html: (urgent ? '<span class="civic-pin-pulse"></span>' : "") +
+                          '<span class="civic-pin-body">' + pin + "</span>",
+                    iconSize: [26, 36],
+                    iconAnchor: [13, 36],
+                    popupAnchor: [0, -33]
+                });
+            }
 
             reports.forEach(function (report) {
                 const latitude = Number(report.latitude);
@@ -162,8 +227,11 @@
                     return;
                 }
 
-                const marker = L.marker([latitude, longitude])
-                    .addTo(map);
+                const marker = L.marker([latitude, longitude], {
+                    icon: civicPinIcon(Number(report.severity), report.isUrgent)
+                });
+
+                marker.addTo(map);
 
                 // Използваме textContent, за да не третираме
                 // въведените от потребителите данни като HTML.
@@ -172,6 +240,16 @@
                 const title = document.createElement("strong");
                 title.textContent = report.title || "Сигнал без заглавие";
                 popup.appendChild(title);
+
+                const severityNote = document.createElement("p");
+                severityNote.textContent = Number(report.severity) >= 1
+                    ? "Средна сериозност: " + report.severity + " от 5"
+                    : "Все още без оценки за сериозност.";
+                if (report.isUrgent) {
+                    severityNote.className = "popup-urgent-note";
+                    severityNote.textContent += " · спешен сигнал";
+                }
+                popup.appendChild(severityNote);
 
                 const category = document.createElement("p");
                 category.textContent =
@@ -193,8 +271,22 @@
                     "Статус: " + (report.status || "Не е посочен");
                 popup.appendChild(status);
 
+                // Страницата на сигнала очаква номера в пътя (/Details/7),
+                // затова връзката се сглобява така, а не с вопросителен знак.
+                if (Number.isInteger(report.id)) {
+                    const link = document.createElement("a");
+                    link.textContent = "Виж сигнала №" + report.id + " →";
+                    link.href = "/Details/" + report.id;
+                    link.className = "popup-details-link";
+                    popup.appendChild(link);
+                }
+
                 marker.bindPopup(popup);
                 markers.push(marker);
+
+                if (report.isUrgent) {
+                    urgentMarkers++;
+                }
             });
 
             if (markers.length > 0) {
@@ -207,7 +299,11 @@
 
                 messageElement.textContent =
                     "Показани са " + markers.length +
-                    " сигнала с координати.";
+                    " сигнала с координати." +
+                    (urgentMarkers > 0
+                        ? " Пулсиращите маркери (" + urgentMarkers +
+                          ") са най-сериозните и все още не са решени."
+                        : "");
             } else {
                 messageElement.textContent =
                     "Все още няма сигнали със записани координати. " +

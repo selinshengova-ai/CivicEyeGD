@@ -25,14 +25,6 @@
                 <span>Намерени сигнали</span>
                 <strong>@Model.Reports.Count</strong>
             </div>
-            <div class="reports-summary-card">
-                <span>Категории в системата</span>
-                <strong>@Model.Categories.Count</strong>
-            </div>
-            <div class="reports-summary-card">
-                <span>Статуси в системата</span>
-                <strong>@Model.Statuses.Count</strong>
-            </div>
         </div>
 
         <form method="get" class="reports-filters">
@@ -130,12 +122,12 @@
                             </span>
                             <span>
                                 <strong>Дата:</strong>
-                                @report.CreatedAt.ToLocalTime().ToString("dd.MM.yyyy")
+                                @report.CreatedAt.ToDayText()
                             </span>
                             @if (report.Confirmations.Any())
                             {
                                 <span>
-                                    <strong>Потвърден от:</strong> @report.Confirmations.Count граждани
+                                    <strong>Потвърден от:</strong> @report.Confirmations.Count @BulgarianPlural.Of(report.Confirmations.Count, "гражданин", "граждани")
                                 </span>
                             }
                         </div>

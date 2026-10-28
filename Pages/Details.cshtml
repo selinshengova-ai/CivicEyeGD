@@ -2,6 +2,33 @@
 @model CivicEyeGD.Pages.DetailsModel
 @{
     ViewData["Title"] = Model.Report?.Title ?? "Сигнал";
+
+    // Кой може да гласува и защо не, се решава тук, за да не се
+    // различават надписите от правилата в модела.
+    var CurrentUserCanVote = Model.IsSignedIn
+        && !Model.CurrentUserIsAuthor
+        && Model.Report is not null
+        && !ReportStatuses.IsClosed(Model.Report.Status);
+
+    // Приключеният сигнал няма какво да чака от общината, затова числото
+    // му се показва като факт от миналото, а не като етикет за действие.
+    var IsClosedReport = Model.Report is not null
+        && ReportStatuses.IsClosed(Model.Report.Status);
+
+    // Изречението стои под самото число, затова глаголът трябва да е в
+    // същия род и число като субекта; при нула пък няма кой какво да твърди.
+    var ConfirmationsSentence = Model.ConfirmationCount switch
+    {
+        0 => "Все още няма потвърждения от други граждани.",
+        1 => "гражданин потвърждава, че проблемът съществува.",
+        _ => "граждани потвърждават, че проблемът съществува."
+    };
+
+    var VotingUnavailableText = !Model.IsSignedIn
+        ? "Трябва да влезеш в акаунта си, за да гласуваш."
+        : Model.CurrentUserIsAuthor
+            ? "Като подател не участваш в оценката на собствения си сигнал."
+            : "Сигналът е приключен и не приема повече гласове.";
 }
 
 <section class="details-page">
@@ -30,9 +57,17 @@
                         <span aria-hidden="true">⌖</span> @Model.Report.Address
                     </p>
                 </div>
-                <div class="details-priority">
-                    <span class="details-priority-label">@Model.PriorityLabel</span>
-                    <span class="details-priority-score">@Model.PriorityScore / 100</span>
+                <div class="details-priority@(IsClosedReport ? " details-priority-closed" : "")">
+                    @if (IsClosedReport)
+                    {
+                        <span class="details-priority-label">@Model.Report.Status</span>
+                        <span class="details-priority-score">приключен · @Model.PriorityScore / 100</span>
+                    }
+                    else
+                    {
+                        <span class="details-priority-label">@Model.PriorityLabel</span>
+                        <span class="details-priority-score">@Model.PriorityScore / 100</span>
+                    }
                 </div>
             </div>
 
@@ -74,8 +109,25 @@
                                     <div class="timeline-item">
                                         <div class="timeline-dot"></div>
                                         <div class="timeline-content">
-                                            <strong>@entry.NewStatus</strong>
-                                            <span>@entry.ChangedAt.ToLocalTime().ToString("dd.MM.yyyy HH:mm")</span>
+                                            <strong>
+                                                @if (string.IsNullOrEmpty(entry.OldStatus))
+                                                {
+                                                    <text>@entry.NewStatus</text>
+                                                }
+                                                else
+                                                {
+                                                    <text>@entry.OldStatus → @entry.NewStatus</text>
+                                                }
+                                            </strong>
+                                            <span>@entry.ChangedAt.ToMomentText()</span>
+                                            @if (Model.HistoryAuthorLabels.TryGetValue(entry.Id, out var authorLabel))
+                                            {
+                                                <span class="timeline-author">@authorLabel</span>
+                                            }
+                                            @if (!string.IsNullOrWhiteSpace(entry.Comment))
+                                            {
+                                                <span class="timeline-comment">@entry.Comment</span>
+                                            }
                                         </div>
                                     </div>
                                 }
@@ -85,36 +137,75 @@
                 </div>
 
                 <aside class="details-sidebar">
+                    <div class="details-card details-breakdown">
+                        <h2>Как се получава @Model.PriorityScore / 100</h2>
+                        @{
+                            var parts = Model.Breakdown!;
+                            var raw = parts.SeverityPoints + parts.ConfirmationPoints + parts.AdminPoints;
+                        }
+                        <dl class="details-breakdown-list">
+                            <dt>Средна сериозност @parts.UsedSeverity.ToString("0.00") от 5</dt>
+                            <dd>@parts.SeverityPoints.ToString("0.##") т. <span>(по 20 т. на степен)</span></dd>
+
+                            <dt>@parts.CappedConfirmations @BulgarianPlural.Of(parts.CappedConfirmations, "потвърждение", "потвърждения")</dt>
+                            <dd>@parts.ConfirmationPoints.ToString("0.##") т. <span>(по 3 т., най-много 10)</span></dd>
+
+                            <dt>Корекция на общината</dt>
+                            <dd>@parts.AdminPoints.ToString("0.##") т. <span>(0–10)</span></dd>
+
+                            <dt class="details-breakdown-total">Общо @raw.ToString("0.##") от 140</dt>
+                            <dd class="details-breakdown-total">@Model.PriorityScore.ToString("0.0") % <span>→ @Model.PriorityLabel@(IsClosedReport ? " (преди сигнала да приключи)" : "")</span></dd>
+                        </dl>
+                        <p class="details-muted">Оценките и потвържденията на подателя не влизат в сметката.</p>
+                    </div>
+
                     <div class="details-card">
                         <h2>Оценка за сериозност</h2>
                         <div class="details-rating-display">
                             <span class="details-rating-number">@Model.AverageSeverity.ToString("0.0")</span>
                             <span class="details-rating-scale">/ 5</span>
                         </div>
-                        <p class="details-muted">@Model.Report.SeverityRatings.Count оценки</p>
+                        <p class="details-muted">@Model.IndependentRaterCount @BulgarianPlural.Of(Model.IndependentRaterCount, "оценка", "оценки") от други граждани</p>
 
-                        <form method="post" asp-page-handler="Rate" asp-route-id="@Model.Report.Id">
-                            <p class="details-rating-prompt">
-                                @(Model.CurrentUserHasRated ? "Твоята оценка (можеш да я промениш):" : "Дай своята оценка:")
-                            </p>
-                            <div class="details-rating-buttons">
-                                @for (int i = 1; i <= 5; i++)
+                        @if (CurrentUserCanVote)
+                        {
+                            <form method="post" asp-page-handler="Rate" asp-route-id="@Model.Report.Id">
+                                <p class="details-rating-prompt">
+                                    @(Model.CurrentUserHasRated ? "Твоята оценка (можеш да я промениш):" : "Дай своята оценка:")
+                                </p>
+                                <div class="details-rating-buttons">
+                                    @for (int i = 1; i <= 5; i++)
+                                    {
+                                        <button type="submit" name="rating" value="@i"
+                                                class="details-rating-button @(Model.CurrentUserRating == i ? "is-selected" : "")">
+                                            @i
+                                        </button>
+                                    }
+                                </div>
+                            </form>
+                        }
+                        else
+                        {
+                            <p class="details-vote-note">
+                                @VotingUnavailableText
+                                @if (!Model.IsSignedIn)
                                 {
-                                    <button type="submit" name="rating" value="@i"
-                                            class="details-rating-button @(Model.CurrentUserRating == i ? "is-selected" : "")">
-                                        @i
-                                    </button>
+                                    <a class="details-login-link"
+                                       asp-page="/Account/Login"
+                                       asp-route-returnUrl="/Details/@Model.Report.Id">
+                                        Влез сега
+                                    </a>
                                 }
-                            </div>
-                        </form>
+                            </p>
+                        }
                     </div>
 
                     <div class="details-card">
                         <h2>Потвърждения</h2>
                         <div class="details-rating-number">@Model.ConfirmationCount</div>
-                        <p class="details-muted">граждани потвърждават, че проблемът съществува.</p>
+                        <p class="details-muted">@ConfirmationsSentence</p>
 
-                        @if (Model.Report.Status == "Решен" || Model.Report.Status == "Отхвърлен")
+                        @if (ReportStatuses.IsClosed(Model.Report.Status))
                         {
                             <p class="details-confirmed-note">Този сигнал е приключен и не приема нови потвърждения.</p>
                         }
@@ -122,11 +213,25 @@
                         {
                             <p class="details-confirmed-note">✓ Вече си потвърдил този проблем.</p>
                         }
-                        else
+                        else if (CurrentUserCanVote)
                         {
                             <form method="post" asp-page-handler="Confirm" asp-route-id="@Model.Report.Id">
                                 <button type="submit" class="details-confirm-button">Потвърди този проблем</button>
                             </form>
+                        }
+                        else
+                        {
+                            <p class="details-vote-note">
+                                @VotingUnavailableText
+                                @if (!Model.IsSignedIn)
+                                {
+                                    <a class="details-login-link"
+                                       asp-page="/Account/Login"
+                                       asp-route-returnUrl="/Details/@Model.Report.Id">
+                                        Влез сега
+                                    </a>
+                                }
+                            </p>
                         }
                     </div>
 
@@ -235,6 +340,46 @@
     .timeline-content span {
         color: var(--civic-muted, #66766d);
         font-size: 12px;
+    }
+    .timeline-author {
+        font-weight: 600;
+    }
+    .timeline-comment {
+        color: var(--civic-green-dark, #12392e);
+        font-size: 13px;
+    }
+
+    /* Разбивка на приоритета: числата зад етикета */
+    .details-breakdown-list {
+        display: grid;
+        grid-template-columns: 1fr auto;
+        gap: 6px 12px;
+        margin: 12px 0;
+        font-size: 14px;
+    }
+    .details-breakdown-list dt {
+        color: var(--civic-muted, #66766d);
+    }
+    .details-breakdown-list dd {
+        margin: 0;
+        text-align: right;
+        font-variant-numeric: tabular-nums;
+    }
+    .details-breakdown-list dd span {
+        display: block;
+        font-size: 11px;
+        color: var(--civic-muted, #66766d);
+    }
+    .details-breakdown-total {
+        border-top: 1px solid var(--civic-border, #e0e8e1);
+        padding-top: 6px;
+        font-weight: 700;
+        color: var(--civic-green-dark, #12392e);
+    }
+    .details-vote-note {
+        margin-top: 12px;
+        font-size: 13px;
+        color: var(--civic-muted, #66766d);
     }
 
     /* Тъмна тема за таймлайна */

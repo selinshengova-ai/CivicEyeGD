@@ -1,9 +1,12 @@
 using CivicEyeGD.Data;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.EntityFrameworkCore;
 
 namespace CivicEyeGD.Pages;
 
+// Списъкът е публичен; създаването и „Моите сигнали" си остават зад вход.
+[AllowAnonymous]
 public class ReportsModel : PageModel
 {
     private readonly ApplicationDbContext _context;
@@ -50,7 +53,7 @@ public class ReportsModel : PageModel
             .OrderBy(s => s)
             .ToListAsync();
 
-        // ВАЖНО: Include за Confirmations, за да покажем броя им в списъка
+        // Списъкът показва броя потвърждения, затова те идват с реда.
         var query = _context.Reports
             .Include(r => r.Confirmations)
             .AsNoTracking();

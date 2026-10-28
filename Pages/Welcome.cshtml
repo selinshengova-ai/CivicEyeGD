@@ -1,4 +1,3 @@
-
 @page "/Welcome"
 @attribute [Microsoft.AspNetCore.Authorization.AllowAnonymous]
 
@@ -53,7 +52,29 @@
 
         <div class="home-hero-visual" aria-hidden="true">
 
-            <div class="home-visual-circle home-circle-outer"></div>
+            <div class="home-orbit home-orbit-outer">
+                <svg viewBox="0 0 400 400" class="home-orbit-svg">
+                    <defs>
+                        <path id="welcomeOrbitPath"
+                              d="M 200, 200 m -186, 0 a 186,186 0 1,1 372,0 a 186,186 0 1,1 -372,0" />
+                    </defs>
+                    <circle cx="200" cy="200" r="186" class="home-orbit-guide" />
+                    <text class="home-orbit-text">
+                        <textPath href="#welcomeOrbitPath" startOffset="0"
+                                  textLength="1168" lengthAdjust="spacing">
+                            ЗАБЕЛЕЖИ • ПОДАЙ СИГНАЛ • ПРОМЕНИ ГРАДА • ЗАБЕЛЕЖИ • ПОДАЙ СИГНАЛ • ПРОМЕНИ ГРАДА •
+                        </textPath>
+                    </text>
+                </svg>
+            </div>
+
+            <div class="home-orbit home-orbit-inner">
+                <svg viewBox="0 0 400 400" class="home-orbit-svg">
+                    <circle cx="200" cy="200" r="150" class="home-orbit-ticks" />
+                    <circle cx="200" cy="50" r="3" class="home-orbit-dot-accent" />
+                </svg>
+            </div>
+
             <div class="home-visual-circle home-circle-inner"></div>
 
             <div class="home-visual-card">
@@ -67,11 +88,6 @@
                         Твоята възможност за промяна.
                     </span>
                 </div>
-            </div>
-
-            <div class="home-visual-tag home-tag-top">
-                <span class="home-tag-dot"></span>
-                Забележи
             </div>
 
         </div>

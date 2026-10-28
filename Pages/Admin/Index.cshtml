@@ -8,66 +8,123 @@
     <div class="reports-container">
         <div class="reports-heading">
             <div>
-                <span class="reports-eyebrow" style="color: #c2413b;">CIVICEYE GD / СИСТЕМА</span>
+                <span class="reports-eyebrow reports-eyebrow--danger">CIVICEYE GD / СИСТЕМА</span>
                 <h1>Административно табло.</h1>
                 <p>Управление, смяна на статуси и проверка на снимки.</p>
             </div>
         </div>
 
-        <!-- Статистики (кликаеми) -->
+        @if (Model.Notice is not null)
+        {
+            <p class="admin-notice" role="status">@Model.Notice</p>
+        }
+
+        @if (Model.HighPriorityCount > 0)
+        {
+            <div class="admin-urgent-banner" role="alert">
+                <span class="urgent-dot-static" aria-hidden="true"></span>
+                <div>
+                    <strong>Спешни сигнали: @Model.HighPriorityCount</strong>
+                    <p class="admin-urgent-detail">
+                        Тези активни сигнали са с приоритет @CivicEyeGD.Pages.Admin.IndexModel.HighPriorityFrom нагоре —
+                        гражданите ги оценяват като сериозни и ги потвърждават масово.
+                    </p>
+                </div>
+            </div>
+        }
+
         <div class="admin-stats">
-            <a asp-page="/Admin/Index" asp-route-filterStatus="" class="admin-stat-card">
+            <a asp-page="/Admin/Index" asp-route-filterStatus=""
+               class="admin-stat-card @(Model.FilterStatus.Length == 0 ? "is-active" : null)"
+               aria-current="@(Model.FilterStatus.Length == 0 ? "true" : null)">
                 <span>Всички активни</span>
                 <strong>@Model.TotalActiveCount</strong>
             </a>
-            <a asp-page="/Admin/Index" asp-route-filterStatus="Подаден" class="admin-stat-card">
+            <a asp-page="/Admin/Index" asp-route-filterStatus="@ReportStatuses.New"
+               class="admin-stat-card @(Model.FilterStatus == ReportStatuses.New ? "is-active" : null)"
+               aria-current="@(Model.FilterStatus == ReportStatuses.New ? "true" : null)">
                 <span>Нови</span>
                 <strong>@Model.NewCount</strong>
             </a>
-            <a asp-page="/Admin/Index" asp-route-filterStatus="В процес" class="admin-stat-card">
+            <a asp-page="/Admin/Index" asp-route-filterStatus="@ReportStatuses.InProgress"
+               class="admin-stat-card @(Model.FilterStatus == ReportStatuses.InProgress ? "is-active" : null)"
+               aria-current="@(Model.FilterStatus == ReportStatuses.InProgress ? "true" : null)">
                 <span>В процес</span>
                 <strong>@Model.InProgressCount</strong>
             </a>
-            <a asp-page="/Admin/Index" asp-route-filterStatus="Решен" class="admin-stat-card">
-                <span>Решени / Отхвърлени</span>
-                <strong>@Model.ResolvedCount</strong>
+            <a asp-page="/Admin/Index" asp-route-filterStatus="@IndexModel.ClosedFilter"
+               class="admin-stat-card @(Model.FilterStatus == IndexModel.ClosedFilter ? "is-active" : null)"
+               aria-current="@(Model.FilterStatus == IndexModel.ClosedFilter ? "true" : null)">
+                <span>Приключени</span>
+                <strong>@Model.ClosedCount</strong>
             </a>
         </div>
 
-        <div class="reports-list-heading" style="margin-top: 30px;">
-            <h2>Активни сигнали (@Model.Reports.Count)</h2>
+        <div class="reports-list-heading admin-list-heading">
+            <h2>@Model.ListTitle (@Model.Reports.Count)</h2>
+
+            <div class="admin-list-actions">
+                <a class="admin-report-button"
+                   asp-page="/Admin/Index"
+                   asp-page-handler="ExportPdf"
+                   asp-route-filterStatus="@Model.FilterStatus">
+                    Отчет PDF
+                </a>
+
+                <details class="admin-more">
+                    <summary>Други формати</summary>
+
+                    <div class="admin-more-body">
+                        <a asp-page="/Admin/Index"
+                           asp-page-handler="ExportXlsx"
+                           asp-route-filterStatus="@Model.FilterStatus">
+                            Таблица в Excel (.xlsx)
+                        </a>
+
+                        <a asp-page="/Admin/Index"
+                           asp-page-handler="Export"
+                           asp-route-filterStatus="@Model.FilterStatus">
+                            Таблица в CSV
+                        </a>
+
+                        <button type="button" onclick="window.print()">
+                            Принтирай таблото
+                        </button>
+                    </div>
+                </details>
+            </div>
         </div>
 
-        <div class="reports-list" style="display: flex; flex-direction: column; gap: 15px;">
+        <div class="admin-report-list">
             @foreach (var report in Model.Reports)
             {
                 <article class="report-card admin-report-card">
-                    
-                    <!-- Лява част: Информация -->
                     <div class="admin-report-info">
-                        <div class="report-card-top" style="display: flex; gap: 10px; margin-bottom: 10px;">
+                        <div class="admin-card-top">
                             <span class="report-category">@report.Category</span>
                             <span class="report-id">#@report.Id</span>
+                            <span class="priority-chip @(Model.IsHighPriority(report) ? "high" : null)">
+                                @Model.PriorityLabelOf(report) · @Model.PriorityOf(report).ToString("0.0")
+                            </span>
                         </div>
 
-                        <h3 style="margin: 0 0 10px 0;">
+                        <h3>
                             <a asp-page="/Details" asp-route-id="@report.Id" class="report-title-link">
                                 @report.Title
                             </a>
                         </h3>
 
-                        <p class="report-description" style="margin-bottom: 10px;">@report.Description</p>
+                        <p class="report-description">@report.Description</p>
 
-                        <!-- Показване на снимките с модал -->
                         @if (report.Images.Any())
                         {
-                            <div style="display: flex; gap: 10px; margin-bottom: 15px;">
+                            <div class="admin-images">
                                 @foreach (var image in report.Images)
                                 {
-                                    <a href="javascript:void(0)" 
-                                       class="open-image-modal" 
-                                       data-image-src="/report-images/@image.Id">
-                                        <img src="/report-images/@image.Id" alt="Снимка" style="width: 80px; height: 80px; object-fit: cover; border-radius: 8px; border: 1px solid #ccc; cursor: pointer;" />
+                                    <a href="#" class="open-image-modal" data-image-src="/report-images/@image.Id">
+                                        <img class="admin-image-thumb"
+                                             src="/report-images/@image.Id"
+                                             alt="Снимка към сигнал #@report.Id" />
                                     </a>
                                 }
                             </div>
@@ -75,30 +132,54 @@
 
                         <div class="report-meta">
                             <span><strong>Адрес:</strong> @report.Address</span>
-                            <span><strong>Дата:</strong> @report.CreatedAt.ToLocalTime().ToString("dd.MM.yyyy")</span>
+                            <span><strong>Дата:</strong> @report.CreatedAt.ToDayText()</span>
                         </div>
                     </div>
 
-                    <!-- Дясна част: Действия -->
                     <div class="admin-report-actions">
-                        <span style="font-size: 12px; color: var(--dark-text-muted); font-weight: bold;">СМЯНА НА СТАТУС:</span>
-                        
-                        <form method="post" asp-page-handler="ChangeStatus" asp-route-id="@report.Id">
-                            <!-- ПРОМЕНЕНО: добавен е confirm() диалог -->
-                            <select name="newStatus" class="form-select" style="margin-bottom: 10px;" 
-                                    onchange="if(confirm('Сигурни ли сте, че искате да смените статуса на този сигнал?')) { this.form.submit(); } else { this.value = '@report.Status'; }">
-                                <!option value="Подаден" @(report.Status == "Подаден" ? "selected" : "")>Подаден</!option>
-                                <!option value="В процес" @(report.Status == "В процес" ? "selected" : "")>В процес</!option>
-                                <!option value="Решен" @(report.Status == "Решен" ? "selected" : "")>Решен</!option>
-                                <!option value="Отхвърлен" @(report.Status == "Отхвърлен" ? "selected" : "")>Отхвърлен</!option>
-                            </select>
-                        </form>
+                        <form method="post" asp-page-handler="Update" asp-route-id="@report.Id"
+                              class="admin-action-form">
+                            <input type="hidden" name="filterStatus" value="@Model.FilterStatus" />
 
-                        <a asp-page="/Details" asp-route-id="@report.Id" class="btn btn-outline-success w-100" style="display: block; margin-top: 5px; text-align: center; font-weight: bold;">
-                            Виж детайли →
-                        </a>
+                            <div class="admin-field-row">
+                                <div class="admin-field">
+                                    <label class="admin-field-label" for="status-@report.Id">Статус</label>
+                                    <select id="status-@report.Id" name="newStatus" class="form-select">
+                                        @foreach (var status in ReportStatuses.All)
+                                        {
+                                            <option value="@status" selected="@(status == report.Status ? "selected" : null)">@status</option>
+                                        }
+                                    </select>
+                                </div>
+
+                                <div class="admin-field admin-field--adjust">
+                                    <label class="admin-field-label" for="adjustment-@report.Id">Корекция</label>
+                                    <input id="adjustment-@report.Id" type="number" name="adjustment"
+                                           min="0" max="10" step="1" value="@report.AdminPriorityAdjustment"
+                                           class="form-input" />
+                                </div>
+                            </div>
+
+                            <div class="admin-field">
+                                <label class="admin-field-label" for="comment-@report.Id">Бележка</label>
+                                <textarea id="comment-@report.Id" name="comment" class="form-textarea"
+                                          rows="2" maxlength="500"
+                                          placeholder="Какво е направено или защо сигналът се отхвърля."></textarea>
+                            </div>
+
+                            <button type="submit" class="admin-save-button">Запази промяната</button>
+                            <p class="admin-field-hint">
+                                Бележката се показва публично в историята на сигнала.
+                                Корекцията е от 0 до 10 и се добавя към приоритета.
+                            </p>
+                        </form>
                     </div>
                 </article>
+            }
+
+            @if (Model.Reports.Count == 0)
+            {
+                <p class="admin-empty">В тази група няма сигнали.</p>
             }
         </div>
     </div>

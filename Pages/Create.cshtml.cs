@@ -3,14 +3,15 @@ using CivicEyeGD.Services;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
-using System.ComponentModel.DataAnnotations;
-using System.Text.Json;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
+using System.ComponentModel.DataAnnotations;
 
 namespace CivicEyeGD.Pages;
 
 [RequestFormLimits(MultipartBodyLengthLimit = 16 * 1024 * 1024)]
 [RequestSizeLimit(16 * 1024 * 1024)]
+[EnableRateLimiting("forms")]
 public class CreateModel : PageModel
 {
     private readonly ApplicationDbContext _context;
@@ -22,13 +23,21 @@ public class CreateModel : PageModel
         ApplicationDbContext context,
         UserManager<IdentityUser> userManager,
         ReportImageStorage imageStorage,
+        IConfiguration configuration,
         ILogger<CreateModel> logger)
     {
         _context = context;
         _userManager = userManager;
         _imageStorage = imageStorage;
+        GoogleMapsApiKey = configuration["GoogleMapsApi:ApiKey"] ?? string.Empty;
         _logger = logger;
     }
+
+    // Ключът идва от настройките (за локална работа — от user secrets),
+    // за да не попадне в изходния код и в публичния архив.
+    public string GoogleMapsApiKey { get; }
+
+    public IReadOnlyList<string> Categories => ReportCategories.All;
 
     [BindProperty]
     public ReportInput Report { get; set; } = new();
@@ -36,21 +45,56 @@ public class CreateModel : PageModel
     [BindProperty]
     public List<IFormFile> Photos { get; set; } = new();
 
-    public string ExistingReportsJson { get; private set; } = "[]";
+    // Сигналите, които вече описват същото място. Показват се като
+    // предложение да се потвърди съществуващият запис, преди някой да е
+    // попълнил напълно нов формуляр за вече видян проблем.
+    public IReadOnlyList<NearbyReport> NearbyDuplicates { get; private set; } = [];
 
-    public async Task OnGetAsync()
+    // Картата и категорията се попълват в различен ред — проверката се
+    // пуска само когато и двете стойности вече са в заявката.
+    public async Task<IActionResult> OnGetNearbyAsync(string? category, double? latitude, double? longitude)
     {
-        await LoadExistingReportsAsync();
+        if (category is null || !ReportCategories.IsValid(category)
+            || latitude is null || longitude is null
+            || !double.IsFinite(latitude.Value) || !double.IsFinite(longitude.Value)
+            || !ReportGeography.IsWithinTown(latitude, longitude))
+        {
+            return new JsonResult(new { matches = Array.Empty<NearbyReport>() });
+        }
+
+        var matches = await FindNearbyAsync(category, latitude.Value, longitude.Value);
+
+        return new JsonResult(new { matches });
     }
 
     public async Task<IActionResult> OnPostAsync()
     {
         ValidatePhotos();
+        ValidateLocation();
 
         if (!ModelState.IsValid)
         {
-            await LoadExistingReportsAsync();
             return Page();
+        }
+
+        // Предупреждението се появява и в браузъра, докато маркерът се
+        // мести, но проверката тук е задължителна: заявка може да го
+        // заобиколи. Един наистина различен проблем не се блокира —
+        // иска се само явно признание под предупреждението.
+        if (!Report.DuplicateAcknowledged)
+        {
+            NearbyDuplicates = await FindNearbyAsync(
+                Report.Category, Report.Latitude!.Value, Report.Longitude!.Value);
+
+            if (NearbyDuplicates.Count > 0)
+            {
+                ModelState.AddModelError(
+                    string.Empty,
+                    "На това място вече има подаден сигнал от същата категория. "
+                    + "Отвори го и го потвърди вместо да създадеш дубликат. "
+                    + "Ако проблемът е различен, отметни полето под предупреждението и изпрати отново.");
+                return Page();
+            }
         }
 
         var newReport = new Data.Report
@@ -59,7 +103,7 @@ public class CreateModel : PageModel
             Category = Report.Category,
             Address = Report.Address.Trim(),
             Description = Report.Description.Trim(),
-            Status = "Подаден",
+            Status = ReportStatuses.New,
             CreatedAt = DateTime.UtcNow,
             Latitude = Report.Latitude,
             Longitude = Report.Longitude,
@@ -105,34 +149,36 @@ public class CreateModel : PageModel
             }
             _logger.LogError(ex, "Неуспешно записване на нов сигнал.");
             ModelState.AddModelError(string.Empty, "Сигналът не беше записан заради временен проблем. Моля, опитай отново.");
-            await LoadExistingReportsAsync();
             return Page();
         }
 
         return RedirectToPage("/Details", new { id = newReport.Id });
     }
 
-    private async Task LoadExistingReportsAsync()
+    // SQLite не смята разстояние по голям кръг, затова от базата идва
+    // само съседният квадрат. В рамките на един град това са нула или
+    // два сигнала, а точната мерка се решава тук в паметта.
+    private async Task<IReadOnlyList<NearbyReport>> FindNearbyAsync(
+        string category,
+        double latitude,
+        double longitude)
     {
-        var activeReports = await _context.Reports
+        var latitudeMargin = ReportDuplicates.RadiusMeters / 111_320.0;
+        var longitudeMargin = latitudeMargin / Math.Max(
+            0.2, Math.Cos(latitude * Math.PI / 180.0));
+
+        var candidates = await _context.Reports
             .AsNoTracking()
-            .Where(r => r.Status != "Решен" && r.Status != "Отхвърлен")
-            .Select(r => new
-            {
-                r.Id,
-                r.Title,
-                r.Category,
-                r.Description,
-                r.Latitude,
-                r.Longitude,
-                r.Status
-            })
+            .Where(report => report.Category == category
+                && report.Latitude != null
+                && report.Longitude != null
+                && report.Latitude >= latitude - latitudeMargin
+                && report.Latitude <= latitude + latitudeMargin
+                && report.Longitude >= longitude - longitudeMargin
+                && report.Longitude <= longitude + longitudeMargin)
             .ToListAsync();
 
-        ExistingReportsJson = JsonSerializer.Serialize(activeReports, new JsonSerializerOptions
-        {
-            PropertyNamingPolicy = JsonNamingPolicy.CamelCase
-        });
+        return ReportDuplicates.Find(candidates, category, latitude, longitude);
     }
 
     private void ValidatePhotos()
@@ -146,6 +192,35 @@ public class CreateModel : PageModel
         {
             var error = _imageStorage.ValidateFile(photo);
             if (error is not null) ModelState.AddModelError(nameof(Photos), error);
+        }
+    }
+
+    // Браузърът пази стойностите в списъци, но заявка може да дойде и
+    // заобикаляйки формата — затова проверяваме и тук.
+    // Ключовете на грешките трябва да съвпадат с пълните имена на полетата,
+    // иначе съобщенията не се изписват нищо на екрана.
+    private void ValidateLocation()
+    {
+        if (!ReportCategories.IsValid(Report.Category))
+        {
+            ModelState.AddModelError(
+                $"{nameof(Report)}.{nameof(Report.Category)}",
+                "Избери категория от списъка.");
+        }
+
+        // Координатите са в скрити полета, затова грешките отиват в
+        // общия список над формата.
+        if (Report.Latitude is null || Report.Longitude is null)
+        {
+            ModelState.AddModelError(
+                string.Empty,
+                "Отбележи мястото на картата — без него сигналът не се вижда в публичната карта.");
+        }
+        else if (!ReportGeography.IsWithinTown(Report.Latitude, Report.Longitude))
+        {
+            ModelState.AddModelError(
+                string.Empty,
+                "Отбелязаната точка е извън границите на Гоце Делчев.");
         }
     }
 
@@ -172,5 +247,9 @@ public class CreateModel : PageModel
         [Required(ErrorMessage = "Моля, изберете оценка за сериозност.")]
         [Range(1, 5, ErrorMessage = "Оценката трябва да е между 1 и 5.")]
         public int Severity { get; set; } = 3; // По подразбиране 3
+
+        // Отметнато, когато потребителят е виждал предупреждението за
+        // същия проблем на това място и настоява за нов сигнал.
+        public bool DuplicateAcknowledged { get; set; }
     }
 }

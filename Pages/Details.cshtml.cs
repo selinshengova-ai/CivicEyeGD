@@ -1,5 +1,6 @@
 using CivicEyeGD.Data;
 using CivicEyeGD.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
@@ -7,6 +8,17 @@ using Microsoft.EntityFrameworkCore;
 
 namespace CivicEyeGD.Pages;
 
+// Сигналът се гледа и без акаунт: публичната карта води насам, а
+// зад вход страницата показва същото като таблото. Гласуването пак
+// изисква вход — без бисквита Challenge() праща към страницата за
+// вход, преди нещо да е записано. Атрибутът е по класа, защото
+// поставен върху обработващ метод на Razor Page той не стига до
+// крайната точка и не действа (MVC1001).
+//
+// Отделно ограничение за гласуването няма смисъл: един акаунт може да
+// потвърди сигнал веднъж (уникален индекс), подателят не гласува, а
+// самото създаване на акаунти е ограничено с политиката "forms".
+[AllowAnonymous]
 public class DetailsModel : PageModel
 {
     private readonly ApplicationDbContext _context;
@@ -22,14 +34,22 @@ public class DetailsModel : PageModel
 
     public Report? Report { get; private set; }
     public double AverageSeverity { get; private set; }
+    public int IndependentRaterCount { get; private set; }
     public int ConfirmationCount { get; private set; }
     public double PriorityScore { get; private set; }
     public string PriorityLabel { get; private set; } = string.Empty;
+    public ReportPriorityService.PriorityBreakdown? Breakdown { get; private set; }
     public bool CurrentUserHasRated { get; private set; }
     public bool CurrentUserHasConfirmed { get; private set; }
+    public bool CurrentUserIsAuthor { get; private set; }
+    public bool IsSignedIn { get; private set; }
     public int CurrentUserRating { get; private set; }
     public string? SuccessMessage { get; set; }
     public string? ErrorMessage { get; set; }
+
+    // Идентификатор на запис от историята -> показвано име. Имейлите не
+    // се изписват никъде: подателят остава анонимен за другите граждани.
+    public Dictionary<int, string> HistoryAuthorLabels { get; } = new();
 
     public async Task<IActionResult> OnGetAsync(int id)
     {
@@ -38,7 +58,6 @@ public class DetailsModel : PageModel
         return Page();
     }
 
-    // Променен метод за потвърждение, който работи и с AJAX (fetch)
     public async Task<IActionResult> OnPostConfirmAsync(int id)
     {
         await LoadReportAsync(id);
@@ -47,9 +66,18 @@ public class DetailsModel : PageModel
         var userId = _userManager.GetUserId(User);
         if (userId is null) return Challenge();
 
+        if (ReportStatuses.IsClosed(Report.Status))
+        {
+            return BadRequest("Приключен сигнал не приема нови потвърждения.");
+        }
+
+        if (Report.WasSubmittedBy(userId))
+        {
+            return BadRequest("Не можеш да потвърдиш собствения си сигнал.");
+        }
+
         if (CurrentUserHasConfirmed)
         {
-            // Връщаме статус 400, за да го хванем в JS
             return BadRequest("Вече си потвърдил този проблем.");
         }
 
@@ -60,12 +88,16 @@ public class DetailsModel : PageModel
             CreatedAt = DateTime.UtcNow
         });
 
-        await _context.SaveChangesAsync();
-        
-        // Ако е AJAX заявка, връщаме OK без да презареждаме страницата
-        if (Request.Headers["X-Requested-With"] == "XMLHttpRequest")
+        // Два клика подред минават през проверката и двата, преди
+        // първият запис да е готов. Уникалният индекс спечелва, а
+        // потребителят трябва да види обяснение, не сървърна грешка.
+        try
         {
-            return new OkResult();
+            await _context.SaveChangesAsync();
+        }
+        catch (DbUpdateException)
+        {
+            return BadRequest("Вече си потвърдил този проблем.");
         }
 
         await LoadReportAsync(id);
@@ -75,7 +107,6 @@ public class DetailsModel : PageModel
 
     public async Task<IActionResult> OnPostRateAsync(int id, int rating)
     {
-        // ... (остави съществуващата логика за оценка, тя е същата) ...
         await LoadReportAsync(id);
         if (Report is null) return NotFound();
 
@@ -87,6 +118,18 @@ public class DetailsModel : PageModel
 
         var userId = _userManager.GetUserId(User);
         if (userId is null) return Challenge();
+
+        if (ReportStatuses.IsClosed(Report.Status))
+        {
+            ErrorMessage = "Приключен сигнал вече не се оценява.";
+            return Page();
+        }
+
+        if (Report.WasSubmittedBy(userId))
+        {
+            ErrorMessage = "Подателят не участва в оценката на собствения си сигнал.";
+            return Page();
+        }
 
         var existing = await _context.SeverityRatings.FirstOrDefaultAsync(r => r.ReportId == id && r.UserId == userId);
 
@@ -100,7 +143,16 @@ public class DetailsModel : PageModel
             existing.CreatedAt = DateTime.UtcNow;
         }
 
-        await _context.SaveChangesAsync();
+        try
+        {
+            await _context.SaveChangesAsync();
+        }
+        catch (DbUpdateException)
+        {
+            ErrorMessage = "Оценката вече е записана.";
+            return Page();
+        }
+
         await LoadReportAsync(id);
         SuccessMessage = "Оценката ти е записана.";
         return Page();
@@ -113,23 +165,66 @@ public class DetailsModel : PageModel
             .Include(r => r.Confirmations)
             .Include(r => r.SeverityRatings)
             .Include(r => r.StatusHistories)
+                .ThenInclude(h => h.ChangedByUser)
             .AsNoTracking()
             .FirstOrDefaultAsync(r => r.Id == id);
 
         if (Report is null) return;
 
-        ConfirmationCount = Report.Confirmations.Count;
-        AverageSeverity = Report.SeverityRatings.Count > 0 ? Math.Round(Report.SeverityRatings.Average(sr => sr.Rating), 2) : 0;
-        PriorityScore = _priorityService.Calculate(AverageSeverity, ConfirmationCount, Report.AdminPriorityAdjustment);
+        AverageSeverity = Report.IndependentAverageSeverity;
+        IndependentRaterCount = Report.IndependentRaterCount;
+        ConfirmationCount = Report.IndependentConfirmationCount;
+
+        Breakdown = _priorityService.Breakdown(
+            AverageSeverity,
+            ConfirmationCount,
+            Report.AdminPriorityAdjustment);
+
+        PriorityScore = Breakdown.Score;
         PriorityLabel = _priorityService.GetPriorityLabel(PriorityScore);
 
         var userId = _userManager.GetUserId(User);
+        IsSignedIn = userId is not null;
+        CurrentUserIsAuthor = Report.WasSubmittedBy(userId);
+
         if (userId is not null)
         {
             var userRating = Report.SeverityRatings.FirstOrDefault(sr => sr.UserId == userId);
             CurrentUserHasRated = userRating is not null;
             CurrentUserRating = userRating?.Rating ?? 0;
             CurrentUserHasConfirmed = Report.Confirmations.Any(c => c.UserId == userId);
+        }
+
+        await LoadHistoryAuthorsAsync();
+    }
+
+    private async Task LoadHistoryAuthorsAsync()
+    {
+        if (Report is null) return;
+
+        var labels = new Dictionary<string, string>();
+
+        foreach (var changedById in Report.StatusHistories
+                     .Select(h => h.ChangedByUserId)
+                     .Where(id => id is not null)
+                     .Distinct())
+        {
+            var user = await _userManager.FindByIdAsync(changedById!);
+
+            labels[changedById!] = user is null
+                ? "Служител с премахнат акаунт"
+                : (await _userManager.GetRolesAsync(user)).Contains("Administrator")
+                    ? "Администратор на платформата"
+                    : "Служител на общината";
+        }
+
+        foreach (var entry in Report.StatusHistories)
+        {
+            if (entry.ChangedByUserId is not null
+                && labels.TryGetValue(entry.ChangedByUserId, out var label))
+            {
+                HistoryAuthorLabels[entry.Id] = label;
+            }
         }
     }
 }

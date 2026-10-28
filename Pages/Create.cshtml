@@ -6,8 +6,20 @@
 }
 
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css" />
-<!-- Google Maps API (замени ТВОЯТ_API_КЛЮЧ с истинския) -->
-<script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyAU0bnkSUJZ5h1loC25nXlAg9nzJKs-zW8"></script>
+<script>
+    // Панелът се маха при отказ на Google: невалиден или ограничен ключ,
+    // мрежова грешка, блокиран скрипт. Формулярът остава напълно работещ.
+    window.civicHideStreetView = function () {
+        var panel = document.getElementById("street-view-panel");
+        if (panel) { panel.remove(); }
+    };
+    window.gm_authFailure = window.civicHideStreetView;
+</script>
+@if (!string.IsNullOrEmpty(Model.GoogleMapsApiKey))
+{
+    <script src="https://maps.googleapis.com/maps/api/js?key=@Model.GoogleMapsApiKey"
+            onerror="window.civicHideStreetView()"></script>
+}
 
 <section class="civic-form-page">
     <div class="civic-form-card">
@@ -33,14 +45,8 @@
                 <label asp-for="Report.Category" class="form-label">
                     Категория <span class="required-mark">*</span>
                 </label>
-                <select asp-for="Report.Category" class="form-select">
+                <select asp-for="Report.Category" class="form-select" asp-items="new SelectList(Model.Categories)">
                     <option value="">Избери категория</option>
-                    <option value="Достъпност">Достъпност</option>
-                    <option value="Тротоари">Тротоари</option>
-                    <option value="Пешеходни пътеки">Пешеходни пътеки</option>
-                    <option value="Улично осветление">Улично осветление</option>
-                    <option value="Пътна настилка">Пътна настилка</option>
-                    <option value="Друго">Друго</option>
                 </select>
                 <span asp-validation-for="Report.Category" class="text-danger"></span>
             </div>
@@ -80,14 +86,44 @@
                     <p id="selected-location-message" class="status-message" aria-live="polite"></p>
                 </div>
 
-                <div class="street-view-panel">
-                    <div class="panel-heading">
-                        <span class="panel-icon" aria-hidden="true">360°</span>
-                        <h2>Уличен изглед</h2>
+                @if (!string.IsNullOrEmpty(Model.GoogleMapsApiKey))
+                {
+                    <div class="street-view-panel" id="street-view-panel">
+                        <div class="panel-heading">
+                            <span class="panel-icon" aria-hidden="true">360°</span>
+                            <h2>Уличен изглед</h2>
+                        </div>
+                        <div id="street-view-container"></div>
                     </div>
-                    <!-- Тук Google Street View ще се зареди -->
-                    <div id="street-view-container"></div>
+                }
+            </div>
+
+            <!-- Дублиращи сигнали: предложението се появява, докато
+                 маркерът се мести, за да не качва някой три снимки
+                 за проблем, който вече се чака от общината. -->
+            <div class="duplicate-notice" id="duplicate-notice" role="status" aria-live="polite"@(Model.NearbyDuplicates.Count > 0 ? null : " hidden")>
+                <div class="panel-heading">
+                    <span class="panel-icon" aria-hidden="true">⚑</span>
+                    <h2>Твърде близо до вече подаден сигнал</h2>
                 </div>
+                <p class="duplicate-lead">
+                    Отвори съществуващия сигнал и го потвърди с един клик.
+                    Потвържденията вдигат приоритета на реалния проблем, вместо
+                    общината да получава две карточки за една и съща дупка.
+                </p>
+                <ul class="duplicate-list" id="duplicate-list">
+                    @foreach (var match in Model.NearbyDuplicates)
+                    {
+                        <li>
+                            <a class="duplicate-link" asp-page="/Details" asp-route-id="@match.Id">@match.Title</a>
+                            <span class="duplicate-meta">@match.Address · @match.Status · на @(Math.Round(match.DistanceMeters)) m</span>
+                        </li>
+                    }
+                </ul>
+                <label class="duplicate-acknowledge">
+                    <input asp-for="Report.DuplicateAcknowledged" type="checkbox" />
+                    <span>Разбирам — това е различен проблем и искам нов сигнал.</span>
+                </label>
             </div>
 
             <div class="form-field">
@@ -119,7 +155,7 @@
                     Снимки <span class="photo-hint">(незадължително · до 3 снимки · макс. 5 MB)</span>
                 </label>
                 <div class="photo-picker">
-                    <input id="photo-input" name="Photos" type="file" class="photo-input" accept="image/*" capture="environment" multiple />
+                    <input id="photo-input" name="Photos" type="file" class="photo-input" accept="image/*" multiple />
                     <label for="photo-input" class="photo-picker-button">
                         <span aria-hidden="true">＋</span> Избери или снимай
                     </label>
@@ -186,7 +222,93 @@
             );
         }
 
-        // --- 3. Функция за обновяване на локацията ---
+        // Ключът не е конфигуриран или скриптът не минава през мрежата —
+        // без панел, който да показва празна рамка на комисията.
+        if (!panorama) {
+            setTimeout(window.civicHideStreetView, 4000);
+        }
+
+        // --- 3. Вече подаден сигнал на същото място ---
+        const notice = document.getElementById("duplicate-notice");
+        const noticeList = document.getElementById("duplicate-list");
+        const acknowledge = document.getElementById("Report_DuplicateAcknowledged");
+        const categoryInput = document.getElementById("Report_Category");
+        let nearbyTimer = null;
+        let nearbyKey = null;
+
+        function hideDuplicates() {
+            noticeList.textContent = "";
+            notice.hidden = true;
+            acknowledge.checked = false;
+        }
+
+        function showDuplicates(matches) {
+            noticeList.textContent = "";
+
+            matches.forEach(function (match) {
+                const item = document.createElement("li");
+
+                const link = document.createElement("a");
+                link.className = "duplicate-link";
+                // Страницата на сигнала очаква номера в пътя (/Details/7),
+                // а не след вопросителен знак — иначе връзката е 404.
+                link.href = "/Details/" + encodeURIComponent(match.id);
+                link.textContent = match.title;
+
+                const meta = document.createElement("span");
+                meta.className = "duplicate-meta";
+                meta.textContent = match.address + " · " + match.status
+                    + " · на " + Math.round(match.distanceMeters) + " m";
+
+                item.appendChild(link);
+                item.appendChild(meta);
+                noticeList.appendChild(item);
+            });
+
+            notice.hidden = false;
+        }
+
+        // Заявката се бави половин секунда и се повтаря само при реална
+        // промяна: драгането на маркера иначе изпраща отделен запрос на
+        // всяка позиция и изразходва ограничението за форми, което пази
+        // и самото изпращане на сигнала.
+        function askAboutDuplicates() {
+            const category = categoryInput.value;
+            const lat = latitudeInput.value;
+            const lng = longitudeInput.value;
+
+            if (!category || !lat || !lng) return;
+
+            const key = category + "|" + lat + "|" + lng;
+            if (key === nearbyKey) return;
+            nearbyKey = key;
+
+            window.clearTimeout(nearbyTimer);
+            nearbyTimer = window.setTimeout(async function () {
+                try {
+                    const url = window.location.pathname + "?handler=Nearby"
+                        + "&category=" + encodeURIComponent(category)
+                        + "&latitude=" + encodeURIComponent(lat)
+                        + "&longitude=" + encodeURIComponent(lng);
+
+                    const response = await fetch(url, { headers: { Accept: "application/json" } });
+                    if (!response.ok) return;
+
+                    const data = await response.json();
+                    if (data.matches && data.matches.length) {
+                        showDuplicates(data.matches);
+                    } else {
+                        hideDuplicates();
+                    }
+                } catch (error) {
+                    // Няма мрежа или отговорът не е JSON: форматът продължава
+                    // да работи, а при изпращането сървърът прави същата
+                    // проверка и без този скрипт.
+                }
+            }, 500);
+        }
+
+        // --- 4. Функция за обновяване на локацията ---
         function updateLocation(lat, lng) {
             // Записваме в скритите полета
             latitudeInput.value = lat.toFixed(7);
@@ -194,15 +316,23 @@
 
             if (message) {
                 message.textContent = `Избрано местоположение: ${lat.toFixed(6)}, ${lng.toFixed(6)}`;
+                message.classList.remove("status-error");
             }
 
             // Местим Street View
             if (panorama) {
                 panorama.setPosition({ lat: lat, lng: lng });
             }
+
+            askAboutDuplicates();
         }
 
-        // --- 4. Клик на Leaflet картата ---
+        categoryInput.addEventListener("change", function () {
+            nearbyKey = null;
+            askAboutDuplicates();
+        });
+
+        // --- 5. Клик на Leaflet картата ---
         map.on("click", function (e) {
             const lat = e.latlng.lat;
             const lng = e.latlng.lng;
@@ -232,7 +362,7 @@
             updateLocation(prevLat, prevLng);
         }
 
-        // --- 5. Търсене на адрес (Nominatim) ---
+        // --- 6. Търсене на адрес (Nominatim) ---
         async function searchAddress() {
             const query = searchInput.value.trim();
             if (!query) {
@@ -246,18 +376,31 @@
             searchMessage.textContent = "";
 
             try {
-                const url = new URL("https://nominatim.openstreetmap.org/search");
-                url.searchParams.set("q", query + ", Гоце Делчев, България");
-                url.searchParams.set("format", "jsonv2");
-                url.searchParams.set("limit", "1");
-                url.searchParams.set("countrycodes", "bg");
-                url.searchParams.set("viewbox", "23.65,41.62,23.82,41.50");
-                url.searchParams.set("bounded", "1");
+                // Nominatim тук не познава адреса с представка „ул.“, но я
+                // разбира без нея. Повтаряме само при празен резултат:
+                // „бул. Гоце Делчев“ без представката връща града, не булеварда.
+                const lookup = async (term) => {
+                    const url = new URL("https://nominatim.openstreetmap.org/search");
+                    url.searchParams.set("q", term + ", Гоце Делчев, България");
+                    url.searchParams.set("format", "jsonv2");
+                    url.searchParams.set("limit", "1");
+                    url.searchParams.set("countrycodes", "bg");
+                    url.searchParams.set("viewbox", "23.65,41.62,23.82,41.50");
+                    url.searchParams.set("bounded", "1");
+                    url.searchParams.set("accept-language", "bg");
 
-                const response = await fetch(url.toString(), { headers: { "Accept": "application/json" } });
-                if (!response.ok) throw new Error("Search failed");
+                    const response = await fetch(url.toString(), { headers: { "Accept": "application/json" } });
+                    if (!response.ok) throw new Error("Search failed");
+                    return await response.json();
+                };
 
-                const results = await response.json();
+                let results = await lookup(query);
+
+                const withoutPrefix = query.replace(/^(ул|бул|б-р|скв|селище)\.?\s+/i, "").trim();
+                if (!results.length && withoutPrefix.length > 0 && withoutPrefix !== query) {
+                    results = await lookup(withoutPrefix);
+                }
+
                 if (!results.length) {
                     searchMessage.textContent = "Адресът не е намерен. Опитай с друго име на улица.";
                     return;
@@ -301,6 +444,31 @@
 
         setTimeout(() => map.invalidateSize(), 200);
         window.addEventListener("resize", () => map.invalidateSize());
+
+        // --- 7. Място е задължително ---
+        // Без координати сигналът не се появява на публичната карта, затова
+        // спираме изпращането тук и оставяме сървъра да потвърди проверката.
+        const form = mapElement.closest("form");
+
+        form?.addEventListener("submit", function (event) {
+            if (!latitudeInput.value || !longitudeInput.value) {
+                event.preventDefault();
+                if (message) {
+                    message.textContent = "Отбележи мястото с клик върху картата.";
+                    message.classList.add("status-error");
+                }
+                map.getContainer().scrollIntoView({ behavior: "smooth", block: "center" });
+                return;
+            }
+
+            // Същият гейт като на сървъра. Тук е, защото след отказания
+            // пост прикачените снимки не се възстановяват — браузърът не
+            // позволява да се попълни файловото поле отново.
+            if (!notice.hidden && !acknowledge.checked) {
+                event.preventDefault();
+                notice.scrollIntoView({ behavior: "smooth", block: "center" });
+            }
+        });
     });
 
     // --- 6. Визуализация на снимки ---

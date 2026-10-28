@@ -1,7 +1,6 @@
 ﻿
 @page "/Index"
 @model CivicEyeGD.Pages.IndexModel
-@attribute [Microsoft.AspNetCore.Authorization.Authorize]
 
 @{
     ViewData["Title"] = "Начало";
@@ -30,8 +29,14 @@
 
             <div class="home-account-actions">
                 <p>Добре дошъл в CivicEye GD!</p>
-
-               
+                <div class="home-account-buttons">
+                    <a asp-page="/Create" class="home-button-primary">
+                        <span>+</span> Подай сигнал
+                    </a>
+                    <a asp-page="/Map" class="home-button-secondary">
+                        Виж картата ↗
+                    </a>
+                </div>
             </div>
 
             <div class="home-hero-note">
@@ -43,7 +48,29 @@
 
         <div class="home-hero-visual" aria-hidden="true">
 
-            <div class="home-visual-circle home-circle-outer"></div>
+            <div class="home-orbit home-orbit-outer">
+                <svg viewBox="0 0 400 400" class="home-orbit-svg">
+                    <defs>
+                        <path id="indexOrbitPath"
+                              d="M 200, 200 m -186, 0 a 186,186 0 1,1 372,0 a 186,186 0 1,1 -372,0" />
+                    </defs>
+                    <circle cx="200" cy="200" r="186" class="home-orbit-guide" />
+                    <text class="home-orbit-text">
+                        <textPath href="#indexOrbitPath" startOffset="0"
+                                  textLength="1168" lengthAdjust="spacing">
+                            ЗАБЕЛЕЖИ • ПОДАЙ СИГНАЛ • ПРОМЕНИ ГРАДА • ЗАБЕЛЕЖИ • ПОДАЙ СИГНАЛ • ПРОМЕНИ ГРАДА •
+                        </textPath>
+                    </text>
+                </svg>
+            </div>
+
+            <div class="home-orbit home-orbit-inner">
+                <svg viewBox="0 0 400 400" class="home-orbit-svg">
+                    <circle cx="200" cy="200" r="150" class="home-orbit-ticks" />
+                    <circle cx="200" cy="50" r="3" class="home-orbit-dot-accent" />
+                </svg>
+            </div>
+
             <div class="home-visual-circle home-circle-inner"></div>
 
             <div class="home-visual-card">
@@ -57,11 +84,6 @@
                         Твоята възможност за промяна.
                     </span>
                 </div>
-            </div>
-
-            <div class="home-visual-tag home-tag-top">
-                <span class="home-tag-dot"></span>
-                Забележи
             </div>
 
         </div>
@@ -171,7 +193,7 @@
                             </span>
 
                             <time datetime="@report.CreatedAt.ToString("O")">
-                                @report.CreatedAt.ToLocalTime().ToString("dd.MM.yyyy")
+                                @report.CreatedAt.ToDayText()
                             </time>
 
                         </div>

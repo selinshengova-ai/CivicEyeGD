@@ -52,7 +52,7 @@
 
                         <div class="report-meta">
                             <span><strong>Място:</strong> @report.Address</span>
-                            <span><strong>Дата:</strong> @report.CreatedAt.ToLocalTime().ToString("dd.MM.yyyy")</span>
+                            <span><strong>Дата:</strong> @report.CreatedAt.ToDayText()</span>
                         </div>
 
                         <div class="report-card-bottom">
