@@ -36,7 +36,7 @@
 <body class="civic-site" data-theme="light">
 
 <header class="site-header">
-    <nav class="navbar navbar-expand-lg civic-navbar">
+    <nav class="navbar navbar-expand-xl civic-navbar">
         <div class="container civic-nav-container">
             <a class="navbar-brand civic-brand" asp-page="/Index" aria-label="CivicEye GD — Начало">
                 <span class="civic-brand-mark" aria-hidden="true">
@@ -89,7 +89,7 @@
                         }
                     }
                 </ul>
-                <div class="d-flex flex-column flex-lg-row align-items-stretch align-items-lg-center gap-2 ms-lg-auto">
+                <div class="civic-nav-actions">
                     <button type="button" class="btn btn-outline-success" id="themeToggle" aria-pressed="false">
                         <span id="themeIcon" aria-hidden="true">☾</span><span id="themeLabel">Тъмна тема</span>
                     </button>
@@ -97,7 +97,11 @@
                     {
                         <div class="dropdown">
                             <button class="btn btn-outline-success dropdown-toggle" type="button" id="accountDropdown" data-bs-toggle="dropdown" aria-expanded="false">
-                                <span aria-hidden="true">♙</span> Профил
+                                <svg class="civic-nav-icon" viewBox="0 0 24 24" aria-hidden="true">
+                                    <circle cx="12" cy="7.5" r="4" fill="none" stroke="currentColor" stroke-width="2" />
+                                    <path d="M4.5 20.5a7.5 7.5 0 0 1 15 0" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+                                </svg>
+                                <span>Профил</span>
                             </button>
                             <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="accountDropdown">
                                 <li><span class="dropdown-item-text text-muted">@User.Identity.Name</span></li>

@@ -72,7 +72,17 @@
 .map-card-header h2 { margin: 0; font-size: 1.4rem; font-weight: 800; }
 .map-live-indicator { display: inline-flex; align-items: center; gap: 8px; color: #66736A; font-size: 0.85rem; white-space: nowrap; }
 .map-live-indicator span { width: 8px; height: 8px; border-radius: 50%; background: #71994C; }
-#civicMap { width: 100%; height: 500px; z-index: 1; background: #E4EBDD; }
+#civicMap { width: 100%; height: 500px; z-index: 1; background: #E4EBDD; border: 1px solid #DCE5D6; border-radius: 12px; }
+
+/* Един pane: векторната карта е с пълна ширина. */
+.map-panes-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(340px, 100%), 1fr));
+    gap: 22px;
+    padding: 0 28px;
+}
+.map-pane { min-width: 0; }
+html[data-theme="dark"] #civicMap { border-color: var(--dark-border); }
 .map-card-footer { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 10px; padding: 14px 22px; color: #718076; font-size: 0.78rem; }
 .map-card-footer a { color: #426B52; text-decoration: none; }
 .map-card-footer a:hover { text-decoration: underline; }
@@ -112,6 +122,10 @@
 .details-priority { background: var(--civic-green); color: white; padding: 15px 20px; border-radius: 12px; text-align: center; min-width: 150px; }
 .details-priority-label { display: block; font-size: 12px; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 5px; }
 .details-priority-score { font-size: 24px; font-weight: 800; }
+/* Приключен сигнал: числото е факт от миналото, а не етикет за действие,
+   затова е сиво и с по-дребен ред, за да не се състезава със статуса. */
+.details-priority-closed { background: #64748b; }
+.details-priority-closed .details-priority-score { font-size: 15px; font-weight: 600; }
 .details-grid { display: grid; grid-template-columns: 2fr 1fr; gap: 30px; align-items: start; }
 .details-main, .details-sidebar { display: flex; flex-direction: column; gap: 20px; }
 .details-description, .details-images, .details-history, .details-card { background: #fff; padding: 24px; border-radius: 16px; border: 1px solid var(--civic-border); box-shadow: 0 4px 15px rgba(0,0,0,0.03); }
@@ -144,11 +158,29 @@
     .map-heading { align-items: flex-start; flex-direction: column; }
     .map-report-button { width: 100%; }
     .map-card-header { align-items: flex-start; flex-direction: column; padding: 20px; }
-    #civicMap { height: 380px; }
+    #civicMap { height: 440px; }
+    .map-panes-grid { padding: 0 18px; }
     .map-bottom { grid-template-columns: 1fr; gap: 14px; padding-top: 28px; }
     .map-info { align-items: flex-start; padding: 16px; }
     .details-grid { grid-template-columns: 1fr; }
     .details-header { flex-direction: column; }
+
+    /* Пръстът е по-непрецизен от мишката: 44px е минималната зона за допир. */
+    .leaflet-bar a { width: 42px; height: 42px; line-height: 42px; font-size: 20px; }
+    .leaflet-container .leaflet-control-attribution { padding: 3px 6px; font-size: 10px; }
+    .details-back, .back-link,
+    .report-title-link, .report-details-link {
+        display: inline-flex;
+        align-items: center;
+        min-height: 44px;
+    }
+    .details-rating-button { height: 46px; }
+    .card-body p.text-center > a {
+        display: inline-flex;
+        align-items: center;
+        min-height: 44px;
+        padding: 0 6px;
+    }
 }
 @media (max-width: 600px) {
     .reports-page { padding: 30px 0 48px; }
@@ -226,8 +258,16 @@
     display: flex;
     flex-direction: column;
     gap: 8px;
+    color: inherit;
+    text-decoration: none;
     box-shadow: 0 4px 14px rgba(18, 59, 50, 0.03);
-    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+/* Която и да е карта е филтър: активната се различава по ръба, не по цвят. */
+.admin-stat-card.is-active {
+    border-color: var(--civic-green, #1b4d3e);
+    box-shadow: 0 4px 14px rgba(18, 59, 50, 0.03), inset 3px 0 0 var(--civic-lime, #d7f36b);
 }
 
 .admin-stat-card:hover {
@@ -288,61 +328,178 @@ html[data-theme="dark"] .admin-stat-card strong {
    АДМИН ПАНЕЛ
    ========================================= */
 
-/* Статистики */
-.admin-stats {
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 15px;
-    margin-bottom: 25px;
-}
-.admin-stat-card {
-    background: #fff;
-    padding: 15px;
-    border-radius: 12px;
-    border: 1px solid var(--civic-border);
+/* Админ карти */
+.admin-report-list {
     display: flex;
     flex-direction: column;
-    gap: 8px;
-    text-decoration: none;
-    color: inherit;
-    cursor: pointer;
-    transition: transform 0.2s, box-shadow 0.2s;
-}
-.admin-stat-card:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 8px 24px rgba(18, 59, 50, 0.06);
-}
-.admin-stat-card span {
-    font-size: 13px;
-    color: var(--civic-muted);
-}
-.admin-stat-card strong {
-    font-size: 28px;
-    color: var(--civic-green-dark);
-}
-html[data-theme="dark"] .admin-stat-card {
-    background: var(--dark-surface);
-    border-color: var(--dark-border);
-}
-html[data-theme="dark"] .admin-stat-card strong {
-    color: var(--dark-accent);
+    gap: 15px;
 }
 
-/* Админ карти */
 .admin-report-card {
-    display: flex;
-    flex-direction: row;
-    justify-content: space-between;
-    align-items: flex-start;
-    gap: 20px;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 320px;
+    align-items: start;
+    gap: 24px;
 }
-.admin-report-info { flex: 1; }
-.admin-report-actions {
+
+.admin-report-info { min-width: 0; }
+
+.admin-card-top {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 10px;
+}
+
+.admin-report-info h3 { margin: 0 0 10px; }
+.admin-report-info .report-description { margin-bottom: 10px; }
+
+.admin-images {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-bottom: 15px;
+}
+
+.admin-image-thumb {
+    width: 80px;
+    height: 80px;
+    object-fit: cover;
+    border-radius: 8px;
+    border: 1px solid var(--civic-border, #e0e8e1);
+}
+
+.admin-images a {
+    display: block;
+    border-radius: 8px;
+    cursor: zoom-in;
+}
+
+.admin-images a:hover .admin-image-thumb,
+.admin-images a:focus-visible .admin-image-thumb {
+    border-color: var(--civic-green, #1b4d3e);
+}
+
+/* Действията си имат собствен панел: преди падоха право в текста на
+   картата и се блъскаха една в друга. */
+.admin-action-form {
     display: flex;
     flex-direction: column;
-    gap: 10px;
-    min-width: 180px;
+    gap: 12px;
+    padding: 16px;
+    border: 1px solid var(--civic-border, #e0e8e1);
+    border-radius: var(--civic-radius-sm, 10px);
+    background: var(--civic-green-soft, #f0f6f1);
 }
+
+.admin-field-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+}
+
+.admin-field {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    min-width: 0;
+    flex: 1;
+}
+
+.admin-field--adjust { flex: 0 0 88px; }
+
+.admin-field-label {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--civic-muted, #66766d);
+}
+
+.admin-action-form .form-select,
+.admin-action-form .form-textarea,
+.admin-action-form .form-input {
+    width: 100%;
+    font-size: 14px;
+    box-sizing: border-box;
+}
+
+.admin-save-button {
+    border: 0;
+    border-radius: 9px;
+    padding: 11px 14px;
+    background: var(--civic-green, #1b4d3e);
+    color: #fff;
+    font-family: inherit;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background var(--civic-transition, 180ms ease), transform .1s ease;
+}
+
+.admin-save-button:hover { background: var(--civic-green-hover, #24634e); }
+.admin-save-button:active { transform: translateY(1px); }
+
+.admin-save-button:focus-visible {
+    outline: 3px solid var(--civic-lime, #d7f36b);
+    outline-offset: 2px;
+}
+
+.admin-field-hint {
+    margin: 0;
+    font-size: 11px;
+    line-height: 1.5;
+    color: var(--civic-muted, #66766d);
+}
+
+/* Репликата след записване и празната група – двете неща, които преди
+   липсваха и служителят не разбера дали нещо се е случило. */
+.admin-notice {
+    margin: 0 0 18px;
+    padding: 11px 16px;
+    border: 1px solid var(--civic-border, #e0e8e1);
+    border-left: 4px solid var(--civic-green, #1b4d3e);
+    border-radius: 10px;
+    background: var(--civic-green-soft, #f0f6f1);
+    font-size: 14px;
+    color: var(--civic-text, #1d3028);
+}
+
+.admin-empty {
+    margin: 0;
+    padding: 26px;
+    border: 1px dashed var(--civic-border, #e0e8e1);
+    border-radius: var(--civic-radius, 16px);
+    text-align: center;
+    color: var(--civic-muted, #66766d);
+}
+
+.admin-urgent-detail { margin: 2px 0 0 0; }
+
+/* Надписът над заглавията беше без стил навсякъде, където се ползва. */
+.reports-eyebrow {
+    display: inline-block;
+    margin-bottom: 10px;
+    color: var(--civic-muted, #66766d);
+    font-size: 12px;
+    font-weight: 800;
+    letter-spacing: 1.5px;
+}
+
+.reports-eyebrow--danger { color: var(--civic-danger, #c2413b); }
+
+.admin-list-heading { margin-top: 30px; }
+
+html[data-theme="dark"] .admin-action-form,
+html[data-theme="dark"] .admin-notice {
+    background: var(--dark-surface);
+    border-color: var(--dark-border);
+    color: var(--dark-text);
+}
+
+html[data-theme="dark"] .admin-image-thumb { border-color: var(--dark-border); }
+html[data-theme="dark"] .admin-notice { border-left-color: var(--dark-accent); }
 
 /* Модален прозорец */
 .image-modal {
@@ -384,20 +541,378 @@ html[data-theme="dark"] .admin-stat-card strong {
     color: var(--civic-lime, #d7f36b);
 }
 
-/* Мобилна адаптивност */
-@media (max-width: 768px) {
+/* Мобилна адаптивност: колоните на картата се нареджат една под друга,
+   а панелът на действа остава без собствена рамка, защото картата вече
+   има своя и два рамки един в друг изглеждат като грешка. */
+@media (max-width: 900px) {
     .admin-report-card {
-        flex-direction: column;
+        grid-template-columns: 1fr;
     }
-    .admin-report-actions {
+
+    .admin-action-form {
+        padding: 14px 0 0;
+        border: 0;
+        border-top: 1px solid var(--civic-border, #e0e8e1);
+        border-radius: 0;
+        background: transparent;
+    }
+
+    .admin-save-button {
         width: 100%;
     }
-    .admin-stats {
-        grid-template-columns: repeat(2, 1fr);
+}
+/* ================= Спешни сигнали =================
+   Маркерът е игла, оцветена по средната сериозност, и
+   пулсира, когато сигналът е 4 или 5 и още не е решен. */
+.civic-pin-wrap {
+    position: relative;
+    width: 26px;
+    height: 36px;
+    background: none;
+    border: none;
+}
+
+.civic-pin-body {
+    position: relative;
+    z-index: 2;
+    display: block;
+}
+
+.civic-pin {
+    display: block;
+    filter: drop-shadow(0 2px 3px rgba(19, 35, 28, 0.35));
+}
+
+.civic-pin-pulse {
+    position: absolute;
+    left: 13px;
+    top: 12px;
+    width: 26px;
+    height: 26px;
+    margin: -13px 0 0 -13px;
+    border-radius: 50%;
+    background: rgba(194, 65, 59, 0.45);
+    z-index: 1;
+    animation: civic-pulse 1.8s ease-out infinite;
+}
+
+@keyframes civic-pulse {
+    0% {
+        transform: scale(0.5);
+        opacity: 0.9;
+    }
+    70% {
+        transform: scale(2);
+        opacity: 0;
+    }
+    100% {
+        transform: scale(2);
+        opacity: 0;
     }
 }
-@media (max-width: 500px) {
-    .admin-stats {
-        grid-template-columns: 1fr;
+
+/* Пулсацията е движение, затова спира при настройка
+   за намалени анимации. */
+@media (prefers-reduced-motion: reduce) {
+    .civic-pin-pulse {
+        animation: none;
+        opacity: 0.35;
+    }
+}
+
+.map-legend {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px 18px;
+    padding: 12px 24px;
+    border-top: 1px solid var(--civic-border, #e0e8e1);
+    font-size: 0.82rem;
+    color: var(--civic-muted, #66766d);
+}
+
+.map-legend span {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+}
+
+.legend-dot {
+    width: 11px;
+    height: 11px;
+    border-radius: 50%;
+    border: 1.5px solid #fff;
+    box-shadow: 0 0 0 1px rgba(19, 35, 28, 0.18);
+    flex: none;
+}
+
+.legend-dot-low { background: #2e7d5b; }
+.legend-dot-mid { background: #d9a406; }
+.legend-dot-high { background: #c2413b; }
+.legend-dot-none { background: #6b7280; }
+
+.map-legend-note {
+    font-style: italic;
+}
+
+.map-urgent-summary {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    color: var(--civic-danger);
+    font-size: 0.86rem;
+}
+
+.urgent-dot-static {
+    width: 11px;
+    height: 11px;
+    border-radius: 50%;
+    background: var(--civic-danger);
+    flex: none;
+}
+
+.popup-urgent-note {
+    color: var(--civic-danger);
+    font-weight: 600;
+}
+
+.popup-details-link {
+    display: inline-block;
+    margin-top: 4px;
+    color: var(--civic-green);
+    font-weight: 600;
+}
+
+.admin-urgent-banner {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    flex-wrap: wrap;
+    padding: 16px 20px;
+    margin-bottom: 22px;
+    border-left: 4px solid var(--civic-danger);
+    border-radius: var(--civic-radius-sm);
+    background: rgba(194, 65, 59, 0.09);
+}
+
+.admin-urgent-banner strong {
+    color: var(--civic-danger);
+}
+
+.priority-chip {
+    display: inline-block;
+    padding: 3px 9px;
+    border-radius: 999px;
+    font-size: 0.76rem;
+    font-weight: 600;
+    background: var(--civic-green-light);
+    color: var(--civic-green);
+}
+
+.priority-chip.high {
+    background: rgba(194, 65, 59, 0.14);
+    color: var(--civic-danger);
+}
+
+/* Един видим бутон за експорт: PDF отчетът е документът, който
+   службата използва. Таблиците и принтът са под едно разкриващо
+   копче, за да не се състезават трите катина с него. */
+.admin-report-button {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 18px;
+    border-radius: 999px;
+    background: var(--civic-green);
+    color: #fff;
+    font-size: 0.86rem;
+    font-weight: 700;
+    text-decoration: none;
+    transition: background var(--civic-transition, 180ms ease), transform .1s ease;
+}
+
+.admin-report-button:hover {
+    background: var(--civic-green-hover);
+    color: #fff;
+}
+
+.admin-report-button:active {
+    transform: translateY(1px);
+}
+
+.admin-report-button:focus-visible {
+    outline: 3px solid var(--civic-lime, #d7f36b);
+    outline-offset: 2px;
+}
+
+.admin-list-actions {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    row-gap: 12px;
+    flex-wrap: wrap;
+}
+
+.admin-more {
+    position: relative;
+}
+
+.admin-more summary {
+    display: inline-flex;
+    align-items: center;
+    padding: 9px 16px;
+    border: 1px solid var(--civic-border, #e0e8e1);
+    border-radius: 999px;
+    background: transparent;
+    color: var(--civic-green);
+    font-size: 0.82rem;
+    font-weight: 600;
+    cursor: pointer;
+    list-style: none;
+}
+
+.admin-more summary::-webkit-details-marker {
+    display: none;
+}
+
+.admin-more summary:hover {
+    border-color: var(--civic-green);
+    background: var(--civic-green-soft, #f0f6f1);
+}
+
+.admin-more[open] summary {
+    border-color: var(--civic-green);
+    background: var(--civic-green-soft, #f0f6f1);
+}
+
+.admin-more-body {
+    position: absolute;
+    top: calc(100% + 6px);
+    right: 0;
+    z-index: 20;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    min-width: 220px;
+    padding: 8px;
+    border: 1px solid var(--civic-border, #e0e8e1);
+    border-radius: 12px;
+    background: #fff;
+    box-shadow: 0 12px 28px rgba(18, 59, 50, 0.12);
+}
+
+.admin-more-body a,
+.admin-more-body button {
+    display: block;
+    width: 100%;
+    padding: 9px 12px;
+    border: 0;
+    border-radius: 8px;
+    background: transparent;
+    color: var(--civic-text, #1d3028);
+    font-family: inherit;
+    font-size: 0.82rem;
+    font-weight: 600;
+    text-align: left;
+    text-decoration: none;
+    cursor: pointer;
+}
+
+.admin-more-body a:hover,
+.admin-more-body button:hover {
+    background: var(--civic-green-soft, #f0f6f1);
+    color: var(--civic-green);
+}
+
+/* Надписът защо гласуването е затворен + поканата за вход до него. */
+.details-vote-note {
+    color: var(--civic-muted);
+    font-size: 14px;
+    margin: 0 0 12px 0;
+}
+
+.details-login-link {
+    display: inline-block;
+    margin-left: 4px;
+    color: var(--civic-green);
+    font-weight: 700;
+    text-decoration: underline;
+}
+
+.details-login-link:focus-visible {
+    outline: 2px solid var(--civic-green);
+    outline-offset: 2px;
+}
+
+/* Страницата „Поверителност" е обикновен текст: тясна колона, редове
+   с въздух, за да се чете и на телефона, и на хартия. */
+.privacy-container {
+    width: min(760px, 100%);
+    margin: 0 auto;
+    padding: 24px 16px 48px;
+    line-height: 1.6;
+}
+
+.privacy-container h1 {
+    color: var(--civic-green);
+    font-size: 28px;
+    margin: 0 0 12px;
+}
+
+.privacy-container h2 {
+    font-size: 19px;
+    margin: 26px 0 8px;
+    color: var(--civic-green);
+}
+
+.privacy-lead {
+    font-size: 16px;
+    margin: 0 0 18px;
+}
+
+.privacy-container ul {
+    margin: 0 0 12px 20px;
+    padding: 0;
+}
+
+.privacy-container li {
+    margin: 8px 0;
+}
+
+.privacy-note {
+    margin-top: 28px;
+    color: var(--civic-muted);
+    font-size: 13px;
+}
+
+/* Хартиен вариант на таблото: без навигация, бутони и форми. */
+@media print {
+    .site-header,
+    .civic-footer,
+    .admin-list-actions,
+    .admin-report-actions {
+        display: none !important;
+    }
+
+    body {
+        background: #fff;
+        color: #1d3028;
+    }
+
+    .reports-container {
+        max-width: none;
+        padding: 0;
+    }
+
+    .admin-report-card {
+        break-inside: avoid;
+        border: 1px solid #b9c4bd;
+        box-shadow: none;
+    }
+
+    .report-description {
+        display: block;
+        max-height: none;
+        overflow: visible;
     }
 }
