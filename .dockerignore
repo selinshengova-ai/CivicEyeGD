@@ -1,0 +1,15 @@
+﻿.git
+.vs
+.vscode
+bin
+obj
+publish
+App_Data
+.private
+Tests
+*.db
+*.db-shm
+*.db-wal
+run_dev.log
+
+App_Data-backup/
