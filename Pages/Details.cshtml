@@ -1,6 +1,11 @@
 @page "{id:int}"
 @model CivicEyeGD.Pages.DetailsModel
+@* Номерът на сигнала стои в пътя на адреса и е само цяло число: заявка с дума
+   или с дробна част не стига дотук, а се отхвърля още при маршрутизирането.
+   Същият адрес ползват връзките от картите и от списъците. *@
 @{
+    // Името на раздела в браузъра идва от заглавието на сигнала; при
+    // липсващ такъв остава неутрална дума, а не празно място в листа.
     ViewData["Title"] = Model.Report?.Title ?? "Сигнал";
 
     // Кой може да гласува и защо не, се решава тук, за да не се
@@ -15,15 +20,9 @@
     var IsClosedReport = Model.Report is not null
         && ReportStatuses.IsClosed(Model.Report.Status);
 
-    // Изречението стои под самото число, затова глаголът трябва да е в
-    // същия род и число като субекта; при нула пък няма кой какво да твърди.
-    var ConfirmationsSentence = Model.ConfirmationCount switch
-    {
-        0 => "Все още няма потвърждения от други граждани.",
-        1 => "гражданин потвърждава, че проблемът съществува.",
-        _ => "граждани потвърждават, че проблемът съществува."
-    };
-
+    // Трите обяснения са написани веднъж, защото за оценката и за
+    // потвърждението важат същите причини: под блока се изписва един ред,
+    // а не два, които след време се разминават.
     var VotingUnavailableText = !Model.IsSignedIn
         ? "Трябва да влезеш в акаунта си, за да гласуваш."
         : Model.CurrentUserIsAuthor
@@ -34,6 +33,9 @@
 <section class="details-page">
     <div class="details-container">
 
+        @* Двете ленти съобщават резултата от току-що направено действие — глас,
+           потвърждение или намеса на общината. Когато няма такова, редовете
+           изобщо не влизат в изпратения HTML, а не стоят празни. *@
         @if (Model.ErrorMessage is not null)
         {
             <div class="details-alert details-alert-error">@Model.ErrorMessage</div>
@@ -43,10 +45,17 @@
             <div class="details-alert details-alert-success">@Model.SuccessMessage</div>
         }
 
+        @* Обратно се ходи към списъка, а не към предишния адрес на браузъра:
+           насам се стига по номер на сигнал. Стрелката е украса и е
+           скрита от четящите програми, защото текстът зад нея казва
+           всичко сам. *@
         <a asp-page="/Reports" class="details-back">
             <span aria-hidden="true">←</span> Всички сигнали
         </a>
 
+        @* Цялото тяло е под тази проверка: при изтрит или не намерен сигнал
+           страницата остава само със съобщението отгоре, без празна картичка
+           и без нули на мястото на липсващите данни. *@
         @if (Model.Report is not null)
         {
             <div class="details-header">
@@ -57,16 +66,20 @@
                         <span aria-hidden="true">⌖</span> @Model.Report.Address
                     </p>
                 </div>
+                @* На приключен сигнал етикетът за приоритет отстъпва мястото
+                   си на статуса: думата, описвала напрежението преди
+                   затварянето, в настоящето би звучала като грешка. Чипът
+                   получава само класова наставка, а не цветове на мястото. *@
                 <div class="details-priority@(IsClosedReport ? " details-priority-closed" : "")">
                     @if (IsClosedReport)
                     {
                         <span class="details-priority-label">@Model.Report.Status</span>
-                        <span class="details-priority-score">приключен · @Model.PriorityScore / 100</span>
+                        <span class="details-priority-score">приключен · @NumberText.Score(Model.PriorityScore) / 100</span>
                     }
                     else
                     {
                         <span class="details-priority-label">@Model.PriorityLabel</span>
-                        <span class="details-priority-score">@Model.PriorityScore / 100</span>
+                        <span class="details-priority-score">@NumberText.Score(Model.PriorityScore) / 100</span>
                     }
                 </div>
             </div>
@@ -78,16 +91,27 @@
                         <p>@Model.Report.Description</p>
                     </div>
 
+                    @* Разделът със снимки отсъства изцяло, когато сигналът
+                       няма нито една: заглавен ред с празна мрежа под него би
+                       се чел като счупен, а не като липсващ. *@
                     @if (Model.Report.Images.Count > 0)
                     {
                         <div class="details-images">
                             <h2>Снимки</h2>
                             <div class="details-images-grid">
+                                @* Снимките се сервират по собствения си номер,
+                                   не по име на файл от диска. Малката картина и
+                                   тази в слоя на прегледа сочат към един и същ
+                                   адрес, затова прегледът не носи второ
+                                   изтегляне. *@
                                 @foreach (var image in Model.Report.Images)
                                 {
                                     <a href="javascript:void(0)" 
                                        class="open-image-modal" 
                                        data-image-src="/report-images/@image.Id">
+                                        @* Текстът за четящите програми е обща
+                                           фраза, а не описание на кадъра: тук
+                                           за снимката е известен само номерът ѝ. *@
                                         <img src="/report-images/@image.Id" alt="Снимка към сигнала" />
                                     </a>
                                 }
@@ -95,35 +119,90 @@
                         </div>
                     }
 
+                    @* Дневникът на сигнала: тук се вижда всяка стъпка на
+                       общината — смяна на статуса, корекция на приоритета и
+                       бележка. Запис без промяна на статуса оставя стария и
+                       новия статус равни, и това го различава от прехода. *@
                     <div class="details-history">
-                        <h2>История на статуса</h2>
-                        @if (Model.Report.StatusHistories.Count == 0)
+                        <h2>История на сигнала</h2>
+                        @* Липсата на стъпки се казва с изречение, а не с
+                           празна лента от точки: линия и точка без запис
+                           биха подсказвали промяна, която не се е случила. *@
+                        @if (Model.DiarySteps.Count == 0)
                         {
-                            <p class="details-muted">Все още няма промени по статуса.</p>
+                            <p class="details-muted">Все още няма записани промени по сигнала.</p>
                         }
                         else
                         {
+                            @* Историята се изписва от сървъра, защото тя е
+                               доказателство за направеното, а не изглед, който
+                               скриптът би преустроил. Редът на листата е
+                               готов в модела — най-новата стъпка първо, защото
+                               нея търси човекът, който се връща при сигнала. *@
                             <div class="timeline">
-                                @foreach (var entry in Model.Report.StatusHistories.OrderByDescending(h => h.ChangedAt))
+                                @foreach (var entry in Model.DiarySteps)
                                 {
                                     <div class="timeline-item">
                                         <div class="timeline-dot"></div>
                                         <div class="timeline-content">
                                             <strong>
+                                                @* Първият запис няма предишен
+                                                   статус и затова се изписва
+                                                   само новият: стрелка,
+                                                   тръгваща от нищо, би
+                                                   приличала на преход. *@
                                                 @if (string.IsNullOrEmpty(entry.OldStatus))
                                                 {
                                                     <text>@entry.NewStatus</text>
+                                                }
+                                                else if (entry.OldStatus == entry.NewStatus)
+                                                {
+                                                    @* Равни стар и нов статус не са
+                                                       сгрешени данни, а смисъл:
+                                                       общината се е намесила без
+                                                       преход, затова редът се чете
+                                                       като намеса, не като смяна
+                                                       на състоянието. *@
+                                                    <text>Намеса на общината · @entry.NewStatus</text>
                                                 }
                                                 else
                                                 {
                                                     <text>@entry.OldStatus → @entry.NewStatus</text>
                                                 }
                                             </strong>
+                                            @* Редът се появява само когато има
+                                               стойност: иначе нулата би се
+                                               чела като нулирана намеса, а не
+                                               като липсваща. *@
+                                            @if (entry.NewPriorityAdjustment.HasValue)
+                                            {
+                                                @* Корекцията е част от числото 0–100
+                                                   на приоритета, затова я показваме
+                                                   като факт, а не като тайна. *@
+                                                <span class="timeline-priority">
+                                                    Корекция на приоритета:
+                                                    @entry.OldPriorityAdjustment → @entry.NewPriorityAdjustment от 10
+                                                </span>
+                                            }
+                                            @* Часът е в относителен израз, не в
+                                               печат с минути: така се чете на
+                                               един поглед, а точният момент си
+                                               остава записан в базата. *@
                                             <span>@entry.ChangedAt.ToMomentText()</span>
+                                            @* Имената на служители се вземат от
+                                               готов речник, а не се питат за
+                                               всеки ред: дневникът се сглобява
+                                               с едно минаване. Когато записът
+                                               няма автор, редът просто отпада. *@
                                             @if (Model.HistoryAuthorLabels.TryGetValue(entry.Id, out var authorLabel))
                                             {
                                                 <span class="timeline-author">@authorLabel</span>
                                             }
+                                            @* Бележката е последният ред на
+                                               записа и носи класа
+                                               timeline-comment; защо стилът ѝ
+                                               е с два класа, пише в CSS-а
+                                               долу. Празна тя не влиза в HTML. *@
                                             @if (!string.IsNullOrWhiteSpace(entry.Comment))
                                             {
                                                 <span class="timeline-comment">@entry.Comment</span>
@@ -137,42 +216,183 @@
                 </div>
 
                 <aside class="details-sidebar">
-                    <div class="details-card details-breakdown">
-                        <h2>Как се получава @Model.PriorityScore / 100</h2>
-                        @{
-                            var parts = Model.Breakdown!;
-                            var raw = parts.SeverityPoints + parts.ConfirmationPoints + parts.AdminPoints;
-                        }
-                        <dl class="details-breakdown-list">
-                            <dt>Средна сериозност @parts.UsedSeverity.ToString("0.00") от 5</dt>
-                            <dd>@parts.SeverityPoints.ToString("0.##") т. <span>(по 20 т. на степен)</span></dd>
+                    @* Панелът на служителя се показва само на ролята,
+                       проверена в базата, а не като скрит бутон: без права
+                       форматът изобщо не влиза в изпратения HTML, та няма
+                       какво да се надхитрява от конзолата. Скриването е само
+                       ред, а границата е друга — заявката се приема от
+                       обработващ метод на страницата, не от скрипт. *@
+                    @if (Model.IsOfficer)
+                    {
+                        <div class="details-card details-office">
+                            <h2>Намеса на общината</h2>
 
-                            <dt>@parts.CappedConfirmations @BulgarianPlural.Of(parts.CappedConfirmations, "потвърждение", "потвърждения")</dt>
-                            <dd>@parts.ConfirmationPoints.ToString("0.##") т. <span>(по 3 т., най-много 10)</span></dd>
+                            @* Тук, а не в таблото: служителят вижда снимките,
+                               точката на картата и дневника на същия екран,
+                               докато решава. На таблото оставаше само списък
+                               от полета без контекст. *@
+                            @* Трите действия на страницата си делят един адрес
+                               и се различават само по име на обработчика,
+                               затова за един сигнал не трябват три отделни
+                               листа. *@
+                            <form method="post" asp-page-handler="Office"
+                                  asp-route-id="@Model.Report.Id" class="admin-action-form"
+                                  data-current-status="@Model.Report.Status"
+                                  data-current-adjustment="@Model.Report.AdminPriorityAdjustment">
+                                <div class="admin-field">
+                                    <label class="admin-field-label" for="office-status">Статус</label>
+                                    @* Възможните статуси идват от общия списък
+                                       на приложението, не са преписани тук:
+                                       не може да се появи вариант, който
+                                       правилата не познават. Текущият е
+                                       избран по подразбиране, за да вижда
+                                       служителят от къде тръгва промяната. *@
+                                    <select id="office-status" name="newStatus" class="form-select">
+                                        @foreach (var status in ReportStatuses.All)
+                                        {
+                                            <option value="@status" selected="@(status == Model.Report.Status ? "selected" : null)">@status</option>
+                                        }
+                                    </select>
+                                </div>
 
-                            <dt>Корекция на общината</dt>
-                            <dd>@parts.AdminPoints.ToString("0.##") т. <span>(0–10)</span></dd>
+                                <div class="admin-field admin-field--adjust">
+                                    <label class="admin-field-label" for="office-adjustment">Корекция (0–10)</label>
+                                    @* Полето е числово със стъпка 1 и с граници
+                                       0–10, същите като в разбивката: текст или
+                                       дробна стойност не се въвеждат, но това е
+                                       само удобство — числото го тълкува
+                                       сървърът, не браузърът. *@
+                                    <div class="admin-adjust-row">
+                                        <input id="office-adjustment" type="number" name="adjustment"
+                                               min="0" max="10" step="1"
+                                               value="@Model.Report.AdminPriorityAdjustment"
+                                               class="form-input admin-adjust-number" />
+                                        @* Плъзгачът няма име, затова не пътува
+                                           към сървъра: той е огледало на
+                                           числото за бавна мишка и за бърз
+                                           палец. *@
+                                        <input type="range" min="0" max="10" step="1"
+                                               value="@Model.Report.AdminPriorityAdjustment"
+                                               class="admin-adjust-range"
+                                               aria-label="Корекция с плъзгач" />
+                                    </div>
 
-                            <dt class="details-breakdown-total">Общо @raw.ToString("0.##") от 140</dt>
-                            <dd class="details-breakdown-total">@Model.PriorityScore.ToString("0.0") % <span>→ @Model.PriorityLabel@(IsClosedReport ? " (преди сигнала да приключи)" : "")</span></dd>
-                        </dl>
-                        <p class="details-muted">Оценките и потвържденията на подателя не влизат в сметката.</p>
-                    </div>
+                                    @* Трите бутони са бърз избор, а не ново
+                                       правило: всеки само въвежда число в
+                                       полето горе, което остава отворено и за
+                                       ръчна промяна. Затова са type="button" —
+                                       формата изпраща единствено бутонът
+                                       „Запази промяната“. *@
+                                    <div class="admin-orientation" role="group"
+                                         aria-label="Бърза ориентация на сигнала">
+                                        <button type="button" class="admin-orient-button"
+                                                data-adjustment="0">0 · без</button>
+                                        <button type="button" class="admin-orient-button"
+                                                data-adjustment="5">5 · средна</button>
+                                        <button type="button" class="admin-orient-button"
+                                                data-adjustment="10">10 · максимална</button>
+                                    </div>
 
-                    <div class="details-card">
-                        <h2>Оценка за сериозност</h2>
-                        <div class="details-rating-display">
-                            <span class="details-rating-number">@Model.AverageSeverity.ToString("0.0")</span>
-                            <span class="details-rating-scale">/ 5</span>
+                                    <p class="admin-field-hint">
+                                        Една точка = +@NumberText.Score(DetailsModel.AdjustmentWeightPerPoint) към приоритета.
+                                        <span class="admin-orient-preview"
+                                              data-current="@Model.Report.AdminPriorityAdjustment"
+                                              data-weight="@DetailsModel.AdjustmentWeightForScript"
+                                              hidden></span>
+                                    </p>
+                                </div>
+
+                                <div class="admin-field">
+                                    <label class="admin-field-label" for="office-comment">Бележка</label>
+                                    @* Бележката е ограничена до 500 знака,
+                                       защото тя не остава служебна: влиза в
+                                       публичния дневник на сигнала. *@
+                                    <textarea id="office-comment" name="comment" class="form-textarea"
+                                              rows="3" maxlength="500"
+                                              placeholder="Какво е направено или защо сигналът се отхвърля."></textarea>
+                                </div>
+
+                                <button type="submit" class="admin-save-button">Запази промяната</button>
+
+                                @* Под бутона пише какво става след натискането:
+                                   бележката е публична, затова служителят го
+                                   разбира преди изпращането, не след него. *@
+                                <p class="admin-field-hint">
+                                    Бележката се вижда публично в историята на сигнала.
+                                </p>
+                            </form>
+
+                            @* Формата за изтриване е отделна, а не бутон в
+                               горната: в HTML една форма не се влага в друга,
+                               и така „Запази промяната“ никога не би могъл да
+                               изпрати и заявка за изтриване. Токенът идва от
+                               същия помощник, а сървърът приема само запис. *@
+                            <form method="post" asp-page-handler="Delete" asp-route-id="@Model.Report.Id"
+                                  class="admin-delete-form"
+                                  data-confirm-text="Изтриването е необратимо. Сигнал #@Model.Report.Id и снимките му ще изчезнат заедно с оценките, потвържденията и дневника. Да се изтрие ли?">
+                                <button type="submit" class="admin-delete-button">Изтрий сигнала</button>
+                            </form>
                         </div>
-                        <p class="details-muted">@Model.IndependentRaterCount @BulgarianPlural.Of(Model.IndependentRaterCount, "оценка", "оценки") от други граждани</p>
+                    }
+
+                    <partial name="_PriorityBreakdown"
+                             model="new ReportPriorityService.PriorityPanel(
+                                 Model.Breakdown!, Model.PriorityScore, Model.PriorityLabel, IsClosedReport)" />
+
+                    @* Двете числа са в една картичка, едно до друго:
+                       сериозността и броят на потвържденията се четат заедно,
+                       а на отделни карти заемаха двойно повече място. Формите
+                       са под тях по цяла ширина — в тясна колона петте бутона
+                       биха били прекалено тесни за натискане. *@
+                    <div class="details-card details-engagement">
+                        <h2>Оценка и потвърждения</h2>
+
+                        <div class="details-engagement-grid">
+                            <div class="details-engagement-item">
+                                <h3>Сериозност</h3>
+                                <div class="details-rating-display">
+                                    <span class="details-rating-number">@NumberText.Score(Model.AverageSeverity)</span>
+                                    <span class="details-rating-scale">/ 5</span>
+                                </div>
+                                @* Броят на оценките е отделно число от средната:
+                                   2,5 от трима души не е същото като 2,5 от
+                                   трийсет, а и двете се четат като едно число. *@
+                                <p class="details-muted">@Model.IndependentRaterCount @BulgarianPlural.Of(Model.IndependentRaterCount, "оценка", "оценки")</p>
+                            </div>
+
+                            <div class="details-engagement-item">
+                                <h3>Потвърждения</h3>
+                                @* Тук самото едро число е броят, затова думата
+                                   до него не го повтаря. *@
+                                <div class="details-rating-display">
+                                    <span class="details-rating-number">@Model.ConfirmationCount</span>
+                                    <span class="details-rating-scale">@BulgarianPlural.Of(Model.ConfirmationCount, "гражданин", "граждани")</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        @* Редът е преди формите, а не вместо тях: веднъж
+                           потвърдено остава факт, дори когато гласуването после
+                           се спре — приключен сигнал или собствено авторство. *@
+                        @if (Model.CurrentUserHasConfirmed)
+                        {
+                            <p class="details-confirmed-note">✓ Вече си потвърдил този проблем.</p>
+                        }
 
                         @if (CurrentUserCanVote)
                         {
                             <form method="post" asp-page-handler="Rate" asp-route-id="@Model.Report.Id">
+                                @* Надписът казва дали човекът гласува за първи път
+                                   или поправя предишния си вот; и двете минават
+                                   през същия формат и същ обработчик, затова
+                                   няма отделна страница за промяна. *@
                                 <p class="details-rating-prompt">
                                     @(Model.CurrentUserHasRated ? "Твоята оценка (можеш да я промениш):" : "Дай своята оценка:")
                                 </p>
+                                @* Петте бутона са истински изпращания на един и
+                                   същ формат с едно име и различна стойност:
+                                   гласуването работи и без пуснат скрипт, а
+                                   добавеният клас показва вече дадения вот. *@
                                 <div class="details-rating-buttons">
                                     @for (int i = 1; i <= 5; i++)
                                     {
@@ -183,11 +403,23 @@
                                     }
                                 </div>
                             </form>
+
+                            @if (!Model.CurrentUserHasConfirmed)
+                            {
+                                <form method="post" asp-page-handler="Confirm" asp-route-id="@Model.Report.Id">
+                                    <button type="submit" class="details-confirm-button">Потвърди този проблем</button>
+                                </form>
+                            }
                         }
                         else
                         {
+                            @* Единственото обяснение защо няма бутони: същото и
+                               за двете действия, изписано веднъж. *@
                             <p class="details-vote-note">
                                 @VotingUnavailableText
+                                @* След влизането човекът се връща при този същ
+                                   сигнал, а не в началото: не губи мястото, от
+                                   което е тръгнал. *@
                                 @if (!Model.IsSignedIn)
                                 {
                                     <a class="details-login-link"
@@ -200,45 +432,32 @@
                         }
                     </div>
 
-                    <div class="details-card">
-                        <h2>Потвърждения</h2>
-                        <div class="details-rating-number">@Model.ConfirmationCount</div>
-                        <p class="details-muted">@ConfirmationsSentence</p>
-
-                        @if (ReportStatuses.IsClosed(Model.Report.Status))
-                        {
-                            <p class="details-confirmed-note">Този сигнал е приключен и не приема нови потвърждения.</p>
-                        }
-                        else if (Model.CurrentUserHasConfirmed)
-                        {
-                            <p class="details-confirmed-note">✓ Вече си потвърдил този проблем.</p>
-                        }
-                        else if (CurrentUserCanVote)
-                        {
-                            <form method="post" asp-page-handler="Confirm" asp-route-id="@Model.Report.Id">
-                                <button type="submit" class="details-confirm-button">Потвърди този проблем</button>
-                            </form>
-                        }
-                        else
-                        {
-                            <p class="details-vote-note">
-                                @VotingUnavailableText
-                                @if (!Model.IsSignedIn)
-                                {
-                                    <a class="details-login-link"
-                                       asp-page="/Account/Login"
-                                       asp-route-returnUrl="/Details/@Model.Report.Id">
-                                        Влез сега
-                                    </a>
-                                }
-                            </p>
-                        }
-                    </div>
-
+                    @* Карточката за мястото изисква и двете координати: само
+                       едната не е точка на картата, затова разделът мълчи, а
+                       не чертае празна връзка. *@
                     @if (Model.Report.Latitude.HasValue && Model.Report.Longitude.HasValue)
                     {
                         <div class="details-card">
                             <h2>Местоположение</h2>
+
+                            @* Мини-картата е мястото, където служителят
+                               разбира адреса с очи: преди това оставаше само
+                               един ред текст и връзка навън, а точността на
+                               качването се преценяваше чак след отварянето
+                               на голямата карта. Контейнерът е готов празен,
+                               плънките идват при зареждането. *@
+                            <div id="detailsMiniMap"
+                                 class="details-mini-map"
+                                 data-lat="@Model.Report.Latitude.Value.ToString(System.Globalization.CultureInfo.InvariantCulture)"
+                                 data-lng="@Model.Report.Longitude.Value.ToString(System.Globalization.CultureInfo.InvariantCulture)"
+                                 role="img"
+                                 aria-label="Местоположението на сигнала на картата"></div>
+
+                            @* Координатите се изписват с постоянна култура, за
+                               да остане точката като десетичен разделител: със
+                               запетаята на българската култура връзката към
+                               външната карта би се счупила. Новият прозорец е
+                               отрязан от достъп до нашия лист. *@
                             <a class="details-map-link"
                                href="https://www.openstreetmap.org/?mlat=@Model.Report.Latitude.Value.ToString(System.Globalization.CultureInfo.InvariantCulture)&mlon=@Model.Report.Longitude.Value.ToString(System.Globalization.CultureInfo.InvariantCulture)#map=18/@Model.Report.Latitude.Value.ToString(System.Globalization.CultureInfo.InvariantCulture)/@Model.Report.Longitude.Value.ToString(System.Globalization.CultureInfo.InvariantCulture)"
                                target="_blank" rel="noopener noreferrer">
@@ -253,183 +472,260 @@
 </section>
 
 <!-- Модален прозорец за снимки -->
+@* Прозорецът за преглед е готов в изпратения HTML от началото и се
+   показва само с промяна на видимостта: няма второ зареждане на
+   страницата, а изображението се пълни чак при щракване. *@
+@* Слойът стои извън проверката за съществуващ сигнал, защото скриптът
+   го търси по номер винаги: изчисти ли го при липсващ сигнал, същият
+   скрипт спира дотам и не закача нищо друго в страницата. *@
 <div id="imageModal" class="image-modal">
     <span class="image-modal-close">&times;</span>
     <img class="image-modal-content" id="modalImage" src="" alt="Преглед на снимка" />
 </div>
 
-<style>
-    /* Модален прозорец */
-    .image-modal {
-        display: none;
-        position: fixed;
-        z-index: 10000;
-        left: 0;
-        top: 0;
-        width: 100%;
-        height: 100%;
-        overflow: auto;
-        background-color: rgba(0, 0, 0, 0.85);
-        backdrop-filter: blur(5px);
-    }
+@section Scripts {
+    @* Leaflet идва в секцията за скриптове, тоест след тялото, за да
+       съществува контейнерът на мини-картата, когато кодът тръгва. Същата
+       точна версия като на публичната карта, за да изглежда еднакво.
+       Плънките на OpenStreetMap не искат ключ и акаунт, а липсата им се
+       различава от липсата на сигнал: без библиотеката се чете ред текст. *@
+    <link rel="stylesheet"
+          href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+          crossorigin="anonymous" />
 
-    .image-modal-content {
-        margin: auto;
-        display: block;
-        max-width: 90%;
-        max-height: 90vh;
-        position: absolute;
-        top: 50%;
-        left: 50%;
-        transform: translate(-50%, -50%);
-        border-radius: 8px;
-        box-shadow: 0 10px 40px rgba(0,0,0,0.5);
-    }
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+            crossorigin="anonymous"></script>
 
-    .image-modal-close {
-        position: absolute;
-        top: 20px;
-        right: 40px;
-        color: #fff;
-        font-size: 40px;
-        font-weight: bold;
-        cursor: pointer;
-        z-index: 10001;
-        transition: color 0.2s;
-    }
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            // --- Мини-карта до сигнала ---
+            const miniMap = document.getElementById("detailsMiniMap");
+            if (miniMap && typeof L !== "undefined") {
+                // Координатите идват от атрибутите, изписани с постоянна
+                // култура: браузърът разбира единствено десетична точка.
+                const lat = Number(miniMap.getAttribute("data-lat"));
+                const lng = Number(miniMap.getAttribute("data-lng"));
 
-    .image-modal-close:hover {
-        color: var(--civic-lime, #d7f36b);
-    }
+                if (Number.isFinite(lat) && Number.isFinite(lng)) {
+                    const map = L.map(miniMap, {
+                        // Тук картата е показание, не инструмент: плъзгането
+                        // би откраднало превъртането на страницата на
+                        // телефона, а мащабът се решава от листа.
+                        zoomControl: true,
+                        dragging: false,
+                        scrollWheelZoom: false,
+                        doubleClickZoom: false,
+                        touchZoom: false,
+                        boxZoom: false,
+                        keyboard: false
+                    }).setView([lat, lng], 16);
 
-    /* Таймлайн за историята на статуса */
-    .timeline {
-        position: relative;
-        padding-left: 20px;
-        margin-top: 15px;
-    }
-    .timeline-item {
-        position: relative;
-        padding-bottom: 20px;
-        border-left: 2px solid var(--civic-border, #e0e8e1);
-        padding-left: 20px;
-    }
-    .timeline-item:last-child {
-        border-left: 2px solid transparent;
-        padding-bottom: 0;
-    }
-    .timeline-dot {
-        position: absolute;
-        left: -6px;
-        top: 0;
-        width: 10px;
-        height: 10px;
-        border-radius: 50%;
-        background: var(--civic-green, #1b4d3e);
-        border: 2px solid #fff;
-    }
-    .timeline-content {
-        display: flex;
-        flex-direction: column;
-        gap: 4px;
-    }
-    .timeline-content strong {
-        color: var(--civic-green-dark, #12392e);
-        font-size: 14px;
-    }
-    .timeline-content span {
-        color: var(--civic-muted, #66766d);
-        font-size: 12px;
-    }
-    .timeline-author {
-        font-weight: 600;
-    }
-    .timeline-comment {
-        color: var(--civic-green-dark, #12392e);
-        font-size: 13px;
-    }
+                    L.tileLayer(
+                        "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+                        {
+                            maxZoom: 19,
+                            attribution:
+                                '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+                        }
+                    ).addTo(map);
 
-    /* Разбивка на приоритета: числата зад етикета */
-    .details-breakdown-list {
-        display: grid;
-        grid-template-columns: 1fr auto;
-        gap: 6px 12px;
-        margin: 12px 0;
-        font-size: 14px;
-    }
-    .details-breakdown-list dt {
-        color: var(--civic-muted, #66766d);
-    }
-    .details-breakdown-list dd {
-        margin: 0;
-        text-align: right;
-        font-variant-numeric: tabular-nums;
-    }
-    .details-breakdown-list dd span {
-        display: block;
-        font-size: 11px;
-        color: var(--civic-muted, #66766d);
-    }
-    .details-breakdown-total {
-        border-top: 1px solid var(--civic-border, #e0e8e1);
-        padding-top: 6px;
-        font-weight: 700;
-        color: var(--civic-green-dark, #12392e);
-    }
-    .details-vote-note {
-        margin-top: 12px;
-        font-size: 13px;
-        color: var(--civic-muted, #66766d);
-    }
+                    // Кръгът е по-малък от иглата на голямата карта: тук
+                    // той отговаря само на въпроса „къде е това“.
+                    L.circleMarker([lat, lng], {
+                        radius: 7,
+                        color: "#12392e",
+                        weight: 2,
+                        fillColor: "#2f7a5e",
+                        fillOpacity: 1
+                    }).addTo(map);
+                }
+            }
 
-    /* Тъмна тема за таймлайна */
-    html[data-theme="dark"] .timeline-item {
-        border-left-color: var(--dark-border);
-    }
-    html[data-theme="dark"] .timeline-dot {
-        background: var(--dark-accent);
-        border-color: var(--dark-surface);
-    }
-    html[data-theme="dark"] .timeline-content strong {
-        color: var(--dark-text);
-    }
-</style>
+            // --- Преглед на снимките ---
+            const modal = document.getElementById("imageModal");
+            const modalImg = document.getElementById("modalImage");
+            const closeBtn = document.querySelector(".image-modal-close");
+            // Връзките се събират наведнъж и всяка получава свой слушател, за да
+            // не се разпитва документа отново при всяко отваряне на снимка.
+            const imageLinks = document.querySelectorAll(".open-image-modal");
 
-<script>
-    document.addEventListener("DOMContentLoaded", function () {
-        const modal = document.getElementById("imageModal");
-        const modalImg = document.getElementById("modalImage");
-        const closeBtn = document.querySelector(".image-modal-close");
-        const imageLinks = document.querySelectorAll(".open-image-modal");
+            imageLinks.forEach(link => {
+                link.addEventListener("click", function (e) {
+                    // Спираме действието по подразбиране на връзката: нейният
+                    // адрес е поставен само за вид, а превъртане не трябва да
+                    // се случи.
+                    e.preventDefault();
+                    // Пътят се чете от атрибута с името data-image-src, а не от
+                    // реда на елементите: той вече е същият, с който малката
+                    // картина е заредена.
+                    const src = this.getAttribute("data-image-src");
+                    if (src) {
+                        modal.style.display = "block";
+                        modalImg.src = src;
+                    }
+                });
+            });
 
-        imageLinks.forEach(link => {
-            link.addEventListener("click", function (e) {
-                e.preventDefault();
-                const src = this.getAttribute("data-image-src");
-                if (src) {
-                    modal.style.display = "block";
-                    modalImg.src = src;
+            // Затварянето има три пътя, защото мишка, палец и клавиатура не
+            // минават през едно и също място. И навсякъде се изчиства
+            // източникът: иначе следващият лист показва за миг предишната
+            // снимка, докато зарежда новата.
+            closeBtn.addEventListener("click", function () {
+                modal.style.display = "none";
+                modalImg.src = "";
+            });
+
+            // Слоят е по-голям от самата снимка, затова се гледа къде точно е
+            // щракнато: щракването върху картината не бива да затваря слоя.
+            modal.addEventListener("click", function (e) {
+                if (e.target === modal) {
+                    modal.style.display = "none";
+                    modalImg.src = "";
                 }
             });
-        });
 
-        closeBtn.addEventListener("click", function () {
-            modal.style.display = "none";
-            modalImg.src = "";
-        });
+            // Escape е отделен път за затваряне, защото клавиатурата не лови
+            // малкия кръст в ъгъла. Условието гледа дали слойът изобщо е
+            // отворен, та клавишът да не отменя нещо друго в страницата.
+            document.addEventListener("keydown", function (e) {
+                if (e.key === "Escape" && modal.style.display === "block") {
+                    modal.style.display = "none";
+                    modalImg.src = "";
+                }
+            });
 
-        modal.addEventListener("click", function (e) {
-            if (e.target === modal) {
-                modal.style.display = "none";
-                modalImg.src = "";
+            // --- Панелът на служителя ---
+            const officeForm = document.querySelector(".admin-action-form");
+            if (officeForm) {
+                const field = document.getElementById("office-adjustment");
+                const slider = officeForm.querySelector(".admin-adjust-range");
+                const preview = officeForm.querySelector(".admin-orient-preview");
+                const statusSelect = document.getElementById("office-status");
+                const commentBox = document.getElementById("office-comment");
+
+                // Двете числа, от които се мести промяната, са написани във
+                // формата от сървъра. Формулата не се преписва тук: теглото
+                // на точката идва от същото място, където е записано.
+                const savedAdjustment = Number(preview.getAttribute("data-current"));
+                const weight = Number(preview.getAttribute("data-weight"));
+                const savedStatus = officeForm.getAttribute("data-current-status");
+
+                function refreshPreview() {
+                    // Празното поле не се тълкува като нула: иначе изтриването
+                    // на числото би изглеждало като корекция надолу.
+                    if (field.value.trim() === "" || !Number.isFinite(Number(field.value))) {
+                        preview.hidden = true;
+                        return;
+                    }
+
+                    const delta = (Number(field.value) - savedAdjustment) * weight;
+
+                    if (Math.abs(delta) < 0.05) {
+                        preview.textContent = "Промяната би била нулева.";
+                    } else {
+                        const sign = delta > 0 ? "+" : "−";
+                        preview.textContent =
+                            "Приоритетът се мести с " + sign + Math.abs(delta).toFixed(1) + ".";
+                    }
+
+                    // Показването чак сега, а не в HTML-а, пази реда от
+                    // твърдение за промяна, която още не е извършена.
+                    preview.hidden = false;
+                }
+
+                field.addEventListener("input", function () {
+                    if (slider) slider.value = field.value;
+                    refreshPreview();
+                });
+
+                // Плъзгачът е огледало на полето: няма име във формата и не
+                // пътува към сървъра, затова движението му само преписва числото,
+                // което наистина се изпраща.
+                if (slider) {
+                    slider.addEventListener("input", function () {
+                        field.value = slider.value;
+                        refreshPreview();
+                    });
+                }
+
+                // Трите бутона за бърза ориентация не изпращат нищо: всеки
+                // само слага число в полето, което остава отворено и за ръчен
+                // запис.
+                officeForm.querySelectorAll(".admin-orient-button").forEach(function (button) {
+                    button.addEventListener("click", function () {
+                        field.value = button.getAttribute("data-adjustment");
+                        if (slider) slider.value = field.value;
+                        refreshPreview();
+                        // Връщането на фокуса към полето: служителят вижда
+                        // числото, току-що избрал, и може да го дооправи.
+                        field.focus();
+                    });
+                });
+
+                // Потвърждението и спирането на бутона са в един слушател,
+                // не в два: разделени, бутонът би се спрял и когато
+                // служителят е отказал изпращането, а на екрана би
+                // останало число без запис.
+                officeForm.addEventListener("submit", function (event) {
+                    const lines = [];
+
+                    if (statusSelect && statusSelect.value !== savedStatus) {
+                        lines.push("Статус: " + savedStatus + " → " + statusSelect.value + ".");
+                    }
+
+                    const adjustment = Number(field.value);
+                    if (Number.isFinite(adjustment) && adjustment !== savedAdjustment) {
+                        lines.push("Корекция: " + savedAdjustment + " → " + adjustment + " от 10.");
+                    }
+
+                    if (commentBox && commentBox.value.trim() !== "") {
+                        lines.push("Бележката се показва публично в историята на сигнала.");
+                    }
+
+                    // Сървърът прави същото пресмятане и без този ред, но
+                    // служителят вижда какво точно ще остави в публичния
+                    // дневник, преди да е натиснал.
+                    const question = lines.length > 0
+                        ? lines.join("\n") + "\n\nДа се запише ли промяната?"
+                        : "Не сте променили нищо — ще останат същият статус и същата корекция.\n\nДа се запише ли въпреки това?";
+
+                    if (!window.confirm(question)) {
+                        event.preventDefault();
+                        return;
+                    }
+
+                    // Бутонът спира след първото изпращане: същата промяна,
+                    // записана два пъти, би оставила две еднакви стъпки в
+                    // дневника. Страницата се презарежда с отговора и носи
+                    // нов, работещ бутон.
+                    const button = officeForm.querySelector(".admin-save-button");
+                    if (!button || button.disabled) return;
+
+                    // Нулата изчаква браузъра да тръгне със заявката, преди
+                    // бутонът за изпращане да бъде спрян.
+                    window.setTimeout(function () {
+                        button.disabled = true;
+                        button.classList.add("is-busy");
+                        button.textContent = "Записване…";
+                    }, 0);
+                });
             }
-        });
 
-        document.addEventListener("keydown", function (e) {
-            if (e.key === "Escape" && modal.style.display === "block") {
-                modal.style.display = "none";
-                modalImg.src = "";
-            }
+            // --- Изтриването пита преди да действа ---
+            // Текстът стои върху самата форма, заедно с номера на сигнала,
+            // затова диалогът никога не сочи друг ред; без потвърждение един
+            // случаен натиск би изтрил документ, който няма как да се върне.
+            document.querySelectorAll(".admin-delete-form").forEach(function (form) {
+                form.addEventListener("submit", function (event) {
+                    const question = form.getAttribute("data-confirm-text")
+                        || "Изтриването е необратимо. Да се изтрие ли?";
+
+                    if (!window.confirm(question)) {
+                        event.preventDefault();
+                    }
+                });
+            });
         });
-    });
-</script>
+    </script>
+}
+

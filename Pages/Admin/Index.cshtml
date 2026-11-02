@@ -1,5 +1,13 @@
 @page
 @model CivicEyeGD.Pages.Admin.IndexModel
+@* Таблото е само за общинския служител: изискването за роля Administrator
+   стои като атрибут върху класа на модела в Pages/Admin/Index.cshtml.cs, а
+   не като скрит бутон тук. Затова директна заявка на адреса без влизане не
+   стига до сигналите и не може да се оспори даден ред. *@
+
+@* Заглавието се предава с ключ към ViewData, защото оттам го чете
+   шаблонът за етикета на раздела; текстът е на български, тъй като и
+   целият интерфейс, и отчетите за общината са на български. *@
 @{
     ViewData["Title"] = "Администрация";
 }
@@ -10,21 +18,36 @@
             <div>
                 <span class="reports-eyebrow reports-eyebrow--danger">CIVICEYE GD / СИСТЕМА</span>
                 <h1>Административно табло.</h1>
-                <p>Управление, смяна на статуси и проверка на снимки.</p>
+                <p>Преглед, филтри и експорти; промените се правят на страницата на сигнала.</p>
             </div>
         </div>
 
+        @* Репликата след записването пристига като параметър в адреса,
+           защото презареждането след POST няма друго място, където да
+           съхрани текста между двете заявки. role="status" я обявява
+           учтиво, без да прекъсва това, което човекът чете в момента. *@
         @if (Model.Notice is not null)
         {
             <p class="admin-notice" role="status">@Model.Notice</p>
         }
 
+        @* Прагът на спешността е константата HighPriorityFrom от модела и
+           съвпада с етикета „Висок приоритет“ в услугата за приоритет
+           (70 нагоре), за да не вижда служителят две различни числа за
+           едно и също. Лентата липсва при нула, за да не крещи празно
+           табло, а role="alert" прекъсва, защото има какво да се чака. *@
         @if (Model.HighPriorityCount > 0)
         {
             <div class="admin-urgent-banner" role="alert">
                 <span class="urgent-dot-static" aria-hidden="true"></span>
                 <div>
                     <strong>Спешни сигнали: @Model.HighPriorityCount</strong>
+                    @* Точката до заглавката е само украса, затова е с
+                       aria-hidden: екранният четец не бива да обявява
+                       фигура без значение. Обяснението долу именува
+                       умножителите на приоритета — средна сериозност от
+                       чужди граждани и независими потвърждения; оценката
+                       на подателя не тегли реда, защото той не е свидетел. *@
                     <p class="admin-urgent-detail">
                         Тези активни сигнали са с приоритет @CivicEyeGD.Pages.Admin.IndexModel.HighPriorityFrom нагоре —
                         гражданите ги оценяват като сериозни и ги потвърждават масово.
@@ -33,13 +56,28 @@
             </div>
         }
 
+        @* Филтрирането става с параметър в адреса, а не с постъпателно
+           зареждане: всяка група получава собствен адрес, който може да се
+           отметне, пратен по имейл на служителя и отворен след
+           презареждане. Същият адрес носят и връзките за експорт подолу. *@
+        @* Бройките в четирите карти се смятат винаги върху всички сигнали,
+           независимо от избрания филтър: ако се променяха с него,
+           служителят губи прегледа на деня и няма с какво да сравни
+           групите. *@
         <div class="admin-stats">
+            @* Празната стойност на филтъра не е липса на избор, а групата
+               „всички, които още чакат“; при непознат текст в адреса моделът
+               също се връща тук, вместо списъкът да остане празен. *@
             <a asp-page="/Admin/Index" asp-route-filterStatus=""
                class="admin-stat-card @(Model.FilterStatus.Length == 0 ? "is-active" : null)"
                aria-current="@(Model.FilterStatus.Length == 0 ? "true" : null)">
                 <span>Всички активни</span>
                 <strong>@Model.TotalActiveCount</strong>
             </a>
+            @* Двете междинни карти са истинските статуси в базата –
+               Подаден и В процес. Имената се вземат от общия списък на
+               статусите, за да не може надписът на картата и стойността,
+               която сървърът разпознава, да се разминат. *@
             <a asp-page="/Admin/Index" asp-route-filterStatus="@ReportStatuses.New"
                class="admin-stat-card @(Model.FilterStatus == ReportStatuses.New ? "is-active" : null)"
                aria-current="@(Model.FilterStatus == ReportStatuses.New ? "true" : null)">
@@ -52,18 +90,34 @@
                 <span>В процес</span>
                 <strong>@Model.InProgressCount</strong>
             </a>
+            @* „Приключени“ не е статус, съхраняван в базата, а общо име за
+               двата статуса, след които сигналът не чака действие — Решен и
+               Отхвърлен. Стойността идва като константа от модела, а не като
+               низ тук, защото същият текст влиза и в адреса на връзката. *@
             <a asp-page="/Admin/Index" asp-route-filterStatus="@IndexModel.ClosedFilter"
                class="admin-stat-card @(Model.FilterStatus == IndexModel.ClosedFilter ? "is-active" : null)"
                aria-current="@(Model.FilterStatus == IndexModel.ClosedFilter ? "true" : null)">
                 <span>Приключени</span>
                 <strong>@Model.ClosedCount</strong>
             </a>
+            @* Избраната карта бива отбелязана с aria-current, защото
+               оцветяването само по себе си не стига до екранния четец, а
+               избраният филтър трябва да се чуе. *@
         </div>
 
+        @* Заглавката на списъка и числото до нея са от филтрирания набор,
+           затова винаги съвпадат с броя на картите под тях — служителят
+           с поглед проверява дали филтърът е приложен както трябва. *@
         <div class="reports-list-heading admin-list-heading">
             <h2>@Model.ListTitle (@Model.Reports.Count)</h2>
 
             <div class="admin-list-actions">
+                @* Трите експорта са GET връзки, които носят текущия
+                   филтър: файлът съдържа точно това, което е на екрана,
+                   и затова не е нужен отделен екран за експортиране. *@
+                @* PDF-ът е на първо място, защото е документът, с който
+                   сигналите се защитават пред общината; .xlsx и CSV са за
+                   по-нататъшна обработка в таблица. *@
                 <a class="admin-report-button"
                    asp-page="/Admin/Index"
                    asp-page-handler="ExportPdf"
@@ -71,6 +125,12 @@
                     Отчет PDF
                 </a>
 
+                @* По-рядко използваните формати са свити в елемента
+                   details, защото той се разгъва без JavaScript и не
+                   натоварва основната лента с бутони; принтирането е през
+                   браузъра, без сървърна заявка, защото правилото за печат
+                   в CSS-а вече маха навигацията, експортите и полетата за
+                   статус и оставя само сигналите. *@
                 <details class="admin-more">
                     <summary>Други формати</summary>
 
@@ -95,6 +155,15 @@
             </div>
         </div>
 
+        @* Подреждането по приоритет се случва в модела, затова тук няма
+           елементи за подреждане: служителят винаги вижда първо това, което
+           чака най-много, и не го търси из списъка. *@
+        @* Карточката е резюме, не работен плот. Редакцията беше тук и
+           се получи нагънато: две колони с по три полета върху всеки
+           сигнал, а списъкът се разтегляше до безкрайност. Сега тук
+           остава само онова, което служи за избор на ред — с какво, колко
+           спешно, от кога и с каква последна новина — а снимката, картата,
+           дневникът и промените се правят на страницата на сигнала. *@
         <div class="admin-report-list">
             @foreach (var report in Model.Reports)
             {
@@ -103,11 +172,22 @@
                         <div class="admin-card-top">
                             <span class="report-category">@report.Category</span>
                             <span class="report-id">#@report.Id</span>
+                            @* Етикетът и числото са от една и съща формула
+                               за приоритет; числото е с една десетична
+                               цифра, защото следващата не променя решението,
+                               а само претрупва реда. *@
+                            @* Червеното маркиране е само за сигналите, които
+                               още чакат: приключен с висок приоритет вече не
+                               е работа, а свършен факт. *@
                             <span class="priority-chip @(Model.IsHighPriority(report) ? "high" : null)">
-                                @Model.PriorityLabelOf(report) · @Model.PriorityOf(report).ToString("0.0")
+                                @Model.PriorityLabelOf(report) · @NumberText.Score(Model.PriorityOf(report))
                             </span>
+                            <span class="report-status admin-card-status">@report.Status</span>
                         </div>
 
+                        @* Заглавието е връзка към страницата на сигнала:
+                           там са историята, снимките и полетата за
+                           промяна, затова таблото не ги преизгражда. *@
                         <h3>
                             <a asp-page="/Details" asp-route-id="@report.Id" class="report-title-link">
                                 @report.Title
@@ -116,12 +196,45 @@
 
                         <p class="report-description">@report.Description</p>
 
+                        @* Датата минава през помощника за часова зона:
+                           сигналите се пазят в UTC, а сървърният часовник
+                           би показал грешен ден, когато приложението
+                           работи на машина в друга зона. *@
+                        <div class="report-meta admin-meta">
+                            <span><strong>Адрес</strong>@report.Address</span>
+                            <span><strong>Дата</strong>@report.CreatedAt.ToDayText()</span>
+                            <span><strong>Последна промяна</strong>@(Model.LastChangeOf(report) is { } lastChange ? lastChange.ToDayText() : "няма записани промени")</span>
+                            <span><strong>Независимо</strong>@report.IndependentConfirmationCount @BulgarianPlural.Of(report.IndependentConfirmationCount, "потвърждение", "потвърждения"), @report.SeverityRatings.Count(r => r.UserId != report.UserId) @BulgarianPlural.Of(report.SeverityRatings.Count(r => r.UserId != report.UserId), "оценка", "оценки")</span>
+                        </div>
+                    </div>
+
+                    @* Колоната вдясно е действие, не информация: един
+                       бутон, който води там, където се работи. Миниатюрите
+                       отговарят на въпроса „има ли изобщо снимка“, преди
+                       служителят да отвори сигнала; кликът им сочи натам. *@
+                    <div class="admin-report-open">
+                        <a class="admin-open-button" asp-page="/Details" asp-route-id="@report.Id">
+                            Отвори сигнала
+                        </a>
+
                         @if (report.Images.Any())
                         {
                             <div class="admin-images">
-                                @foreach (var image in report.Images)
+                                @* Трите миниатюри са избрани в модела по
+                                   номера на записа, затова редът им не се
+                                   мести при презареждане и служителят
+                                   помни коя кое показва. Останалите
+                                   се гледат на страницата на сигнала. *@
+                                @foreach (var image in Model.ThumbnailsOf(report))
                                 {
-                                    <a href="#" class="open-image-modal" data-image-src="/report-images/@image.Id">
+                                    @* Снимките се сервират през адреса
+                                       /report-images с номера на записа, а
+                                       не като файл от папка: сървърът
+                                       проверява дали изображението е в
+                                       базата и дали типът му е разрешен,
+                                       затова маскиран изпълним файл не
+                                       се показва. *@
+                                    <a asp-page="/Details" asp-route-id="@report.Id" title="Виж снимката в сигнала">
                                         <img class="admin-image-thumb"
                                              src="/report-images/@image.Id"
                                              alt="Снимка към сигнал #@report.Id" />
@@ -129,54 +242,21 @@
                                 }
                             </div>
                         }
+                        else
+                        {
+                            <p class="admin-no-images">Без снимка.</p>
+                        }
 
-                        <div class="report-meta">
-                            <span><strong>Адрес:</strong> @report.Address</span>
-                            <span><strong>Дата:</strong> @report.CreatedAt.ToDayText()</span>
-                        </div>
-                    </div>
-
-                    <div class="admin-report-actions">
-                        <form method="post" asp-page-handler="Update" asp-route-id="@report.Id"
-                              class="admin-action-form">
-                            <input type="hidden" name="filterStatus" value="@Model.FilterStatus" />
-
-                            <div class="admin-field-row">
-                                <div class="admin-field">
-                                    <label class="admin-field-label" for="status-@report.Id">Статус</label>
-                                    <select id="status-@report.Id" name="newStatus" class="form-select">
-                                        @foreach (var status in ReportStatuses.All)
-                                        {
-                                            <option value="@status" selected="@(status == report.Status ? "selected" : null)">@status</option>
-                                        }
-                                    </select>
-                                </div>
-
-                                <div class="admin-field admin-field--adjust">
-                                    <label class="admin-field-label" for="adjustment-@report.Id">Корекция</label>
-                                    <input id="adjustment-@report.Id" type="number" name="adjustment"
-                                           min="0" max="10" step="1" value="@report.AdminPriorityAdjustment"
-                                           class="form-input" />
-                                </div>
-                            </div>
-
-                            <div class="admin-field">
-                                <label class="admin-field-label" for="comment-@report.Id">Бележка</label>
-                                <textarea id="comment-@report.Id" name="comment" class="form-textarea"
-                                          rows="2" maxlength="500"
-                                          placeholder="Какво е направено или защо сигналът се отхвърля."></textarea>
-                            </div>
-
-                            <button type="submit" class="admin-save-button">Запази промяната</button>
-                            <p class="admin-field-hint">
-                                Бележката се показва публично в историята на сигнала.
-                                Корекцията е от 0 до 10 и се добавя към приоритета.
-                            </p>
-                        </form>
+                        <p class="admin-open-hint">
+                            Статус, корекция, дневник и изтриване са на страницата на сигнала.
+                        </p>
                     </div>
                 </article>
             }
 
+            @* Празният списък се обяснява с думи: служителят трябва да
+               разбере, че в групата наистина няма сигнали, а не че
+               страницата не е успяла да зареди. *@
             @if (Model.Reports.Count == 0)
             {
                 <p class="admin-empty">В тази група няма сигнали.</p>
@@ -184,48 +264,3 @@
         </div>
     </div>
 </section>
-
-<!-- Модален прозорец за снимки -->
-<div id="imageModal" class="image-modal">
-    <span class="image-modal-close">&times;</span>
-    <img class="image-modal-content" id="modalImage" src="" alt="Преглед на снимка" />
-</div>
-
-<script>
-    document.addEventListener("DOMContentLoaded", function () {
-        const modal = document.getElementById("imageModal");
-        const modalImg = document.getElementById("modalImage");
-        const closeBtn = document.querySelector(".image-modal-close");
-        const imageLinks = document.querySelectorAll(".open-image-modal");
-
-        imageLinks.forEach(link => {
-            link.addEventListener("click", function (e) {
-                e.preventDefault();
-                const src = this.getAttribute("data-image-src");
-                if (src) {
-                    modal.style.display = "block";
-                    modalImg.src = src;
-                }
-            });
-        });
-
-        closeBtn.addEventListener("click", function () {
-            modal.style.display = "none";
-            modalImg.src = "";
-        });
-
-        modal.addEventListener("click", function (e) {
-            if (e.target === modal) {
-                modal.style.display = "none";
-                modalImg.src = "";
-            }
-        });
-
-        document.addEventListener("keydown", function (e) {
-            if (e.key === "Escape" && modal.style.display === "block") {
-                modal.style.display = "none";
-                modalImg.src = "";
-            }
-        });
-    });
-</script>

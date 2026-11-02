@@ -169,9 +169,15 @@ namespace CivicEyeGD.Migrations
                     b.Property<string>("Comment")
                         .HasColumnType("TEXT");
 
+                    b.Property<int?>("NewPriorityAdjustment")
+                        .HasColumnType("INTEGER");
+
                     b.Property<string>("NewStatus")
                         .IsRequired()
                         .HasColumnType("TEXT");
+
+                    b.Property<int?>("OldPriorityAdjustment")
+                        .HasColumnType("INTEGER");
 
                     b.Property<string>("OldStatus")
                         .HasColumnType("TEXT");

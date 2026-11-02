@@ -1,43 +1,44 @@
 using CivicEyeGD.Data;
 using CivicEyeGD.Services;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.EntityFrameworkCore;
 
 namespace CivicEyeGD.Pages.Admin;
 
+// Таблото е преглед: подрежда сигналите по приоритет, брои групите и
+// дава експорт. Намесата — статус, корекция, бележка и изтриване —
+// се върши единствено на страницата на сигнала (Pages/Details.cshtml.cs
+// с handler-ите Office и Delete), защото там служителят вижда снимката,
+// мястото и хода на сигнала, а не ги търси в претрупана картичка.
 [Authorize(Roles = "Administrator")]
 public class IndexModel : PageModel
 {
-    // Прагът съвпада с етикета „Висок приоритет" в ReportPriorityService,
+    // Прагът съвпада с етикета „Висок приоритет“ в ReportPriorityService,
     // за да не вижда служителят две различни числа за едно и също нещо.
-    public const double HighPriorityFrom = 70;
+    public const double HighPriorityFrom = ReportPriorityService.UrgentScoreFrom;
 
     // Стойност на филтъра, която не е статус, а група статуси. Държа се тук,
     // а не като низ в .cshtml, за да не се разминава с URL-а от картите.
     public const string ClosedFilter = "Приключени";
 
-    // Бележката се показва публично в историята на сигнала, затова има
-    // таван: без него един постър може да напълни страницата.
-    public const int MaxCommentLength = 500;
+    // Толкова снимки се побират в картичката, без редът да се издължи;
+    // останалите се виждат на страницата на сигнала, където служат.
+    public const int PreviewImages = 3;
 
     private readonly ApplicationDbContext _context;
-    private readonly UserManager<IdentityUser> _userManager;
     private readonly ReportPriorityService _priorityService;
     private readonly ReportExportService _exportService;
     private readonly ReportPdfService _pdfService;
 
     public IndexModel(
         ApplicationDbContext context,
-        UserManager<IdentityUser> userManager,
         ReportPriorityService priorityService,
         ReportExportService exportService,
         ReportPdfService pdfService)
     {
         _context = context;
-        _userManager = userManager;
         _priorityService = priorityService;
         _exportService = exportService;
         _pdfService = pdfService;
@@ -49,7 +50,7 @@ public class IndexModel : PageModel
     public int NewCount { get; private set; }
     public int InProgressCount { get; private set; }
 
-    // Решените и отхвърлените са един филтър („Приключени"), затова
+    // Решените и отхвърлените са един филтър („Приключени“), затова
     // и бройката е една: различните числа в картата и в списъка
     // звучат като грешка в данните.
     public int ClosedCount { get; private set; }
@@ -60,18 +61,16 @@ public class IndexModel : PageModel
 
     public string ListTitle { get; private set; } = "Активни сигнали";
 
-    // Кратка реплика след записването. Идва през URL-а, защото след
-    // redirect няма къде другаде да се съхранява между заявките.
+    // Кратка реплика след изтриването. Идва през URL-а, защото след
+    // redirect няма къде другаде да се съхранява между заявките: самият
+    // сигнал вече го няма, а с него и страницата, която би го показа.
     public string? Notice { get; private set; }
 
-    public async Task OnGetAsync(string? filterStatus, int? savedId = null, string? notice = null)
+    public async Task OnGetAsync(string? filterStatus, int? deletedId = null, string? notice = null)
     {
-        Notice = notice switch
-        {
-            "saved" when savedId is not null => $"Промените по сигнал #{savedId} са записани.",
-            "unchanged" when savedId is not null => $"Сигнал #{savedId} е същият – нищо не се промени.",
-            _ => null
-        };
+        Notice = notice == "deleted" && deletedId is not null
+            ? $"Сигнал #{deletedId} е изтрит заедно със снимките, оценките и дневника."
+            : null;
 
         LoadFilters(filterStatus);
 
@@ -149,77 +148,6 @@ public class IndexModel : PageModel
         return rows;
     }
 
-    // Една форма и един бутон за сигнал: статусът, бележката и корекцията
-    // се решават в един момент, а два отделни бутона караха служителя да
-    // гадае кой от двата трябва да натисне.
-    public async Task<IActionResult> OnPostUpdateAsync(
-        int id,
-        string newStatus,
-        string? comment,
-        int adjustment,
-        string? filterStatus)
-    {
-        if (!ReportStatuses.IsValid(newStatus))
-        {
-            return BadRequest("Непознат статус.");
-        }
-
-        // Административната намеса е число 0-10 в края на сметката, а не
-        // скрито препращане: без ограничение един клик би сделал който и
-        // да е сигнал „висок приоритет".
-        if (adjustment < 0 || adjustment > 10)
-        {
-            return BadRequest("Корекцията на приоритета е между 0 и 10.");
-        }
-
-        var report = await _context.Reports.FindAsync(id);
-        if (report is null)
-        {
-            return NotFound();
-        }
-
-        var changed = false;
-
-        if (report.Status != newStatus)
-        {
-            var oldStatus = report.Status;
-            report.Status = newStatus;
-
-            _context.StatusHistories.Add(new StatusHistory
-            {
-                ReportId = id,
-                OldStatus = oldStatus,
-                NewStatus = newStatus,
-                ChangedByUserId = _userManager.GetUserId(User),
-                ChangedAt = DateTime.UtcNow,
-                Comment = NormalizeComment(comment)
-            });
-
-            changed = true;
-        }
-
-        if (report.AdminPriorityAdjustment != adjustment)
-        {
-            report.AdminPriorityAdjustment = adjustment;
-            changed = true;
-        }
-
-        if (changed)
-        {
-            await _context.SaveChangesAsync();
-        }
-
-        return RedirectToPage(new { savedId = id, notice = changed ? "saved" : "unchanged", filterStatus });
-    }
-
-    private static string? NormalizeComment(string? comment)
-    {
-        var trimmed = comment?.Trim();
-        if (string.IsNullOrEmpty(trimmed)) return null;
-
-        return trimmed.Length > MaxCommentLength ? trimmed[..MaxCommentLength] : trimmed;
-    }
-
     /// <summary>Точният приоритет на сигнала по формулата от услугата.</summary>
     public double PriorityOf(Report report) =>
         _priorityService.Calculate(
@@ -227,11 +155,28 @@ public class IndexModel : PageModel
             report.IndependentConfirmationCount,
             report.AdminPriorityAdjustment);
 
+    // Миниатюрите за картичката: три на брой, по номер на записа.
+    // Реда се фиксира тук, защото без подредба при всяко презареждане
+    // снимките си сменят местата и служителят не може да запомни коя кое
+    // показва; останалите се гледат на страницата на сигнала.
+    public IReadOnlyList<ReportImage> ThumbnailsOf(Report report) =>
+        report.Images
+            .OrderBy(image => image.Id)
+            .Take(PreviewImages)
+            .ToList();
+
+    // Последната промяна се чете от самия дневник, а не от второ число:
+    // две места за едно и също нещо с времето се разминават. Карточката
+    // дава само датата — стъпките си остават на страницата на сигнала.
+    public DateTime? LastChangeOf(Report report) =>
+        report.StatusHistories.Count == 0
+            ? null
+            : report.StatusHistories.Max(step => step.ChangedAt);
+
     public string PriorityLabelOf(Report report) =>
         _priorityService.GetPriorityLabel(PriorityOf(report));
 
-    public bool IsHighPriority(Report report) =>
-        !ReportStatuses.IsClosed(report.Status) && PriorityOf(report) >= HighPriorityFrom;
+    public bool IsHighPriority(Report report) => _priorityService.IsUrgent(report);
 
     private void LoadFilters(string? filterStatus)
     {
@@ -252,6 +197,10 @@ public class IndexModel : PageModel
             .Include(r => r.Images)
             .Include(r => r.Confirmations)
             .Include(r => r.SeverityRatings)
+            // Дневникът е нужен на разгъваемия преглед. Без Include
+            // колекцията остава празна и картичката би твърдяла, че
+            // промени не е имало, макар те да са в базата.
+            .Include(r => r.StatusHistories)
             .AsNoTracking()
             .ToListAsync();
 
@@ -277,7 +226,9 @@ public class IndexModel : PageModel
         NewCount = active.Count(r => r.Status == ReportStatuses.New);
         InProgressCount = active.Count(r => r.Status == ReportStatuses.InProgress);
         ClosedCount = all.Count(r => ReportStatuses.IsClosed(r.Status));
-        HighPriorityCount = active.Count(r => PriorityOf(r) >= HighPriorityFrom);
+        // Същият метод, който оцветява картичките: иначе числото горе
+        // и червените долу могат да се разминат за един и същ сигнал.
+        HighPriorityCount = active.Count(IsHighPriority);
     }
 
     private List<Report> SortByPriority(List<Report> reports) =>

@@ -1,0 +1,48 @@
+@model ReportPriorityService.PriorityPanel
+
+@* Единствената разбивка на формулата. Страницата на сигнала я показва на
+   гражданина, който гледа числото, и на служителя, който преценява реда
+   на работа — едни и същи редове за двамата. Ако се беше описала на
+   две места, с времето двете обяснения щяха да се разминат, а точно
+   те показват пред комисията защо един сигнал е първи. *@
+
+@{
+    var parts = Model.Parts;
+    var raw = parts.SeverityPoints + parts.ConfirmationPoints + parts.AdminPoints;
+}
+
+<div class="details-card details-breakdown">
+    <h2>Как се получава @NumberText.Score(Model.Score) / 100</h2>
+
+    @* Списъкът е с термини и определения, защото тук се гледа двойка по
+       двойка: условие и точки. Думата за множина минава през помощна
+       функция — наставка, сложена на сляпо, би сгрешила при едно или нула. *@
+    <dl class="details-breakdown-list">
+        <dt>Средна сериозност @NumberText.Severity(parts.UsedSeverity) от 5</dt>
+        <dd>@NumberText.Points(parts.SeverityPoints) т. <span>(по 20 т. на степен)</span></dd>
+
+        @* Показан е броят, който реално е влязъл в сметката, а не всяко
+           събрано потвърждение: десетото и следващите вече не променят
+           нищо. *@
+        <dt>@parts.CappedConfirmations @BulgarianPlural.Of(parts.CappedConfirmations, "потвърждение", "потвърждения")</dt>
+        <dd>@NumberText.Points(parts.ConfirmationPoints) т. <span>(по 3 т., най-много 10)</span></dd>
+
+        <dt>Корекция на общината</dt>
+        <dd>@NumberText.Points(parts.AdminPoints) т. <span>(0–10)</span></dd>
+
+        @* Знаменателят 140 е сборът на трите реда горе: сто от
+           сериозността, тридесет от потвържденията, десет от общината.
+           Процентът долу е същото число, мащабено до сто. *@
+        <dt class="details-breakdown-total">Общо @NumberText.Points(raw) от 140</dt>
+        <dd class="details-breakdown-total">
+            @NumberText.Score(Model.Score) %
+            <span>→ @Model.Label@(Model.Closed ? " (преди сигналът да приключи)" : "")</span>
+        </dd>
+    </dl>
+
+    @* Едно изречение, не абзац: правилото трябва да се разбере, докато
+       човекът гледа числото, а не след дълъг прочит. *@
+    <p class="details-muted">
+        Гласът на подателя не се брои — приоритет вдигат само чужди потвърждения.
+    </p>
+</div>
