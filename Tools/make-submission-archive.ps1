@@ -10,7 +10,7 @@ $staging = Join-Path $env:TEMP 'civiceye-submission-staging'
 $outDir = Join-Path $root 'submission'
 
 $excludeDirs = @(
-    '.git', '.private', '.vs', '.vscode', 'bin', 'obj', 'App_Data',
+    '.git', '.private', '.vs', '.vscode', 'bin', 'obj', 'App_Data и App_Data-backup',
     'publish', 'TestResults', 'submission', 'node_modules'
 )
 Write-Output ("Изключени папки: " + ($excludeDirs -join ', '))
@@ -19,7 +19,10 @@ if (Test-Path $staging) { Remove-Item $staging -Recurse -Force }
 New-Item -ItemType Directory -Path $staging | Out-Null
 if (-not (Test-Path $outDir)) { New-Item -ItemType Directory -Path $outDir | Out-Null }
 
-$excludeNamePattern = '\\(\.git|\.private|\.vs|\.vscode|bin|obj|App_Data|publish[^\\]*|TestResults|submission|node_modules)\\'
+# Всяко копие на папката с данни е извън архива, не само оригиналът:
+# в резервното копие има ключ за подпис на бисквитите и снимките,
+# които гражданин е качил.
+$excludeNamePattern = '\\(\.git|\.private|\.vs|\.vscode|bin|obj|App_Data[^\\]*|publish[^\\]*|TestResults|submission|node_modules)\\'
 $excludeExtensionPattern = '\.(db|db-shm|db-wal|log|user)$'
 
 $sourceFiles = Get-ChildItem -LiteralPath $root -Recurse -File -Force |
