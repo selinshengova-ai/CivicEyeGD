@@ -3,7 +3,6 @@ using CivicEyeGD.Pages;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.EntityFrameworkCore;
-using AdminDashboard = CivicEyeGD.Pages.Admin.IndexModel;
 
 namespace CivicEyeGD.Tests;
 
@@ -241,8 +240,9 @@ public sealed class ReportEngagementTests : IDisposable
         var (_, _, reportId) = await ReportWithVoterAsync();
         var adminId = await _host.CreateAdministratorAsync("sluzhitel");
 
-        var adminPage = _host.CreatePageModel<AdminDashboard>(_host.PrincipalFor(adminId));
-        await adminPage.OnPostUpdateAsync(reportId, ReportStatuses.Resolved, "Кърпена е дупката на 12 октомври.", 0, null);
+        // Намесата се прави на страницата на сигнала, не на таблото.
+        var officePage = _host.CreatePageModel<DetailsModel>(_host.PrincipalFor(adminId));
+        await officePage.OnPostOfficeAsync(reportId, ReportStatuses.Resolved, "Кърпена е дупката на 12 октомври.", 0);
 
         var model = _host.CreatePageModel<DetailsModel>();
         await model.OnGetAsync(reportId);

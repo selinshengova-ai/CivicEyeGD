@@ -1,43 +1,88 @@
-﻿<!DOCTYPE html>
+﻿@*
+    CivicEye GD — общата обвивка на целия сайт след влизане.
+    Тук е всичко, което страниците не повтарят: менюто, превключването
+    на темата, футерът и редът на стилове и скриптове. Промяна на едно
+    място се вижда навсякъде, а отделните страници се грижат само за
+    съдържанието си.
+*@
+
+@* Езикът е записан в самия таг, за да го изговарят вярно екранните
+    четци и да работи сричкопределянето; стойността за тема е началната,
+    докато краткият скрипт в head не прочете запазеното предпочитание. *@
+<!DOCTYPE html>
 <html lang="bg" data-theme="light">
 <head>
     <meta charset="utf-8" />
+    @* Тагът viewport казва на мобилния браузър, че страницата е проектирана
+        за неговата ширина; без него телефонът би мащабирал desktop версия. *@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    @* Цветът за тема оцветява адресната лента в mobilen браузър: марката
+        продължава извън самата страница. *@
     <meta name="theme-color" content="#123B32" />
+    @* Заглавието в табата се сглобява тук от ключ, който всяка страница сама
+        задава: краткото име идва от страницата, а името на проекта живее на
+        едно-единствено място и не се переписва навсякъде. *@
     <title>@ViewData["Title"] — CivicEye GD</title>
     
     <script>
+        // Този кратък скрипт е вграден в head и се изпълнява преди стиловете
+        // и преди съдържанието: запазената тема се поставя още преди първия
+        // изрисуван кадър, за да не мига бяло пред потребител на тъмна тема.
         try {
             const savedTheme = localStorage.getItem("civic-theme");
             const theme = savedTheme === "dark" ? "dark" : "light";
             document.documentElement.setAttribute("data-theme", theme);
+            // Темата се слага и на документа веднага, а върху тялото — чак
+            // когато то съществува: по-рано няма какво да се маркира.
             document.addEventListener("DOMContentLoaded", function () {
                 if (document.body) {
                     document.body.setAttribute("data-theme", theme);
                 }
             });
         } catch {
+            // Достъпът до запазените данни може да се отказва от браузъра при
+            // поверителен режим; в този случай светлата тема е безопасният запас,
+            // а не грешка, която би спряла цялата страница.
             document.documentElement.setAttribute("data-theme", "light");
         }
     </script>
     
     <!-- Bootstrap -->
+    @* Редът на файловете е смислен: Bootstrap се зарежда пръв, нашите след
+        него, защото при еднаква специфичност печели правилото, написано по-
+        късно. Така Bootstrap се надписва по ред, без надпревара с !important. *@
     <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
     
     <!-- Новите разделени CSS файлове -->
+    @* Отпечатъкът от съдържанието, който append-version добавя към адреса,
+        позволява агресивно кешпиране: промени ли се файла, адресът се сменя
+        сам и всеки получава новата версия без нулиране на кеша. *@
     <link rel="stylesheet" href="~/css/layout.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/home.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/pages.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/create.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/dark-theme.css" asp-append-version="true" />
     
+    @* Това е пакетът от строенето на scoped стила на самата обвивка (файлът
+        _Layout.cshtml.css): неговите важат само за този компонент и не
+        „изтичат“ към съдържанието на страниците. *@
     <link rel="stylesheet" href="~/CivicEyeGD.styles.css" asp-append-version="true" />
 </head>
+@* Тялото носи клас, по който общите стилове разпознават сайта като цяло, и
+    същия атрибут тема, какъвто стои и на кореновия таг: тъмните стилове
+    имат правила и от двата вида, затова и двата носят маркировката. *@
 <body class="civic-site" data-theme="light">
 
+@* Обвивката е от три хоризонтални ленти: шапка с меню, main и футер.
+    Променя се само средната — страниците не знаят нищо за останалите две
+    и не могат случайно да ги развалят. *@
 <header class="site-header">
     <nav class="navbar navbar-expand-xl civic-navbar">
         <div class="container civic-nav-container">
+            @* Марката е вградена SVG рисунка, оцветена с текущия цвят на
+                текста: темата я оцветява сама, без вторая подготовка на
+                изображение. Рисунката е скриена от екранните четци, а
+                името на връзката е дадено изрично в атрибута за етикет. *@
             <a class="navbar-brand civic-brand" asp-page="/Index" aria-label="CivicEye GD — Начало">
                 <span class="civic-brand-mark" aria-hidden="true">
                     <svg viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
@@ -52,10 +97,17 @@
                     <span class="civic-brand-tagline">Виж проблема. Промени града.</span>
                 </span>
             </a>
+            @* Бутонът се появява под 1200px и свива менюто за малки екрани.
+                Целевият атрибут сочи идентификатора на менюто, а стойностите
+                за контрол и за състояние го описват на екранните четци:
+                кое се отваря и дали вече е отворено. *@
             <button class="navbar-toggler civic-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#civicNavigation" aria-controls="civicNavigation" aria-expanded="false" aria-label="Отвори менюто">
                 <span class="civic-toggler-lines"><span></span><span></span><span></span></span>
             </button>
             <div class="collapse navbar-collapse civic-navigation" id="civicNavigation">
+                @* Номерата 01 до 05 са изписани в маркировката, а не добавени от
+                    стила: те са стил на менюто, но и се четат, дори когато CSS-ът
+                    се зареди частично или изобщо не стигне до екрана. *@
                 <ul class="navbar-nav civic-nav-links">
                     <li class="nav-item">
                         <a class="nav-link civic-nav-link" asp-page="/Index">
@@ -72,6 +124,11 @@
                             <span class="civic-nav-number">03</span><span>Сигнали</span>
                         </a>
                     </li>
+                    @* Проверката е записана безрисково: когато автентикацията
+                        изобщо не е настройена, обектът за потребителя е липсващ,
+                        а верижното четене с въпросителния оператор и сравнението
+                        с вярно дават отрицателен резултат, вместо грешка при
+                        изобразяването на цялата страница. *@
                     @if (User.Identity?.IsAuthenticated == true)
                     {
                         <li class="nav-item">
@@ -79,6 +136,10 @@
                                 <span class="civic-nav-number">04</span><span>Моите сигнали</span>
                             </a>
                         </li>
+                        @* Админският пункт се слага само за тази роля: това е
+                            подредба на менюто, а не защита — обвивката не пази
+                            нищо сама по себе си; коя страница какви права изисква,
+                            се решава независимо от тук написаното. *@
                         @if (User.IsInRole("Administrator"))
                         {
                             <li class="nav-item">
@@ -90,9 +151,17 @@
                     }
                 </ul>
                 <div class="civic-nav-actions">
+                    @* Бутонът за тема е превключвател, не действие: атрибутът за
+                        натиснато състояние казва на екранния четец дали тъмната
+                        тема е включена, а етикета и иконата ги сменя скриптът
+                        долу — затова никога не сочат грешна посока. *@
                     <button type="button" class="btn btn-outline-success" id="themeToggle" aria-pressed="false">
                         <span id="themeIcon" aria-hidden="true">☾</span><span id="themeLabel">Тъмна тема</span>
                     </button>
+                    @* За влезлия се слага един бутон с падащо меню, а за госта —
+                        две отделни връзки: да се показват и двете групи наведнъж
+                        би объркало всеки, защото човекът вижда само това, което
+                        го интересува в неговото състояние. *@
                     @if (User.Identity?.IsAuthenticated == true)
                     {
                         <div class="dropdown">
@@ -118,6 +187,11 @@
                                 <li><a class="dropdown-item" href="#" id="themeMenuToggle">Смени темата</a></li>
                                 <li><hr class="dropdown-divider" /></li>
                                 <li class="px-3 py-1">
+                                    @* Изходът е истинска форма с метод post, а не
+                                        връзка: към form се вгражда автоматично
+                                        защитният CSRF токен, а заявка с post не
+                                        може да се предизвика от чуждо изображение
+                                        или скрито презареждане на страница. *@
                                     <form method="post" asp-page="/Account/Logout">
                                         <button type="submit" class="btn btn-outline-danger w-100">Изход</button>
                                     </form>
@@ -139,10 +213,16 @@
     </nav>
 </header>
 
+@* Средната лента е единствената, която се замества от страницата: тук
+    влиза съдържанието на всеки извикан изглед. Ролята main е оставена и
+    като атрибут — по-старите технологии за достъп я разпознават по нея. *@
 <main role="main" class="site-main">
     @RenderBody()
 </main>
 
+@* Футерът съдържа връзка към политиката за данните — задължителна видимост
+    на такъв текст — и годината, изчислена на сървъра при генериране на
+    страницата, не от скрипт: и при изключен JavaScript стои вярна. *@
 <footer class="civic-footer">
     <div class="container civic-footer-inner">
         <a class="civic-footer-brand" asp-page="/Index">CivicEye <span>GD</span></a>
@@ -152,10 +232,16 @@
     </div>
 </footer>
 
+@* Библиотеките и скриптът на сайта са чак тук, в края на тялото: докато се
+    изтеглят, съдържанието вече се е изобразило, а по ред site.js може да
+    разчита, че jQuery и Bootstrap вече са заредени преди него. *@
 <script src="~/lib/jquery/dist/jquery.min.js"></script>
 <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
 <script src="~/js/site.js" asp-append-version="true"></script>
 <script>
+    // Цялото управление на темата е в непосредствено изпълняваща се функция:
+    // константите ѝ не излизат в глобалната област и не се сблъскват със
+    // скриптовете на отделните страници.
     (() => {
         const root = document.documentElement;
         const body = document.body;
@@ -168,7 +254,9 @@
             const isDark = theme === "dark";
             const themeValue = isDark ? "dark" : "light";
 
-            // Задаваме темата на <html> и на <body> с !important за сигурност
+            // Темата се записва едновременно на кореновия таг и на тялото:
+            // тъмните стилове имат правила от двата вида и и двете места трябва
+            // да ги съдържат, за да светне цялата страница наведнъж.
             root.setAttribute("data-theme", themeValue);
             body.setAttribute("data-theme", themeValue);
             root.style.setProperty('--current-theme', themeValue);
@@ -177,11 +265,16 @@
             if (themeIcon) themeIcon.textContent = isDark ? "☀" : "☾";
             if (themeLabel) themeLabel.textContent = isDark ? "Светла тема" : "Тъмна тема";
             
+            // Записът е в try с хванка: браузърът може да забрани съхранението,
+            // но смяната на темата за текущия поглед трябва да остане възможна.
             try { 
                 localStorage.setItem("civic-theme", themeValue); 
             } catch {}
         }
 
+        // Въпросителният оператор преди всяко събитие означава: ако бутона го
+        // няма на тази страница, скриптът го подминава мълчаливо, вместо да
+        // прекъсне изцяло и да остави без тема всички останали елементи.
         themeButton?.addEventListener("click", () => {
             const newTheme = root.getAttribute("data-theme") === "dark" ? "light" : "dark";
             applyTheme(newTheme);
@@ -193,11 +286,17 @@
             applyTheme(newTheme);
         });
 
-        // Инициализация
+        // Инициализация: head скриптът е сложил уже боята на темата, но надписът
+        // и състоянието на бутона чак сега се подравняват към реалното състояние,
+        // за да не сочат обратното на това, което потребителят вижда.
         const savedTheme = localStorage.getItem("civic-theme") || "light";
         applyTheme(savedTheme);
     })();
 </script>
+@* Секцията Scripts е по желание, не задължителна: страница, която има нужда
+    от собствен скрипт — за карта или за формуляр — я пълни, а гарантираното
+    място е след всички библиотеки; липсва ли, изобразяването продължава
+    без грешка, защото изискването е зададено като незадължително. *@
 @await RenderSectionAsync("Scripts", required: false)
 </body>
 </html>

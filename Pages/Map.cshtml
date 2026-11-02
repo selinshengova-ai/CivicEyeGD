@@ -6,6 +6,12 @@
     ViewData["Title"] = "Карта";
 }
 
+@*
+    Картата е публична — без вход тя е лицето на проекта пред гражданин и
+    жури. Сигналите идват вече подготвени от MapModel, а маркерите се
+    изчертават в браузъра, защото презареждане на страницата би върнало
+    картата в начален мащаб и би затворило отворения попап.
+*@
 <section class="map-page">
     <div class="container py-5">
 
@@ -21,42 +27,87 @@
                 </p>
             </div>
 
+            @* Бутонът е до заглавието, за да е под ръка на гледащия картата. *@
+
             <a class="map-report-button" asp-page="/Create">
                 <span>+</span>
                 Подай сигнал
             </a>
         </div>
 
+        @*
+            Маркерите нямат текстови етикети, затова е нужно изрично
+            подсещане къде се натиска. Едно изречение, без обещание:
+            то е единствената информация, която посетителят не вижда.
+        *@
         <div class="map-info">
-            <div class="map-info-icon">↗</div>
+            <div class="map-info-icon" aria-hidden="true">↗</div>
 
-            <div>
-                <strong>Всеки сигнал има значение.</strong>
-
-                <p>
-                    Натисни маркер върху картата, за да видиш
-                    подробности за съответния сигнал.
-                </p>
-            </div>
+            <p>
+                Натисни маркер върху картата, за да видиш сигнала.
+            </p>
         </div>
 
         <div class="map-card">
 
             <div class="map-card-header">
                 <div>
-                    <span class="map-card-label">
-                        ИНТЕРАКТИВНА КАРТА
-                    </span>
-
-                    <h2>Достъпност в Гоце Делчев</h2>
-
-                    <p class="mb-0 mt-2 text-secondary">
-                        Сигнали с местоположение:
+                    @*
+                        Числото е само за сигналите с координати, за да
+                        съвпада с видяното на картата. Приключените се
+                        споменават отделно, иначе броят би изглеждал
+                        сгрешен, макар маркерите да са по-малко.
+                    *@
+                    <p class="map-card-count">
+                        Показани на картата:
                         <strong>@Model.ReportsCount</strong>
+                        @if (!Model.ShowClosedReports && Model.ClosedCount > 0)
+                        {
+                            <text>· приключените (@Model.ClosedCount) са скрити</text>
+                        }
                     </p>
 
+                    @*
+                        Картата показва само това което още чака общината.
+                        Приключените влизат в числата, но остават скрити
+                        в изгледа, за да не се бъркат с нерешени задачи.
+                        Връзката ги показва, когато някой ги потърси.
+                    *@
+                    @if (Model.ClosedCount > 0)
+                    {
+                        @*
+                            Изборът е параметър в адреса, не скрипт: така
+                            остава запазен при презареждане и при споделяне
+                            на линка. Решението какво влиза в JSON-а остава
+                            в модела, а не в браузъра.
+                        *@
+                        <p class="map-closed-toggle">
+                            @if (Model.ShowClosedReports)
+                            {
+                                <a asp-page="/Map">Скрий приключените сигнали</a>
+                            }
+                            else
+                            {
+                                <a asp-page="/Map" asp-route-showClosed="true">
+                                    Покажи и приключените (@Model.ClosedCount)
+                                </a>
+                            }
+                        </p>
+                    }
+
+                    @*
+                        Правилото за спешност е в модела, не в скрипта:
+                        средна оценка от потребители които не са автори
+                        на сигнала — 4,0 или повече, при статус който
+                        още не е приключен. Така числото в заглавката и
+                        пулсацията на картата съвпадат.
+                    *@
                     @if (Model.UrgentCount > 0)
                     {
+                        @*
+                            Точката е само декорация: aria-hidden я крие
+                            от четците за екрана, а смисълът е в числото.
+                        *@
                         <p class="map-urgent-summary mb-0 mt-1">
                             <span class="urgent-dot-static" aria-hidden="true"></span>
                             <strong>@Model.UrgentCount</strong>
@@ -65,19 +116,22 @@
                     }
                 </div>
 
-                <span class="map-live-indicator">
-                    <span></span>
-                    OpenStreetMap
-                </span>
+                @*
+                    Източникът на плочите се казва веднъж — долу, при
+                    авторското право. Повторение в заглавката само заема
+                    място над картата.
+                *@
             </div>
 
             <div class="map-panes-grid">
                 <div class="map-pane">
-                    <div class="panel-heading">
-                        <span class="panel-icon" aria-hidden="true">⌖</span>
-                        <h2>Картата на сигналите</h2>
-                    </div>
-
+                    @*
+                        Празният контейнер е мястото, в което Leaflet
+                        изгражда картата. role=application казва на
+                        четците за екрана да предават клавишите на
+                        картата, а не да ги задържат за навигация
+                        по страницата.
+                    *@
                     <div id="civicMap"
                          role="application"
                          aria-label="Интерактивна карта със сигнали">
@@ -85,24 +139,82 @@
                 </div>
             </div>
 
+            @*
+                Легендата е огледало на праговете в скрипта — 1–2,
+                3, 4–5 и липсващи оценки. Промени ли се число
+                на едно място, цветът и текстът се разминават.
+            *@
             <div class="map-legend" aria-label="Цвят на маркерите по сериозност">
                 <span><i class="legend-dot legend-dot-low"></i>сериозност 1–2</span>
                 <span><i class="legend-dot legend-dot-mid"></i>сериозност 3</span>
                 <span><i class="legend-dot legend-dot-high"></i>сериозност 4–5</span>
                 <span><i class="legend-dot legend-dot-none"></i>без оценки</span>
+                @*
+                    Точка за приключен се показва само когато те
+                    се рисуват, за да не обещава цвят който не се вижда.
+                *@
+                @if (Model.ShowClosedReports)
+                {
+                    <span><i class="legend-dot legend-dot-closed"></i>приключен</span>
+                }
+                @*
+                    Пулсиращият маркер е същият сигнал като в числото
+                    над картата: решението е в модела, а тук се казва с
+                    едно изречение, без да се преброява формулата.
+                *@
                 <span class="map-legend-note">
-                    Пулсиращият маркер е сигнал с оценка 4 или 5,
-                    който все още не е решен.
+                    Пулсира спешният сигнал — приоритет 70 или повече.
                 </span>
             </div>
 
-            <div id="mapMessage"
-                 class="px-4 py-3 text-secondary"
-                 role="status"
-                 aria-live="polite">
-                Зареждане на сигналите...
+            @*
+                Статистиката брои всички регистрирани сигнали, не
+                само тези с координати. Така числата под картата
+                съвпадат с тези в таблото и в експорта.
+            *@
+            <div class="map-stats" aria-label="Статистика на сигналите по статус">
+                @*
+                    Всеки статус има свой ред, дори при нула сигнали –
+                    липсата трябва да се вижда изрично.
+                *@
+                @foreach (var row in Model.StatusStatistics)
+                {
+                    <span>
+                        <strong>@row.Count</strong>
+                        @row.Status
+                    </span>
+                }
+                @*
+                    Формата след бропка се избира по числото:
+                    на български е „1 сигнал“, но „3 сигнала“.
+                *@
+                <span class="map-stat--total">
+                    <strong>@Model.TotalReportCount</strong>
+                    @BulgarianPlural.Of(Model.TotalReportCount, "сигнал", "сигнала") общо
+                </span>
             </div>
 
+            @*
+                Елементът е видим още при зареждането, за да има
+                какво да се прочете и ако скриптът не тръгне.
+                role=status и aria-live=polite карат четците за
+                екрана да прочетат резултата без прекъсване.
+                Кара се само с допълването — броят на показаните
+                вече стои в заглавката, а две еднакви числа под
+                картата са шум.
+            *@
+            <div id="mapMessage"
+                 class="map-message px-4 py-3"
+                 role="status"
+                 aria-live="polite">
+                Зареждане на сигналите…
+            </div>
+
+            @*
+                Връзката за авторските права се отваря в нов
+                раздел, а noopener не дава на чуждия прозорец
+                достъп до настоящата страница.
+            *@
             <div class="map-card-footer">
                 <span>© OpenStreetMap contributors</span>
 
@@ -114,30 +226,17 @@
             </div>
         </div>
 
-        <div class="map-bottom">
-            <div>
-                <span class="map-bottom-number">01</span>
-                <h3>Разгледай</h3>
-                <p>Намери отбелязаните проблеми в града.</p>
-            </div>
-
-            <div>
-                <span class="map-bottom-number">02</span>
-                <h3>Подай сигнал</h3>
-                <p>Отбележи проблем, който си забелязал.</p>
-            </div>
-
-            <div>
-                <span class="map-bottom-number">03</span>
-                <h3>Промени средата</h3>
-                <p>Помогни за по-достъпни обществени пространства.</p>
-            </div>
-        </div>
-
     </div>
 </section>
 
 @section Scripts {
+    @*
+        Библиотеките са в секцията за скриптове, тоест след
+        тялото, за да съществува контейнерът на картата когато
+        кодът тръгва. Версията е точна (1.9.4), не най-новата,
+        за да изглежда картата еднакво на всеки компютър.
+        Плънките на OpenStreetMap не искат API ключ и акаунт.
+    *@
     <link rel="stylesheet"
           href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
           crossorigin="anonymous" />
@@ -146,10 +245,18 @@
             crossorigin="anonymous"></script>
 
     <script>
+        // Маркерите се изчертават в браузъра, за да не се презарежда
+        // страницата при всяко разглеждане и картата да запазва мащаба.
         document.addEventListener("DOMContentLoaded", function () {
+            // Сигналите са вече в HTML-а, без втора заявка към сървъра:
+            // списъкът е за един град и е малък, а картата се построява
+            // веднага след зареждането на страницата.
             const mapElement = document.getElementById("civicMap");
             const messageElement = document.getElementById("mapMessage");
 
+            // Проверката за L покрива недостъпен CDN, например слаб
+            // интернет в залата: посетителят чете обяснение вместо
+            // счупена страница, а скриптът не продължава с грешка.
             if (!mapElement || typeof L === "undefined") {
                 messageElement.textContent =
                     "Картата не можа да се зареди. Провери интернет връзката.";
@@ -157,14 +264,30 @@
             }
 
             // Данните идват от SQLite чрез MapModel.
+            // Html.Raw е нужен, защото иначе Razor би превърнала
+            // кавичките в HTML-кодове и JSON-ът нямаше да се чете.
+            // Безопасно е: сериализаторът замества <, > и & с
+            // Unicode-кодове, така че текст на потребителя не може
+            // да прекъсне собствения си блок със скрипт.
             const reports = @Html.Raw(Model.ReportsJson);
 
+            // Скритите по дефиниция приключени сигнали се броят в модела,
+            // за да не се различава числото тук от това в заглавката.
+            const hiddenClosed = @(Model.ShowClosedReports ? 0 : Model.ClosedCount);
+
             // Начален изглед: Гоце Делчев.
+            // Координатите са центърът на града, а 14 е мащаб който
+            // го покрива целия. Ако има маркери, fitBounds го заменя
+            // веднага след като картата се построи.
             const map = L.map("civicMap").setView(
                 [41.5667, 23.7333],
                 14
             );
 
+            // Leaflet тегли само видимите плочки, затова картата се
+            // отваря бързо. maxZoom 19 е поставена, за да не поиска
+            // потребителят мащаб, за който вече няма плочки.
+            // Надписът за авторството е задължителен за OpenStreetMap.
             L.tileLayer(
                 "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
                 {
@@ -178,7 +301,8 @@
             let urgentMarkers = 0;
 
             // Цветът на маркера идва от средната сериозност, а пулсацията
-            // показва, че сигналът още не е приключен.
+            // от готовото поле isUrgent: същото число, което списъкът и
+            // таблото на служителя наричат „спешен“.
             const PIN_COLORS = {
                 none: "#6B7280",
                 low: "#2E7D5B",
@@ -186,6 +310,9 @@
                 high: "#C2413B"
             };
 
+            // Праговете 1, 3 и 4 тук съвпадат с легендата над
+            // картата: числата се пазят на две места, затова се
+            // променят винаги заедно.
             function severityBand(severity) {
                 if (!(severity >= 1)) return "none";
                 if (severity >= 4) return "high";
@@ -193,8 +320,12 @@
                 return "low";
             }
 
-            function civicPinIcon(severity, urgent) {
-                const color = PIN_COLORS[severityBand(severity)];
+            function civicPinIcon(severity, urgent, closed) {
+                // Приключен сигнал е сив независимо от оценката:
+                // решен проблем не трябва да изглежда спешен.
+                const color = closed ? "#6B7280" : PIN_COLORS[severityBand(severity)];
+                // Иглата е вграден SVG, не картинка файл.
+                // Нищо не се тегли отвън и цветът се сменя веднага.
                 const pin =
                     '<svg class="civic-pin" viewBox="0 0 26 36" width="26" height="36" focusable="false" aria-hidden="true">' +
                     '<path d="M13 1.2C6.9 1.2 2 6.1 2 12.2 2 20.7 13 34.8 13 34.8S24 20.7 24 12.2C24 6.1 19.1 1.2 13 1.2z" ' +
@@ -202,16 +333,24 @@
                     '<circle cx="13" cy="12.3" r="4.3" fill="#FFFFFF"/>' +
                     '</svg>';
 
+                // divIcon поставя нашия елемент вместо стандартната игла.
                 return L.divIcon({
                     className: "civic-pin-wrap",
+                    // Пулсацията е отделен елемент и CSS анимация.
                     html: (urgent ? '<span class="civic-pin-pulse"></span>' : "") +
-                          '<span class="civic-pin-body">' + pin + "</span>",
+                          '<span class="civic-pin-body' + (closed ? " civic-pin--closed" : "") + '">' + pin + "</span>",
                     iconSize: [26, 36],
+                    // Върхът на иглата сочи точната координата, не центърът.
                     iconAnchor: [13, 36],
+                    // Попапът се отваря над иглата, за да не я закрива.
                     popupAnchor: [0, -33]
                 });
             }
 
+            // Моделът вече е филтрирал координатите, но проверката
+            // се повтаря тук: при лоши данни Leaflet би поставил
+            // маркер който не може да се отвори, а броят под картата
+            // нямаше да съвпада с видяното.
             reports.forEach(function (report) {
                 const latitude = Number(report.latitude);
                 const longitude = Number(report.longitude);
@@ -227,8 +366,10 @@
                     return;
                 }
 
+                // Оценката и спешността идват готови в JSON-а: правилото
+                // се брои веднъж на сървъра, а не се преизчислява тук.
                 const marker = L.marker([latitude, longitude], {
-                    icon: civicPinIcon(Number(report.severity), report.isUrgent)
+                    icon: civicPinIcon(Number(report.severity), report.isUrgent, report.isClosed)
                 });
 
                 marker.addTo(map);
@@ -241,16 +382,20 @@
                 title.textContent = report.title || "Сигнал без заглавие";
                 popup.appendChild(title);
 
+                // Нулата е липса на гласове, а не оценка нула,
+                // затова текстът за нея е различен.
                 const severityNote = document.createElement("p");
                 severityNote.textContent = Number(report.severity) >= 1
                     ? "Средна сериозност: " + report.severity + " от 5"
                     : "Все още без оценки за сериозност.";
+                // Добавката и цветният клас правят спешността явна.
                 if (report.isUrgent) {
                     severityNote.className = "popup-urgent-note";
                     severityNote.textContent += " · спешен сигнал";
                 }
                 popup.appendChild(severityNote);
 
+                // Липсващите полета се заместват с думи, за да е изречението цяло.
                 const category = document.createElement("p");
                 category.textContent =
                     "Категория: " + (report.category || "Не е посочена");
@@ -282,34 +427,63 @@
                 }
 
                 marker.bindPopup(popup);
+                // Масивът е нужен за fitBounds и за бройката под картата.
                 markers.push(marker);
 
+                // Пулсиращите се броят от вече начертаните маркери,
+                // за да отговаря текстът на видяното, а не на заявеното.
                 if (report.isUrgent) {
                     urgentMarkers++;
                 }
             });
 
+            // Българската граматика след бропка: „1 сигнал“, но
+            // „3 сигнала“ — затова изречението се сглобява, а не се
+            // повтаря с число в средата.
+            function hiddenClosedSentence(count) {
+                return count === 1
+                    ? "Един приключен сигнал е скрит от изгледа."
+                    : count + " приключени сигнала са скрити от изгледа.";
+            }
+
+            function pulsingSentence(count) {
+                return count === 1
+                    ? "Пулсира 1 спешен сигнал."
+                    : "Пулсират " + count + " спешни сигнала.";
+            }
+
             if (markers.length > 0) {
                 const markerGroup = L.featureGroup(markers);
 
+                // Картата се приближава сама към сигналите, за да не
+                // ги търси потребителят. Мащаб 16 е границата:
+                // един маркер би приближил прекалено много.
                 map.fitBounds(markerGroup.getBounds(), {
+                    // Отстъпът от 35 px държи маркерите далеч от ръба.
                     padding: [35, 35],
                     maxZoom: 16
                 });
 
-                messageElement.textContent =
-                    "Показани са " + markers.length +
-                    " сигнала с координати." +
-                    (urgentMarkers > 0
-                        ? " Пулсиращите маркери (" + urgentMarkers +
-                          ") са най-сериозните и все още не са решени."
-                        : "");
+                // Под картата се казва само допълването: колко са
+                // показаните вече стои в заглавката, а две еднакви
+                // числа на един екран са шум.
+                const extras = [];
+                if (hiddenClosed > 0) extras.push(hiddenClosedSentence(hiddenClosed));
+                if (urgentMarkers > 0) extras.push(pulsingSentence(urgentMarkers));
+                messageElement.textContent = extras.join(" ");
             } else {
-                messageElement.textContent =
-                    "Все още няма сигнали със записани координати. " +
-                    "Когато подадеш сигнал с местоположение, той ще се появи тук.";
+                // Ако маркерите липсват, съобщението обяснява причината
+                // и сочи връзката за приключените над картата.
+                messageElement.textContent = hiddenClosed > 0
+                    ? "На картата няма активни сигнали. " + hiddenClosedSentence(hiddenClosed) +
+                      " Покажи ги с връзката над картата."
+                    : "Все още няма сигнали със записани координати. " +
+                      "Когато подадеш сигнал с местоположение, той ще се появи тук.";
             }
 
+            // Leaflet измерва контейнера при създаването си. Ако
+            // мярката е преждевременно взета, част от картата
+            // остава сива; преизмерването я оправя.
             setTimeout(function () {
                 map.invalidateSize();
             }, 200);

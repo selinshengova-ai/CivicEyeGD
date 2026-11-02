@@ -10,7 +10,7 @@ namespace CivicEyeGD.Data;
 public static class DbSeeder
 {
     // Паролите не се пазят в кода и не се качват в хранилището: идват само
-    // от конфигурация – dotnet user-secrets локално, променливи на средата
+    // от конфигурация — dotnet user-secrets локално, променливи на средата
     // или файла App_Data/seed-accounts.json на хоста. Без тях акаунтите
     // просто не се създават, а сайтът тръгва и без тях.
     public static async Task SeedAsync(
@@ -43,6 +43,14 @@ public static class DbSeeder
         var neighbour = await EnsureUserAsync(
             userManager, logger, configuration, "SecondCitizen", "citizen.two@civiceye.test", "Citizen");
 
+        // Примерните сигнали са за празна база — за демонстрация или за
+        // архива. Който попълва истинския си град, изключва ключа
+        // Seed:DemoReports и таблицата остава както я е оставил.
+        if (!configuration.GetValue("Seed:DemoReports", true))
+        {
+            return;
+        }
+
         if (author is null || neighbour is null)
         {
             // Примерните сигнали се държат от два акаунта: подателят не участва
@@ -72,9 +80,9 @@ public static class DbSeeder
         if (string.IsNullOrWhiteSpace(password))
         {
             logger.LogWarning(
-                "Демо акаунтът {Email} не е създаден – липсва {Key}. "
+                "Демо акаунтът {Email} не е създаден — липсва {Key}. "
                 + "За локална работа го задай с dotnet user-secrets, "
-                + "на хоста – с променлива на средата или с файла в App_Data.",
+                + "на хоста — с променлива на средата или с файла в App_Data.",
                 email, passwordKey);
             return null;
         }
@@ -100,7 +108,7 @@ public static class DbSeeder
         }
         else if (!await userManager.CheckPasswordAsync(user, password))
         {
-            // Конфигурацията е променена – акаунтът я получава, за да може
+            // Конфигурацията е променена — акаунтът я получава, за да може
             // подновената парола да замени тази, която е била в файл.
             await userManager.RemovePasswordAsync(user);
             Warn(logger, "подновяването", email, await userManager.AddPasswordAsync(user, password));
@@ -142,7 +150,7 @@ public static class DbSeeder
                 + "Хора в инвалидна количка не могат да слязат от тротоара.",
                 "бул. „Гоце Делчев“ 14",
                 41.57390, 23.72960,
-                ReportStatuses.New, 5, 12),
+                ReportStatuses.New, 5, 12, NeighbourRating: 5),
             new(
                 "Отделена плоча на тротоара",
                 ReportCategories.Sidewalks,
@@ -159,7 +167,7 @@ public static class DbSeeder
                 + "с колички.",
                 "ул. „Христо Ботев“ 8",
                 41.57180, 23.72740,
-                ReportStatuses.New, 5, 7),
+                ReportStatuses.New, 5, 7, NeighbourRating: 5),
             new(
                 "Течаща чешма до парк Кьосе",
                 ReportCategories.Other,
@@ -200,7 +208,7 @@ public static class DbSeeder
                 "ул. „Даме Груев“ 4",
                 41.57440, 23.72870,
                 ReportStatuses.Rejected, 5, 11,
-                "Релсите са в проекта на друг инвеститор – сигналът е препратен.")
+                "Релсите са в проекта на друг инвеститор — сигналът е препратен.")
         };
 
         foreach (var sample in samples)
@@ -233,7 +241,12 @@ public static class DbSeeder
             {
                 ReportId = report.Id,
                 UserId = neighbour.Id,
-                Rating = Math.Max(1, sample.Severity - 1),
+                // По принцип съседът е с една точка по-резервиран от
+                // подателя. При двете най-тежки сигнала обаче и двамата
+                // дават пълна сериозност: така приоритетът прескача прага
+                // за спешност и демонстрацията най-после показва пулсиращия
+                // маркер, който от обикновените демо данни не се ражда.
+                Rating = sample.NeighbourRating ?? Math.Max(1, sample.Severity - 1),
                 CreatedAt = report.CreatedAt.AddHours(3)
             });
 
@@ -273,5 +286,6 @@ public static class DbSeeder
         string Status,
         int Severity,
         int DaysAgo,
-        string? HistoryNote = null);
+        string? HistoryNote = null,
+        int? NeighbourRating = null);
 }

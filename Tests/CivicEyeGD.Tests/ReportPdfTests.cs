@@ -88,7 +88,7 @@ public sealed class ReportPdfTests : IDisposable
                     ReportStatuses.New, 40) with { Address = address })
             .ToList();
 
-        // Пет локации се побират на страницата; шестата би скрила
+        // Пет места се побират на страницата; шестата би скрила
         // списъка със сигналите, който е по-важен от диаграмата.
         var locations = ReportStatistics.TopLocations(rows);
 
@@ -183,9 +183,9 @@ public sealed class ReportPdfTests : IDisposable
     }
 
     [Fact]
-    public void BulgarianGlyphsArePresentInTheBundledFont()
+    public void BulgarianGlyphsRenderWithoutMissingGlyphErrors()
     {
-        // Тестът хвърля, ако липсва глаиф: без него отчетът би показал
+        // Тестът хвърля, ако липсва глиф: без него отчетът би показал
         // квадратчета вместо българските букви, а това се вижда чак
         // когато документът се отвори.
         var previous = QuestPDF.Settings.ThrowOnMissingTextGlyphs;

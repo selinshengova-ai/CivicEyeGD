@@ -3,18 +3,25 @@ using CivicEyeGD.Data;
 namespace CivicEyeGD.Services;
 
 /// <summary>Един съществуващ сигнал, който е много близо до новата точка.</summary>
+/// <remarks>
+/// Авторът и датата влизат в записа, защото прозорчето трябва да различи
+/// чужд сигнал от собствен: чужд се потвърждава с клик, а собствения не
+/// може да си потвърдиш сам — там текстът е различен и бутонът липсва.
+/// </remarks>
 public sealed record NearbyReport(
     int Id,
     string Title,
     string Address,
     string Status,
-    double DistanceMeters);
+    double DistanceMeters,
+    string? AuthorUserId,
+    DateTime CreatedAt);
 
 /// <summary>
 /// Преди нов сигнал да се запише, проверяваме дали съсед не е описал
 /// същия проблем на същото място. Дубликатите не са невинни: те делят
 /// гласовете на два записа вместо да ги съберат в един, а общината вижда
-/// две карточки за една дупка. Затова платформата първо предлага да потвърдиш
+/// две картички за една дупка. Затова платформата първо предлага да потвърдиш
 /// съществуващия сигнал, а нов се подава само след явно признание, че
 /// проблемът е различен.
 ///
@@ -52,7 +59,9 @@ public static class ReportDuplicates
                     latitude.Value,
                     longitude.Value,
                     report.Latitude!.Value,
-                    report.Longitude!.Value)))
+                    report.Longitude!.Value),
+                report.UserId,
+                report.CreatedAt))
             .Where(match => match.DistanceMeters <= RadiusMeters)
             .OrderBy(match => match.DistanceMeters)
             .ThenBy(match => match.Id)

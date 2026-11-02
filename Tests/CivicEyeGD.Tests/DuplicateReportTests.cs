@@ -10,9 +10,9 @@ namespace CivicEyeGD.Tests;
 
 /// <summary>
 /// Един и същи тротоар го подават трима. Без проверка за близост
-/// платформата получава три карточки с по един глас, а общината брои
+/// платформата получава три картички с по един глас, а общината брои
 /// три проблема там, където има един. Тестовете минават през правилото
-/// в паметта и през сървърния гейт във формата „Нов сигнал".
+/// в паметта и през сървърната проверка във формата „Нов сигнал“.
 /// </summary>
 public sealed class DuplicateReportTests : IDisposable
 {
@@ -201,6 +201,37 @@ public sealed class DuplicateReportTests : IDisposable
         Assert.Equal(1, match.GetProperty("Id").GetInt32());
         Assert.Equal(ReportStatuses.New, match.GetProperty("Status").GetString());
         Assert.True(match.GetProperty("DistanceMeters").GetDouble() < 20);
+    }
+
+    [Fact]
+    public async Task NearbyHandler_MarksAnotherAuthorsReportAsForeign()
+    {
+        var model = await PageAsync();
+        var neighbour = await _host.CreateUserAsync("sosed");
+        await _host.AddReportAsync(neighbour);
+
+        var result = await model.OnGetNearbyAsync(ReportCategories.RoadSurface, 41.5714, 23.7361);
+
+        var match = Assert.Single(MatchesOf(result));
+
+        // Чужд сигнал се предлага за потвърждане; собственият — не.
+        Assert.False(match.GetProperty("IsMine").GetBoolean());
+    }
+
+    [Fact]
+    public async Task NearbyHandler_MarksTheReportOfTheSignedInUser()
+    {
+        var model = await PageAsync();
+        await SeededAsync();
+
+        var result = await model.OnGetNearbyAsync(ReportCategories.RoadSurface, 41.5714, 23.7361);
+
+        var match = Assert.Single(MatchesOf(result));
+
+        // Прозорецът сменя текста си за собствения сигнал и му дава датата:
+        // „този, който подаде преди месец" е друг случай от двойното изпращане.
+        Assert.True(match.GetProperty("IsMine").GetBoolean());
+        Assert.Equal("20.10.2026", match.GetProperty("CreatedAtText").GetString());
     }
 
     [Fact]

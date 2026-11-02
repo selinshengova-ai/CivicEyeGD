@@ -57,6 +57,7 @@ public sealed class TestHost : IDisposable
         services.AddSingleton<ReportPriorityService>();
         services.AddSingleton<ReportExportService>();
         services.AddSingleton<ReportPdfService>();
+        services.AddScoped<ReportOfficeService>();
 
         services.AddDbContext<ApplicationDbContext>(options =>
             options.UseSqlite($"Data Source={DatabaseFileName}"));

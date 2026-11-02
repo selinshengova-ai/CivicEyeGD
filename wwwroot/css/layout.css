@@ -13,11 +13,31 @@
     --civic-orange: #d97732;
     --civic-success: #258453;
     --civic-danger: #c2413b;
+    /* Червено за текст, не за пълнеж. --civic-danger остава за бутоните и
+       точките, зад които стои бял надпис; като текст върху тъмна повърхност
+       същото число дава 3,2:1 и се чете само наведнъж. */
+    --civic-danger-text: #b54736;
     --civic-text: #1d3028;
-    --civic-muted: #66766d;
+    /* Втори план текст: на бяло и на светъл фон над 5:1, т.е. AA за малки надписи. */
+    --civic-muted: #5b6b62;
     --civic-border: #e0e8e1;
     --civic-background: #f6f8f5;
     --civic-white: #ffffff;
+    /* Повърхност и акцентен текст: светлата тема ги държи в бяло и тъмно зелено,
+       тъмната ги преназначава с едно перење в dark-theme.css. */
+    --civic-surface: #ffffff;
+    --civic-surface-soft: #f0f6f1;
+    --civic-accent-text: #12392e;
+    /* Предупреждението за вече подаден сигнал: светлата тема го държи в кехлибар,
+       тъмната няма как да пази жълт фон с черен текст, затова и тук едно
+       преназначаване в dark-theme.css стига за цялата картичка. */
+    --civic-warn-bg: #fdf7ea;
+    --civic-warn-inner-bg: #fffdf8;
+    --civic-warn-border: #f0d9b5;
+    --civic-warn-stripe: #d99b2f;
+    --civic-warn-text: #6d5522;
+    --civic-warn-strong: #8a5a12;
+    --civic-lime: #d7f36b;
     --civic-radius-sm: 10px;
     --civic-radius: 16px;
     --civic-radius-lg: 22px;
@@ -86,13 +106,15 @@ body.civic-site { display: flex; flex-direction: column; }
 .civic-brand-copy { display: flex; flex-direction: column; line-height: 1.2; }
 .civic-brand-name { font-size: 23px; font-weight: 800; letter-spacing: -0.8px; }
 .civic-brand-name span { color: #72952E; }
-.civic-brand-tagline { margin-top: 5px; color: var(--civic-muted); font-size: 11px; font-weight: 500; letter-spacing: 0.15px; }
+.civic-brand-tagline { margin-top: 5px; color: var(--civic-muted); font-size: 12px; font-weight: 500; letter-spacing: 0.15px; }
 .civic-navigation { align-items: center; justify-content: flex-end; gap: 24px; }
 /* Връзките се прехвърлят на нов ред, вместо да разширяват страницата. */
 .civic-nav-links { align-items: center; flex-wrap: wrap; justify-content: flex-end; gap: 8px 2px; }
 .civic-nav-link { display: inline-flex; align-items: center; gap: 9px; padding: 12px 14px !important; border-radius: 12px; color: #53635B; font-size: 14px; font-weight: 650; white-space: nowrap; transition: background 0.2s ease, color 0.2s ease; }
 .civic-nav-link:hover, .civic-nav-link:focus-visible { background: var(--civic-background); color: var(--civic-green); }
-.civic-nav-number { color: #9AA69C; font-size: 10px; font-weight: 800; letter-spacing: 0.5px; }
+/* Числата са част от надписа, а не украса: вземат същия приглушен тон,
+   който тъмната тема вече преназначава. */
+.civic-nav-number { color: var(--civic-muted); font-size: 12px; font-weight: 800; letter-spacing: 0.5px; }
 .civic-submit-button { display: inline-flex; min-height: 48px; align-items: center; justify-content: center; gap: 10px; padding: 12px 17px; border: 1px solid var(--civic-green); border-radius: 13px; background: var(--civic-green); color: var(--civic-white); font-size: 13px; font-weight: 750; text-decoration: none; white-space: nowrap; transition: transform 0.2s ease, background 0.2s ease; }
 .civic-submit-button:hover, .civic-submit-button:focus-visible { transform: translateY(-2px); background: var(--civic-green-light); color: var(--civic-white); }
 .civic-submit-icon { display: grid; width: 23px; height: 23px; place-items: center; border-radius: 7px; background: var(--civic-lime); color: var(--civic-green); font-size: 19px; line-height: 1; }
@@ -103,7 +125,7 @@ body.civic-site { display: flex; flex-direction: column; }
 .civic-toggler-lines span { display: block; width: 100%; height: 2px; border-radius: 2px; background: var(--civic-green); }
 
 /* Бутоните за тема, профил и вход използват марковата зелена, не Bootstrap-овата.
-   Правилата са за директни деца, за да не засегнат „Изход" в падащото меню. */
+   Правилата са за директни деца, за да не засегнат „Изход“ в падащото меню. */
 .civic-nav-actions { display: flex; align-items: center; gap: 10px; margin-left: auto; }
 .civic-nav-actions > .btn,
 .civic-nav-actions > .dropdown > .btn {
@@ -157,7 +179,7 @@ body.civic-site button { cursor: pointer; }
 .civic-footer-text { margin: 0; color: var(--civic-muted); font-size: 12px; text-align: center; }
 .civic-footer-link { color: var(--civic-green); font-size: 12px; font-weight: 650; text-decoration: none; white-space: nowrap; }
 .civic-footer-link:hover { color: #72952E; }
-.civic-footer-year { color: #8B968E; font-size: 12px; white-space: nowrap; }
+.civic-footer-year { color: var(--civic-muted); font-size: 12px; white-space: nowrap; }
 
 /* Адаптивност за навигация: под 1200px менюто се свива в hamburger,
    защото дори шест връзки не побират в реда. */
@@ -190,7 +212,7 @@ body.civic-site button { cursor: pointer; }
     .civic-brand-mark { width: 42px; height: 42px; flex-basis: 42px; border-radius: 12px; }
     .civic-brand-mark svg { width: 30px; height: 30px; }
     .civic-brand-name { font-size: 20px; }
-    .civic-brand-tagline { max-width: 190px; font-size: 10px; }
+    .civic-brand-tagline { max-width: 200px; font-size: 12px; }
     .site-main { padding-top: 22px; padding-bottom: 36px; }
     .civic-footer-inner { padding-top: 22px; padding-bottom: 22px; }
     .civic-footer-text { line-height: 1.5; }

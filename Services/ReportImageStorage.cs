@@ -91,7 +91,7 @@ public sealed class ReportImageStorage
 
         var extension = AllowedTypes[detectedType];
 
-        // Безопасно, уникално име – не използваме оригиналното име.
+        // Безопасно, уникално име — не използваме оригиналното име.
         var storedFileName = Guid.NewGuid().ToString("N") + extension;
 
         var fullPath = Path.Combine(_rootDirectory, storedFileName);

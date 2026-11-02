@@ -259,11 +259,11 @@ public sealed class CreateReportTests : IDisposable
     public void Dispose() => _host.Dispose();
 
     /// <summary>
-    /// Същият model, но с достъп до проверка на анотациите. Платформата
-    /// прави това сама преди OnPostAsync през TryValidateModel, който
-    /// извън истинския invoker на страницата няма нужните обекти,
-    /// затова тук валидаторът се извиква директно, а съобщенията се
-    /// записват с същите ключове, за да минават през гейта на handler-а.
+    /// Същият модел, но с достъп до проверката на атрибутите. Платформата
+    /// я прави сама преди OnPostAsync през TryValidateModel, който извън
+    /// истинската страница няма нужните обекти, затова тук валидаторът се
+    /// извиква директно, а съобщенията се записват с същите ключове, за да
+    /// стигнат до проверката в самия метод.
     /// </summary>
     private sealed class TestCreateModel : CreateModel
     {
@@ -271,9 +271,10 @@ public sealed class CreateReportTests : IDisposable
             ApplicationDbContext context,
             UserManager<IdentityUser> userManager,
             ReportImageStorage imageStorage,
+            ReportPriorityService priorityService,
             IConfiguration configuration,
             ILogger<CreateModel> logger)
-            : base(context, userManager, imageStorage, configuration, logger)
+            : base(context, userManager, imageStorage, priorityService, configuration, logger)
         {
         }
 

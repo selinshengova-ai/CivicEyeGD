@@ -5,21 +5,36 @@
     ViewData["Title"] = "Подай сигнал";
 }
 
+@* Цялата страница е един POST към самата себе си. Когато сървърът отхвърли
+    сигнала, форматът се връща попълнен и написаното от човека не се губи. *@
+@* Leaflet идва с фиксирана версия 1.9.4: картата изглежда по един и същ
+    начин след всяко публикуване, а библиотеката не влиза в проекта. *@
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css" />
 <script>
     // Панелът се маха при отказ на Google: невалиден или ограничен ключ,
-    // мрежова грешка, блокиран скрипт. Формулярът остава напълно работещ.
+    // мрежова грешка, блокиран скрипт. Формулярът остава напълно работещ,
+    // а бутонът казва на човека защо не получава панорама, вместо да мълчи.
+    // Функцията е обявена толкова рано, защото Google вика gm_authFailure
+    // в мига, в който скриптът пристигне — по-късно никой няма да я намери.
     window.civicHideStreetView = function () {
         var panel = document.getElementById("street-view-panel");
-        if (panel) { panel.remove(); }
+        if (panel) { panel.hidden = true; }
+        var button = document.getElementById("show-street-view");
+        if (button) {
+            button.disabled = true;
+            button.setAttribute("aria-expanded", "false");
+            button.textContent = "Уличният изглед не е достъпен";
+        }
     };
+    // Името gm_authFailure е уговорено от Google: нашата функция се закача
+    // за него, за да не остане отказът на ключа незабелязан от посетителя.
     window.gm_authFailure = window.civicHideStreetView;
 </script>
-@if (!string.IsNullOrEmpty(Model.GoogleMapsApiKey))
-{
-    <script src="https://maps.googleapis.com/maps/api/js?key=@Model.GoogleMapsApiKey"
-            onerror="window.civicHideStreetView()"></script>
-}
+@* Скриптът на Google не идва сам с страницата: тръгва чак когато човекът
+   натисне „Уличен изглед". При отказ на ключа Google изписва собственото
+   си прозорце с грешка право върху формата и то не може да бъде скрито
+   отвън; панорамата пък е спомагателна, повечето подаващи я не отварят,
+   затова и тя, и нейният скрипт чакат един клик. *@
 
 <section class="civic-form-page">
     <div class="civic-form-card">
@@ -30,13 +45,21 @@
         <div class="section-kicker">CIVICEYE GD · ГОЦЕ ДЕЛЧЕВ</div>
         <h1>Подай сигнал</h1>
 
+        @* enctype е задължителен за файлове: без него браузърът предава само
+           името на избраната снимка, а нейното съдържание изобщо не тръгва. *@
         <form method="post" enctype="multipart/form-data">
+            @* ModelOnly оставя тук само грешките, които нямат собствено поле
+               — например броят на снимките — и те не се дублират под полето. *@
             <div asp-validation-summary="ModelOnly" class="text-danger validation-summary"></div>
 
             <div class="form-field">
                 <label asp-for="Report.Title" class="form-label">
                     Заглавие <span class="required-mark">*</span>
                 </label>
+                @* asp-for задава името така, че постът да бъде свързан с модела
+                   и заглавието да се върне в полето при отхвърлен сигнал.
+                   maxlength повтаря границата от модела, за да не се реже текст
+                   след изпращането. *@
                 <input asp-for="Report.Title" class="form-control" maxlength="100" placeholder="Заглавие на сигнала" />
                 <span asp-validation-for="Report.Title" class="text-danger"></span>
             </div>
@@ -45,7 +68,12 @@
                 <label asp-for="Report.Category" class="form-label">
                     Категория <span class="required-mark">*</span>
                 </label>
+                @* Списъкът идва от модела, а не е изписан ред по ред тук:
+                   категориите имат едно-единствено място, откъдето се четат,
+                   и не могат да се разминат с тези при подаването. *@
                 <select asp-for="Report.Category" class="form-select" asp-items="new SelectList(Model.Categories)">
+                    @* Празната стойност е подсказката и точката, която
+                       задължителната проверка отхвърля при ненаправен избор. *@
                     <option value="">Избери категория</option>
                 </select>
                 <span asp-validation-for="Report.Category" class="text-danger"></span>
@@ -55,81 +83,125 @@
                 <label asp-for="Report.Address" class="form-label">
                     Адрес или местоположение <span class="required-mark">*</span>
                 </label>
+                @* Адресът е свободен текст, защото в града проблемите се
+                   назовават с ориентири, а не с номера: текстът остава за
+                   четене и търсене, а точната точка идва от картата отдолу. *@
                 <input asp-for="Report.Address" class="form-control" maxlength="200" placeholder="Улица, номер или ориентир" />
                 <span asp-validation-for="Report.Address" class="text-danger"></span>
             </div>
 
-            <div class="form-field location-field">
-                <label class="form-label">
-                    Местоположение <span class="required-mark">*</span>
-                </label>
+                <div class="form-field location-field">
+                    <label class="form-label">
+                        Местоположение <span class="required-mark">*</span>
+                    </label>
 
-                <div class="map-search">
-                    <input id="map-address-search" type="search" class="form-control" maxlength="200" placeholder="Търси адрес в Гоце Делчев" aria-label="Търсене на адрес" />
-                    <button id="map-search-button" type="button" class="btn-civic-secondary">Търси</button>
-                </div>
-
-                <p id="map-search-message" class="status-message" aria-live="polite"></p>
-
-                <input asp-for="Report.Latitude" type="hidden" />
-                <input asp-for="Report.Longitude" type="hidden" />
-            </div>
-
-            <!-- Карти и Street View -->
-            <div class="map-streetview-grid">
-                <div class="map-panel">
-                    <div class="panel-heading">
-                        <span class="panel-icon" aria-hidden="true">⌖</span>
-                        <h2>Карта</h2>
+                    @* Бутонът е type="button" и не изпраща нищо: с обикновения
+                       тип всяко търсене би пратило непълен сигнал в общината. *@
+                    <div class="map-search">
+                        <input id="map-address-search" type="search" class="form-control" maxlength="200" placeholder="Търси адрес в Гоце Делчев" aria-label="Търсене на адрес" />
+                        <button id="map-search-button" type="button" class="btn-civic-secondary">Търси</button>
                     </div>
-                    <div id="report-location-map" role="application" aria-label="Карта за избор на местоположение"></div>
-                    <p id="selected-location-message" class="status-message" aria-live="polite"></p>
+
+                    @* aria-live кара екранния чет да прочете новия резултат, без
+                       да прекъсва човекът, който още въвежда в полето. *@
+                    <p id="map-search-message" class="status-message" aria-live="polite"></p>
+
+                    @* Координатите никой не ги пише с ръка: скриптът ги слага в
+                       тези скрити полета след щракване по картата. Имената им следват
+                       модела, затова постът ги връзва без допълнителен код. *@
+                    <input asp-for="Report.Latitude" type="hidden" />
+                    <input asp-for="Report.Longitude" type="hidden" />
                 </div>
 
-                @if (!string.IsNullOrEmpty(Model.GoogleMapsApiKey))
-                {
-                    <div class="street-view-panel" id="street-view-panel">
+                @* Картата е сама на реда, докато панорамата не я потърсят:
+                   плочите за мащаба идват от OpenStreetMap и показват къде
+                   точно пада маркерът, а погледът от улицата е проверка за
+                   тези, които я искат. Двете една до друга тласкат формата
+                   надолу и оставят светли петна в тъмната тема. *@
+                <div class="map-streetview-grid">
+                    <div class="map-panel">
+                        <div class="panel-heading">
+                            <span class="panel-icon" aria-hidden="true">⌖</span>
+                            <h2>Карта</h2>
+                        </div>
+                        @* role="application" казва на екранния чет, че клавишите
+                           управляват картата, а не поредица от връзки в страницата. *@
+                        <div id="report-location-map" role="application" aria-label="Карта за избор на местоположение"></div>
+                        <p id="selected-location-message" class="status-message" aria-live="polite"></p>
+                        @* Бутоните са type="button": те местят картата, а не
+                           изпращат формата. Под картата са и са подравнени в
+                           средата, за да се четат като действие върху нея, а
+                           не като част от съобщението за избора. *@
+                        <div class="map-actions">
+                            <button id="use-my-location" type="button" class="btn-civic-secondary">
+                                ⌖ Местоположението ми
+                            </button>
+                            @* Без конфигуриран ключ бутонът изобщо не се изписва:
+                               в страницата не влиза адрес към услуга, която не
+                               отговаря, а скриптът няма какво да зарежда. *@
+                            @if (!string.IsNullOrEmpty(Model.GoogleMapsApiKey))
+                            {
+                                <button id="show-street-view" type="button"
+                                        class="btn-civic-secondary"
+                                        aria-expanded="false"
+                                        aria-controls="street-view-panel"
+                                        data-maps-key="@Model.GoogleMapsApiKey">
+                                    360° Уличен изглед
+                                </button>
+                            }
+                        </div>
+                    </div>
+
+                    @* Панелът съществува в HTML-а, но е скрит, докато някой
+                       не го отвори: така мястото му е готово, преди панорамата
+                       да е долетяла, и редът на картата не подскача. *@
+                    <div class="street-view-panel" id="street-view-panel" hidden>
                         <div class="panel-heading">
                             <span class="panel-icon" aria-hidden="true">360°</span>
                             <h2>Уличен изглед</h2>
                         </div>
                         <div id="street-view-container"></div>
                     </div>
-                }
-            </div>
-
-            <!-- Дублиращи сигнали: предложението се появява, докато
-                 маркерът се мести, за да не качва някой три снимки
-                 за проблем, който вече се чака от общината. -->
-            <div class="duplicate-notice" id="duplicate-notice" role="status" aria-live="polite"@(Model.NearbyDuplicates.Count > 0 ? null : " hidden")>
-                <div class="panel-heading">
-                    <span class="panel-icon" aria-hidden="true">⚑</span>
-                    <h2>Твърде близо до вече подаден сигнал</h2>
                 </div>
-                <p class="duplicate-lead">
-                    Отвори съществуващия сигнал и го потвърди с един клик.
-                    Потвържденията вдигат приоритета на реалния проблем, вместо
-                    общината да получава две карточки за една и съща дупка.
-                </p>
-                <ul class="duplicate-list" id="duplicate-list">
-                    @foreach (var match in Model.NearbyDuplicates)
-                    {
-                        <li>
-                            <a class="duplicate-link" asp-page="/Details" asp-route-id="@match.Id">@match.Title</a>
-                            <span class="duplicate-meta">@match.Address · @match.Status · на @(Math.Round(match.DistanceMeters)) m</span>
-                        </li>
-                    }
-                </ul>
-                <label class="duplicate-acknowledge">
-                    <input asp-for="Report.DuplicateAcknowledged" type="checkbox" />
-                    <span>Разбирам — това е различен проблем и искам нов сигнал.</span>
-                </label>
-            </div>
+
+                @* Думата за близкия сигнал поема изскачащият прозорец, затова
+                   под картата няма нищо, докато форматът се попълва. Този блок
+                   се изписва единствено когато сървърът вече е спрял
+                   изпращането: там човекът вижда кое точно пречи и как да
+                   продължи, включително без JavaScript. *@
+                @if (Model.NearbyDuplicates.Count > 0)
+                {
+                    <div class="duplicate-blocked" role="alert">
+                        <ul class="duplicate-list">
+                            @foreach (var match in Model.NearbyDuplicates)
+                            {
+                                <li>
+                                    <a class="duplicate-link" asp-page="/Details" asp-route-id="@match.Id">@match.Title</a>
+                                    <span class="duplicate-meta">@match.Address · на @(Math.Round(match.DistanceMeters)) m от теб</span>
+                                </li>
+                            }
+                        </ul>
+                        <label class="duplicate-acknowledge">
+                            <input asp-for="Report.DuplicateAcknowledged" type="checkbox" />
+                            <span>Това е различен проблем — изпрати го.</span>
+                        </label>
+                    </div>
+                }
+                else
+                {
+                    @* Полето е скрито, но пътува със поста: прозорецът го
+                       запълва, когато човекът каже, че проблемът е различен. *@
+                    <input type="hidden" name="Report.DuplicateAcknowledged" id="Report_DuplicateAcknowledged" value="false" />
+                }
 
             <div class="form-field">
                 <label asp-for="Report.Description" class="form-label">
                     Описание на проблема <span class="required-mark">*</span>
                 </label>
+                @* Описанието е единственото място, където човекът разказва какво
+                   точно вижда, затова остава на цяла ширина. Ограничението е в
+                   самото поле, за да не бъде текстът отрязан от сървъра след
+                   изпращането; човекът го усеща докато пише. *@
                 <textarea asp-for="Report.Description" class="form-control description-input" rows="5" maxlength="2000" placeholder="Описание на проблема"></textarea>
                 <span asp-validation-for="Report.Description" class="text-danger"></span>
             </div>
@@ -138,6 +210,9 @@
                 <label class="form-label">
                     Оценка за сериозност (1-5) <span class="required-mark">*</span>
                 </label>
+                @* Скалата е прекъсната от едно до пет, затова са радиобутони,
+                   а не числово поле: петте носят едно и също име, така че до
+                   модела да стигне точно един избор, не списък от числа. *@
                 <div class="severity-rating-group">
                     @for (int i = 1; i <= 5; i++)
                     {
@@ -154,6 +229,9 @@
                 <label class="form-label" for="photo-input">
                     Снимки <span class="photo-hint">(незадължително · до 3 снимки · макс. 5 MB)</span>
                 </label>
+                @* Едно поле с accept="image/*" и multiple: на телефона то вече
+                   дава и двата пътя — от галерията или през камерата — и затова
+                   второ, скрито поле за capture не е нужно. *@
                 <div class="photo-picker">
                     <input id="photo-input" name="Photos" type="file" class="photo-input" accept="image/*" multiple />
                     <label for="photo-input" class="photo-picker-button">
@@ -165,6 +243,10 @@
                 <span asp-validation-for="Photos" class="text-danger"></span>
             </div>
 
+            @* Отказът е връзка, не бутон: той не праща нищо и не оставя
+               непълнен сигнал в опашката на сървъра. Редът е последният и
+               се отличава с отделна лента, за да е ясно, че след него нищо
+               няма — форматът приключва тук. *@
             <div class="form-actions">
                 <button type="submit" class="btn-civic-primary">
                     Изпрати сигнала <span aria-hidden="true">→</span>
@@ -172,16 +254,59 @@
                 <a asp-page="/Index" class="btn-civic-secondary cancel-button">Отказ</a>
             </div>
 
+            @* Звездата е обяснена с текст, а не само с червен цвят: правилата
+               за достъпност изискват значението да се разбира и без цвят. *@
             <p class="required-note"><span class="required-mark">*</span> Задължителни полета</p>
         </form>
+
+        @* Прозорецът за вече подаден сигнал стои в същата картичка, но извън
+           <form>-а: нищо от него не се изпраща заедно със сигнала, който още
+           се попълва, а бутоните му ползват същите стилове като тези във
+           формата. Когато е отворен модно, той се изобразява отгоре независимо
+           от мястото си в реда. *@
+        <dialog id="duplicate-dialog" class="duplicate-dialog" aria-labelledby="duplicate-dialog-title">
+            <div class="duplicate-dialog-inner">
+                <button type="button" class="duplicate-dialog-close" data-close aria-label="Затвори прозореца">✕</button>
+                <img id="duplicate-dialog-photo" class="duplicate-dialog-photo" alt="" hidden />
+                <p id="duplicate-dialog-kicker" class="duplicate-dialog-kicker">ВЕЧЕ ПОДАДЕН СИГНАЛ</p>
+                <h2 id="duplicate-dialog-title"></h2>
+                <p id="duplicate-dialog-address" class="duplicate-dialog-address"></p>
+                <ul id="duplicate-dialog-meta" class="duplicate-dialog-meta"></ul>
+                @* Текстът е само един ред: прозорецът изскача за няколко
+                   секунди и човекът трябва да разбере избора си, без да
+                   чете параграф. *@
+                <p id="duplicate-dialog-note" class="duplicate-dialog-note">
+                    Потвърди съществуващия сигнал вместо нов за същото място.
+                </p>
+                <div class="duplicate-dialog-actions">
+                    <button type="button" id="duplicate-confirm-button" class="btn-civic-primary duplicate-confirm-button" data-id="">
+                        Потвърждавам този сигнал
+                    </button>
+                    @* Вторият изход е равен на първия: различният проблем не е
+                       грешка на човека, а същото негово право, затова се
+                       предлага като бутон, а не като ситен текст под него. *@
+                    <button type="button" id="duplicate-different-button" class="btn-civic-secondary duplicate-different-button">
+                        Не е същият — затвори и продължи
+                    </button>
+                    <a id="duplicate-open-link" class="duplicate-dialog-link" href="#" target="_blank" rel="noopener noreferrer">
+                        Отвори страницата на сигнала <span aria-hidden="true">↗</span>
+                    </a>
+                </div>
+                <p id="duplicate-dialog-status" class="duplicate-dialog-status" role="status" aria-live="polite"></p>
+            </div>
+        </dialog>
     </div>
 </section>
 
 <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"></script>
 
+@* Библиотеката се зарежда чак тук, под формата, за да не забавя първия
+   кадър: човекът вижда полетата веднага, картата — малко по-късно. *@
 <script>
     document.addEventListener("DOMContentLoaded", function () {
         // --- 1. Leaflet Карта ---
+        // Няма контейнер за картата — няма смисъл и да се върти останалото:
+        // блокът спира тук, за да не дава грешка в празен или непълен кадър.
         const mapElement = document.getElementById("report-location-map");
         if (!mapElement) return;
 
@@ -189,83 +314,188 @@
         const searchInput = document.getElementById("map-address-search");
         const searchButton = document.getElementById("map-search-button");
         const searchMessage = document.getElementById("map-search-message");
+        // Имената на скритите полета ги определя връзката с модела и тук се
+        // повтарят буквално: с по-късо или по-хубаво име постът ги губи.
         const latitudeInput = document.getElementById("Report_Latitude");
         const longitudeInput = document.getElementById("Report_Longitude");
 
+        // Стартовата точка е центърът на Гоце Делчев, а не нулата на
+        // координатната система: първият кадър трябва да е там, където изобщо
+        // може да има сигнал. Мащаб 16 показва улиците, без да натъпква града.
         const initialPosition = [41.5667, 23.7333];
 
         const map = L.map(mapElement).setView(initialPosition, 16);
         window.reportMap = map;
 
         L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
+            // Плочите спират на мащаб 19, затова по-високите нива се уголемяват
+            // от последната налична плоча, вместо да останат празно бяло.
             maxZoom: 22, maxNativeZoom: 19,
             attribution: '&copy; OpenStreetMap'
         }).addTo(map);
 
         let selectedMarker = null;
 
-        // --- 2. Google Street View ---
-        // Уверяваме се, че контейнерът съществува
+        // --- 2. Уличен изглед, който чака един клик ---
+        // Скриптът на Google не тръгва със страницата. При отказ на ключа той
+        // изписва собственото си прозорце с грешка право върху формата и то не
+        // може да бъде махнато отвън, а панорамата е спомагателна: повечето
+        // подаващи я не отварят. Затова се товарят и тя, и скриптът ѝ чак
+        // когато човекът натисне бутона.
+        const streetViewPanel = document.getElementById("street-view-panel");
         const streetViewContainer = document.getElementById("street-view-container");
+        const streetViewButton = document.getElementById("show-street-view");
         let panorama = null;
+        // Един скрипт на страница: второто отваряне на панела не бива да
+        // поръчва библиотеката на Google още веднъж.
+        let mapsRequested = false;
 
-        // Проверяваме дали Google Maps API е заредено (ако ключът е валиден)
-        if (typeof google !== 'undefined' && streetViewContainer) {
-            panorama = new google.maps.StreetViewPanorama(
-                streetViewContainer,
-                {
-                    position: { lat: initialPosition[0], lng: initialPosition[1] },
-                    pov: { heading: 0, pitch: 0 },
-                    zoom: 1,
-                    visible: true
-                }
-            );
+        // Панорамата тръгва от вече избраната точка; докато човекът не е
+        // щракнал по картата, това е центърът на града.
+        function panoramaStart() {
+            const lat = Number(latitudeInput.value);
+            const lng = Number(longitudeInput.value);
+            return latitudeInput.value && longitudeInput.value
+                && Number.isFinite(lat) && Number.isFinite(lng)
+                ? { lat: lat, lng: lng }
+                : { lat: initialPosition[0], lng: initialPosition[1] };
         }
 
-        // Ключът не е конфигуриран или скриптът не минава през мрежата —
-        // без панел, който да показва празна рамка на комисията.
-        if (!panorama) {
-            setTimeout(window.civicHideStreetView, 4000);
+        function mountPanorama() {
+            // Библиотеката липсва: дошъл е отговорът без нея (блокиран мрежов
+            // достъп, разширение, което спира скрипта). Няма какво да се сглобява.
+            if (typeof google === "undefined" || !streetViewContainer) {
+                window.civicHideStreetView();
+                return;
+            }
+
+            try {
+                panorama = new google.maps.StreetViewPanorama(
+                    streetViewContainer,
+                    {
+                        position: panoramaStart(),
+                        // Мащабът живее в pov, не до позицията. Подаден
+                        // отделно, библиотеката го преизчислява сама и докато
+                        // панорамата още не е долетяла, числото е NaN —
+                        // и Google хвърля InvalidValueError за zoom.
+                        pov: { heading: 0, pitch: 0, zoom: 0 },
+                        visible: true
+                    }
+                );
+
+                // Статусът става известен чак след изтеглянето на панорамата.
+                // Ако снимки няма — изключено фактуриране, ограничен ключ или
+                // улица без покритие — остава сива рамка, която не казва нищо
+                // на човека. Тогава я махаме, както при отказ на ключа.
+                const statusOk = google.maps.StreetViewStatus
+                    ? google.maps.StreetViewStatus.OK
+                    : 'OK';
+                panorama.addListener('status_changed', function () {
+                    if (!panorama) {
+                        return;
+                    }
+                    const status = panorama.getStatus();
+                    if (status !== null && status !== undefined && status !== statusOk) {
+                        panorama = null;
+                        window.civicHideStreetView();
+                    }
+                });
+
+                if (streetViewButton) {
+                    streetViewButton.disabled = false;
+                    streetViewButton.textContent = "Скрий уличния изглед";
+                }
+            } catch (error) {
+                // Хвърленият от Google InvalidValueError засяга само
+                // панорамата. Без капан тук целият скрипт би спрял на този
+                // ред: маркерът, търсенето по адрес и местоположението от
+                // устройството нямаше да се закачат за картата.
+                panorama = null;
+                window.civicHideStreetView();
+            }
+        }
+
+        // Името civicStreetViewReady е на Google: с него скриптът извиква
+        // нашия код, когато библиотеката е готова за употреба.
+        window.civicStreetViewReady = mountPanorama;
+
+        function loadMapsScript() {
+            mapsRequested = true;
+            const script = document.createElement("script");
+            script.async = true;
+            // Ключът идва от бутона, където го е сложила страницата, и влиза
+            // в адреса кодиран: той е външна стойност и знаците в него биха
+            // счупили URL-а, ако се вмъкнат както си е.
+            script.src = "https://maps.googleapis.com/maps/api/js?key="
+                + encodeURIComponent(streetViewButton.dataset.mapsKey)
+                + "&callback=civicStreetViewReady";
+            // Мрежата не пуска скрипта: без този изход бутонът би оставал
+            // заключен в „Зареждане…“ докрай.
+            script.onerror = function () {
+                window.civicHideStreetView();
+            };
+            document.head.appendChild(script);
+
+            // Мрежа, която нито връща грешка, нито продължава: след осем
+            // секунти без библиотека бутонът си признава, че панорама няма.
+            window.setTimeout(function () {
+                if (typeof google === "undefined") {
+                    window.civicHideStreetView();
+                }
+            }, 8000);
+        }
+
+        // Без конфигуриран ключ бутона го няма и панелът остава скрит завинаги.
+        if (streetViewButton) {
+            streetViewButton.addEventListener("click", function () {
+                if (!streetViewPanel.hidden) {
+                    streetViewPanel.hidden = true;
+                    streetViewButton.setAttribute("aria-expanded", "false");
+                    streetViewButton.textContent = "360° Уличен изглед";
+                    return;
+                }
+
+                streetViewPanel.hidden = false;
+                streetViewButton.setAttribute("aria-expanded", "true");
+
+                // Вече сглобена панорама: тя продължава да работи, само се
+                // показва отново, и текстът на бутона веднага го казва.
+                if (panorama) {
+                    streetViewButton.textContent = "Скрий уличния изглед";
+                    return;
+                }
+
+                if (!mapsRequested) {
+                    streetViewButton.disabled = true;
+                    streetViewButton.textContent = "Зареждане…";
+                    loadMapsScript();
+                }
+            });
         }
 
         // --- 3. Вече подаден сигнал на същото място ---
-        const notice = document.getElementById("duplicate-notice");
-        const noticeList = document.getElementById("duplicate-list");
         const acknowledge = document.getElementById("Report_DuplicateAcknowledged");
         const categoryInput = document.getElementById("Report_Category");
         let nearbyTimer = null;
         let nearbyKey = null;
 
-        function hideDuplicates() {
-            noticeList.textContent = "";
-            notice.hidden = true;
-            acknowledge.checked = false;
+        // Отметката живее във формата, не в прозореца: само така постът я
+        // носи на сървъра. Полето е скрито, докато форматът се попълва, и
+        // се нулира при всяка нова точка — случайно останало признание не
+        // трябва да пуска сигнала без проверка.
+        function resetAcknowledgement() {
+            if (!acknowledge) return;
+            if (acknowledge.type === "hidden") {
+                acknowledge.value = "false";
+            } else {
+                acknowledge.checked = false;
+            }
         }
 
+        // Думата поема изскачащият прозорец: панел под картата отпадна,
+        // защото човекът гледа натам, където нещо изскача, а не надолу.
         function showDuplicates(matches) {
-            noticeList.textContent = "";
-
-            matches.forEach(function (match) {
-                const item = document.createElement("li");
-
-                const link = document.createElement("a");
-                link.className = "duplicate-link";
-                // Страницата на сигнала очаква номера в пътя (/Details/7),
-                // а не след вопросителен знак — иначе връзката е 404.
-                link.href = "/Details/" + encodeURIComponent(match.id);
-                link.textContent = match.title;
-
-                const meta = document.createElement("span");
-                meta.className = "duplicate-meta";
-                meta.textContent = match.address + " · " + match.status
-                    + " · на " + Math.round(match.distanceMeters) + " m";
-
-                item.appendChild(link);
-                item.appendChild(meta);
-                noticeList.appendChild(item);
-            });
-
-            notice.hidden = false;
+            window.civicDuplicateDialog?.open(matches);
         }
 
         // Заявката се бави половин секунда и се повтаря само при реална
@@ -286,11 +516,19 @@
             window.clearTimeout(nearbyTimer);
             nearbyTimer = window.setTimeout(async function () {
                 try {
+                    // Проверката е GET към същия адрес с обозначен обработчик,
+                    // за да не мести човека никъде по време на попълване:
+                    // отговорът идва като данни, а не като нова страница.
+                    // Категорията е с кирилица и има интервали в името, затова
+                    // се кодира — без това адресът би бил невалиден за сървъра.
                     const url = window.location.pathname + "?handler=Nearby"
                         + "&category=" + encodeURIComponent(category)
                         + "&latitude=" + encodeURIComponent(lat)
                         + "&longitude=" + encodeURIComponent(lng);
 
+                    // Accept казва на сървъра да върне данни, а не подновена
+                    // страница; при грешен отговор спираме на тихото, за да
+                    // не тълкуваме HTML като предложения за близки сигнали.
                     const response = await fetch(url, { headers: { Accept: "application/json" } });
                     if (!response.ok) return;
 
@@ -298,7 +536,7 @@
                     if (data.matches && data.matches.length) {
                         showDuplicates(data.matches);
                     } else {
-                        hideDuplicates();
+                        resetAcknowledgement();
                     }
                 } catch (error) {
                     // Няма мрежа или отговорът не е JSON: форматът продължава
@@ -308,37 +546,54 @@
             }, 500);
         }
 
-        // --- 4. Функция за обновяване на локацията ---
+        // --- 4. Функция за обновяване на мястото ---
         function updateLocation(lat, lng) {
             // Записваме в скритите полета
+            // Седем десетични знака са около сантиметър: достатъчно за една
+            // улица и същевременно без точност, която базата не може да пази.
             latitudeInput.value = lat.toFixed(7);
             longitudeInput.value = lng.toFixed(7);
 
             if (message) {
+                // На човека се показва по-къса стойност: текстът е за четене,
+                // а числото в полето — за изчисление на разстоянията.
                 message.textContent = `Избрано местоположение: ${lat.toFixed(6)}, ${lng.toFixed(6)}`;
                 message.classList.remove("status-error");
             }
 
-            // Местим Street View
+            // Местим Street View. Местенето е отделен опит за зареждане на
+            // панорама, затова и то е в капан: отказ тук не смее да спре
+            // проверката за дублиращ сигнал на същия ред.
             if (panorama) {
-                panorama.setPosition({ lat: lat, lng: lng });
+                try {
+                    panorama.setPosition({ lat: lat, lng: lng });
+                } catch (error) {
+                    panorama = null;
+                    window.civicHideStreetView();
+                }
             }
 
             askAboutDuplicates();
         }
 
+        // Смяната на категорията може да върне различен резултат на същите
+        // координати, затова предишният отговор се забравя и заявката се
+        // повтаря, вместо да остане старият списък в панела.
         categoryInput.addEventListener("change", function () {
             nearbyKey = null;
             askAboutDuplicates();
         });
 
-        // --- 5. Клик на Leaflet картата ---
-        map.on("click", function (e) {
-            const lat = e.latlng.lat;
-            const lng = e.latlng.lng;
-
+        // --- 5. Поставяне на точката ---
+        // Един и същ ред работа за трите начина, по които човек избира
+        // място: щракване по картата, търсене на адрес и местоположение от
+        // устройството. Маркерът се създава веднъж и остава придвижим, за да
+        // не се трупат няколко точки върху една карта.
+        function placeMarker(lat, lng) {
             if (!selectedMarker) {
                 selectedMarker = L.marker([lat, lng], { draggable: true }).addTo(map);
+                // Чакаме dragend, не drag: по време на влачене позицията се
+                // сменя стотици пъти и всяка смяна би пуснала нова проверка.
                 selectedMarker.on("dragend", function (event) {
                     const moved = event.target.getLatLng();
                     updateLocation(moved.lat, moved.lng);
@@ -348,45 +603,96 @@
             }
 
             updateLocation(lat, lng);
+        }
+
+        // --- 6. Щракване по Leaflet картата ---
+        map.on("click", function (e) {
+            placeMarker(e.latlng.lat, e.latlng.lng);
         });
 
         // Възстановяване на предишни координати (при връщане на формата)
+        // Полетата може да носят остатък от предишен опит, затова числото
+        // се проверява дали е реално, преди картата да получи позиция.
         const prevLat = Number(latitudeInput.value);
         const prevLng = Number(longitudeInput.value);
         if (latitudeInput.value && longitudeInput.value && Number.isFinite(prevLat) && Number.isFinite(prevLng)) {
-            selectedMarker = L.marker([prevLat, prevLng], { draggable: true }).addTo(map);
-            selectedMarker.on("dragend", function (event) {
-                const moved = event.target.getLatLng();
-                updateLocation(moved.lat, moved.lng);
-            });
-            updateLocation(prevLat, prevLng);
+            placeMarker(prevLat, prevLng);
         }
 
-        // --- 6. Търсене на адрес (Nominatim) ---
+        // --- 7. Местоположение от устройството ---
+        const locationButton = document.getElementById("use-my-location");
+
+        locationButton.addEventListener("click", function () {
+            // Без достъп до сензора нищо не се случва само по себе си:
+            // човекът продължава да избира със щракване, както преди.
+            if (!navigator.geolocation || !window.isSecureContext) {
+                message.textContent = window.isSecureContext
+                    ? "Този браузър не поддържа местоположение. Избери точката, като щракнеш по картата."
+                    : "Местоположението се дава само при защитена (https) връзка. Избери точката, като щракнеш по картата.";
+                message.classList.add("status-error");
+                return;
+            }
+
+            locationButton.disabled = true;
+            message.classList.remove("status-error");
+            message.textContent = "Търся местоположението ти…";
+
+            navigator.geolocation.getCurrentPosition(function (position) {
+                locationButton.disabled = false;
+                // Сетивът е около 10 метра в града, затова мащаб 17:
+                // достатъчно близък, за да се види тротоарът, и все пак
+                // с достатъчно контекст около точката.
+                map.setView([position.coords.latitude, position.coords.longitude], 17);
+                placeMarker(position.coords.latitude, position.coords.longitude);
+            }, function (error) {
+                locationButton.disabled = false;
+                // Казва се какво да се направи, а не кодът на браузъра:
+                // отказът е най-честият изход и не е грешка на человека.
+                message.textContent = error.code === error.PERMISSION_DENIED
+                    ? "Достъпът до местоположение е отказан. Разреши го от настройките на браузъра или избери точката ръчно."
+                    : "Местоположението не можа да се определи. Опитай пак или избери точката със щракване по картата.";
+                message.classList.add("status-error");
+            }, { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 });
+        });
+
+        // --- 8. Търсене на адрес (Nominatim) ---
         async function searchAddress() {
             const query = searchInput.value.trim();
+            // Празно поле не тръгва към чужд сървър: курсорът просто се връща
+            // в него, за да не чака човек отговор, който не може да дойде.
             if (!query) {
                 searchMessage.textContent = "Въведи адрес или улица.";
                 searchInput.focus();
                 return;
             }
 
+            // Бутонът се заключва и подписът му се сменя: две едновременни
+            // търсения биха върнали два отговора в различен ред.
             searchButton.disabled = true;
-            searchButton.textContent = "Търсене...";
+            searchButton.textContent = "Търсене…";
             searchMessage.textContent = "";
 
             try {
                 // Nominatim тук не познава адреса с представка „ул.“, но я
                 // разбира без нея. Повтаряме само при празен резултат:
                 // „бул. Гоце Делчев“ без представката връща града, не булеварда.
+                // Търсенето е вътрешна функция, за да може повтореният опит
+                // по-долу да изпрати същите точни параметри, а не втори адрес,
+                // който се различава незабележимо от първия.
                 const lookup = async (term) => {
                     const url = new URL("https://nominatim.openstreetmap.org/search");
                     url.searchParams.set("q", term + ", Гоце Делчев, България");
                     url.searchParams.set("format", "jsonv2");
+                    // Единствен резултат: списък с десет имена не помага на
+                    // човек, който вече знае коя улица търси.
                     url.searchParams.set("limit", "1");
                     url.searchParams.set("countrycodes", "bg");
+                    // Правоъгълникът на града и bounded спират имена, които се
+                    // повтарят в други населени места: извън него няма резултат.
                     url.searchParams.set("viewbox", "23.65,41.62,23.82,41.50");
                     url.searchParams.set("bounded", "1");
+                    // Имената се искат на български, за да се разпознаят от
+                    // жителите и да се четат на кирилица в подсказката долу.
                     url.searchParams.set("accept-language", "bg");
 
                     const response = await fetch(url.toString(), { headers: { "Accept": "application/json" } });
@@ -407,34 +713,35 @@
                 }
 
                 const result = results[0];
+                // Отговорът носи координати като текст, а картата очаква
+                // числа, затова се превръщат преди всяка друга стъпка.
                 const lat = Number(result.lat);
                 const lng = Number(result.lon);
 
                 if (!Number.isFinite(lat) || !Number.isFinite(lng)) throw new Error("Invalid coordinates");
 
                 map.setView([lat, lng], 19);
-                // Извикваме updateLocation, за да преместим и маркера, и Street View
-                if (!selectedMarker) {
-                    selectedMarker = L.marker([lat, lng], { draggable: true }).addTo(map);
-                    selectedMarker.on("dragend", function (event) {
-                        const moved = event.target.getLatLng();
-                        updateLocation(moved.lat, moved.lng);
-                    });
-                } else {
-                    selectedMarker.setLatLng([lat, lng]);
-                }
-                updateLocation(lat, lng);
+                // Същата функция като при щракване и при местоположение:
+                // маркерът и координатите се поддържат на едно място.
+                placeMarker(lat, lng);
 
+                // Пълното име от сървъра казва кой от еднаквите върхове е
+                // избран; маркерът все пак остава за ръчната корекция.
                 searchMessage.textContent = "Намерено: " + result.display_name + ". Избери точката на самия проблем върху картата.";
             } catch (error) {
                 searchMessage.textContent = "Търсенето не успя. Провери връзката и опитай отново.";
             } finally {
+                // Подписът и активното състояние се връщат и при успех, и при
+                // грешка: в противен случай един отказ би оставил бутона
+                // заключен за цялата сесия на попълване.
                 searchButton.disabled = false;
                 searchButton.textContent = "Търси";
             }
         }
 
         searchButton.addEventListener("click", searchAddress);
+        // Enter в полето за търсене иначе изпраща целия сигнал: спираме
+        // подразбираното действие и викаме самото търсене.
         searchInput.addEventListener("keydown", function (event) {
             if (event.key === "Enter") {
                 event.preventDefault();
@@ -442,10 +749,13 @@
             }
         });
 
+        // Leaflet измерва контейнера веднъж при създаване; ако до тогава
+        // страницата още се подрежда, плочите остават сиви, затова размерът
+        // се преизмерва след кратко изчакване и при всяка промяна на прозореца.
         setTimeout(() => map.invalidateSize(), 200);
         window.addEventListener("resize", () => map.invalidateSize());
 
-        // --- 7. Място е задължително ---
+        // --- 9. Място е задължително ---
         // Без координати сигналът не се появява на публичната карта, затова
         // спираме изпращането тук и оставяме сървъра да потвърди проверката.
         const form = mapElement.closest("form");
@@ -454,14 +764,16 @@
             if (!latitudeInput.value || !longitudeInput.value) {
                 event.preventDefault();
                 if (message) {
-                    message.textContent = "Отбележи мястото с клик върху картата.";
+                    message.textContent = "Отбележи мястото, като щракнеш върху картата.";
                     message.classList.add("status-error");
                 }
+                // Картата се докарва в средата на екрана: иначе човекът
+                // остава до бутона и не вижда къде точно трябва да щракне.
                 map.getContainer().scrollIntoView({ behavior: "smooth", block: "center" });
                 return;
             }
 
-            // Същият гейт като на сървъра. Тук е, защото след отказания
+            // Същата проверка като на сървъра. Тук е, защото след отказания
             // пост прикачените снимки не се възстановяват — браузърът не
             // позволява да се попълни файловото поле отново.
             if (!notice.hidden && !acknowledge.checked) {
@@ -471,7 +783,9 @@
         });
     });
 
-    // --- 6. Визуализация на снимки ---
+    // --- 10. Визуализация на снимки ---
+    // Блокът е в собствена функция, за да не се слеят неговите имена
+    // (input, list, files) с тези на скрипта за картата по-горе.
     (function () {
         const input = document.getElementById("photo-input");
         const list = document.getElementById("photo-preview-list");
@@ -479,12 +793,17 @@
 
         if (!input || !list || !message) return;
 
+        // Границите са числата, които вижда и посетителят в подсказката:
+        // тук спират преди изпращането, на сървъра важат и без този скрипт.
         const MAX_FILES = 3;
         const MAX_SIZE = 5 * 1024 * 1024;
         const ALLOWED_TYPES = ["image/jpeg", "image/jpg", "image/png", "image/webp"];
         const ALLOWED_EXTENSIONS = [".jpg", ".jpeg", ".png", ".webp"];
 
         function isAllowedFile(file) {
+            // Типът го съобщава браузърът и при някои телефони е празен,
+            // затова се гледа и разширението. Нито едното не доказва
+            // съдържанието, но и двете махат очевидните грешни избори.
             const type = (file.type || "").toLowerCase();
             if (ALLOWED_TYPES.includes(type)) return true;
             const name = (file.name || "").toLowerCase();
@@ -499,22 +818,33 @@
             message.classList.toggle("photo-error", Boolean(isError) && text !== "");
         }
 
+        // Списъкът на файловото поле е само за четене: премахване на една
+        // снимка става така, че нов списък със запазените файлове се вкарва
+        // обратно в полето. Без този трик прегледът и изпратеното съдържание
+        // биха се разминали — на екрана едно, в поста друго.
         function syncInput() {
             const transfer = new DataTransfer();
             files.forEach(file => transfer.items.add(file));
             input.files = transfer.files;
         }
 
+        // Старите адреси се освобождават преди нова отрисовка: иначе всяко
+        // добавяне оставя предишната версия на снимката в паметта на браузъра.
         function releaseUrls() {
             objectUrls.forEach(url => URL.revokeObjectURL(url));
             objectUrls = [];
         }
 
         function render() {
+            // Прегледите се строят отново от нулата, за да съвпадат винаги с
+            // текущия списък: дописване на редове би оставило снимки, които
+            // човекът уже е премахнал.
             releaseUrls();
             list.innerHTML = "";
 
             files.forEach(function (file, index) {
+                // Снимката се показва през локален адрес към вече избрания
+                // файл, без да се качва и сваля веднъж за прегледа.
                 const url = URL.createObjectURL(file);
                 objectUrls.push(url);
 
@@ -532,13 +862,20 @@
                 name.className = "photo-preview-name";
                 name.textContent = file.name;
 
+                // Копчето е type="button": създадено вътре във формата, то по
+                // подразбиране би изпратило сигнала при едно натискане.
                 const remove = document.createElement("button");
                 remove.type = "button";
                 remove.className = "photo-remove-button";
                 remove.textContent = "Премахни";
+                // Надписът за екранния чет носи името на файла: пет еднакви
+                // копчета „Премахни“ не казват кое какво маха.
                 remove.setAttribute("aria-label", "Премахни " + file.name);
 
                 remove.addEventListener("click", function () {
+                    // Индексът е от изграждането на реда, затова и списъкът, и
+                    // самото поле, и прегледите се опресняват заедно — иначе
+                    // изрязаната снимка пак би тръгвала с поста.
                     files.splice(index, 1);
                     syncInput();
                     render();
@@ -551,6 +888,7 @@
                 item.appendChild(meta);
                 list.appendChild(item);
             });
+
         }
 
         function updateMessage() {
@@ -561,11 +899,17 @@
             showMessage("Избрани снимки: " + files.length + " / " + MAX_FILES, false);
         }
 
-        input.addEventListener("change", function () {
-            const incoming = Array.from(input.files);
+        // Изборът минава през една функция: проверките и прегледите са общи
+        // каквито и файлове да носи полето.
+        function adoptFrom(source) {
+            // Прозорецът за файлове замества целия избор всеки път, затова
+            // досегашните снимки се връщат обратно от нашия списък по-долу.
+            const incoming = Array.from(source.files);
             const errors = [];
             const valid = [];
 
+            // Грешките се събират и изписват наведнъж: човекът вижда кой
+            // файл е отхвърлен, без форматът да спре заради него.
             incoming.forEach(function (file) {
                 if (!isAllowedFile(file)) {
                     errors.push("„" + file.name + "“ не е сред поддържаните формати (JPG, PNG, WEBP).");
@@ -578,6 +922,8 @@
                 valid.push(file);
             });
 
+            // Еднаквите име, размер и последна промяна означават, че същият
+            // файл е избран повторно: не го показваме два пъти под прегледите.
             files.forEach(function (existing) {
                 const duplicate = valid.some(file => file.name === existing.name && file.size === existing.size && file.lastModified === existing.lastModified);
                 if (!duplicate) valid.push(existing);
@@ -587,6 +933,8 @@
                 errors.push("Може да прикачиш най-много " + MAX_FILES + " снимки.");
             }
 
+            // Превишението не спира изпращането: първите три остават и
+            // се обясняват с текст, вместо форматът да се държи счупен.
             files = valid.slice(0, MAX_FILES);
             syncInput();
             render();
@@ -596,6 +944,275 @@
             } else {
                 updateMessage();
             }
+        }
+
+        input.addEventListener("change", function () {
+            adoptFrom(input);
         });
+
+        // Списъкът се изписва още при отваряне: без него премахнатият файл
+        // би оставил стар преглед под полето.
+        render();
+    })();
+
+    // --- 11. Прозорецът за вече подаден сигнал ---
+    // Щом проверката намери близък сигнал, прозорецът се показва сам и поема
+    // цялата дума: списък под картата отпадна, защото две места за едно и
+    // също предупреждение само се повтарят. Двата изхода са равни — чужд
+    // сигнал се потвърждава с клик, а различен проблем просто се затваря и
+    // попълването продължава. Собственият сигнал е трети случай: той не се
+    // потвърждава от автора си, затова за него текстът е друг и бутонът отпада.
+    (function () {
+        const dialog = document.getElementById("duplicate-dialog");
+        if (!dialog) return;
+
+        const titleBox = document.getElementById("duplicate-dialog-title");
+        const addressBox = document.getElementById("duplicate-dialog-address");
+        const kickerBox = document.getElementById("duplicate-dialog-kicker");
+        const noteBox = document.getElementById("duplicate-dialog-note");
+        const metaList = document.getElementById("duplicate-dialog-meta");
+        const photoBox = document.getElementById("duplicate-dialog-photo");
+        const confirmButton = document.getElementById("duplicate-confirm-button");
+        const differentButton = document.getElementById("duplicate-different-button");
+        const openLink = document.getElementById("duplicate-open-link");
+        const statusBox = document.getElementById("duplicate-dialog-status");
+        // Отметката живее във формата, не в прозореца: само така постът я
+        // носи на сървъра. Прозорецът я попълва от името на човека, когато
+        // той каже, че проблемът е различен.
+        const acknowledge = document.getElementById("Report_DuplicateAcknowledged");
+
+        // Native <dialog> дава моддалност, блокировка на tab-редата, замъглен
+        // фон и затваряне с Esc. Без него същото съдържание се показва като
+        // насложен слой.
+        const modal = typeof dialog.showModal === "function";
+
+        // Един сигнал се пита веднъж: при всяко местене на маркера проверката
+        // се повтаря и прозорецът би изскачал наново за вече решен проблем.
+        const answered = new Set();
+
+        let currentId = "";
+        let lastFocused = null;
+
+        const TEXT = {
+            foreign: {
+                kicker: "ВЕЧЕ ПОДАДЕН СИГНАЛ",
+                note: "Ако е същият проблем, потвърди го — приоритетът му расте. "
+                    + "Ако е различен, затвори и продължи."
+            },
+            mine: {
+                kicker: "ТИ ВЕЧЕ ПОДАДЕ ТОЗИ СИГНАЛ",
+                note: "Твой е, затова не се потвърждава. Отвори го, за да видиш "
+                    + "статуса, или затвори, ако тук има различен проблем."
+            }
+        };
+
+        function setStatus(text, kind) {
+            statusBox.textContent = text || "";
+            statusBox.classList.toggle("is-saved", kind === "saved");
+            statusBox.classList.toggle("is-error", kind === "error");
+        }
+
+        // Връщането на фокуса е задължително при затваряне: човекът трябва да
+        // застане там, откъдето е отворил прозореца, а не в началото на
+        // страницата.
+        function closeDialog() {
+            if (dialog.open) {
+                dialog.close();
+            } else {
+                dialog.classList.remove("is-fallback");
+            }
+            lastFocused?.focus?.();
+        }
+
+        // Отметката се попълва според вида на полето: докато форматът се
+        // попълва полето е скрито и носи стойност, а когато сървърът вече е
+        // спрял изпращането, то се вижда и се отбелязва.
+        function markDifferent() {
+            if (!acknowledge) return;
+            if (acknowledge.type === "hidden") {
+                acknowledge.value = "true";
+            } else {
+                acknowledge.checked = true;
+            }
+        }
+
+        function addMeta(text) {
+            if (!text) return;
+            const item = document.createElement("li");
+            item.textContent = text;
+            metaList.appendChild(item);
+        }
+
+        // Данните идват от отговора на проверката за близки сигнали.
+        function openDialog(data) {
+            const copy = data.mine ? TEXT.mine : TEXT.foreign;
+            currentId = String(data.id || "");
+            lastFocused = document.activeElement;
+
+            kickerBox.textContent = copy.kicker;
+            noteBox.textContent = copy.note;
+            // Класът променя само акцента на заглавната строка: собственият
+            // сигнал не е предупреждение, а напомняне.
+            dialog.classList.toggle("is-mine", Boolean(data.mine));
+
+            titleBox.textContent = data.title || "Сигнал без заглавие";
+            addressBox.textContent = data.address || "";
+
+            metaList.textContent = "";
+            addMeta(data.status);
+            if (data.distance) addMeta("на " + data.distance + " m от теб");
+            if (data.priority) {
+                addMeta(data.priority + (data.priorityScore ? ": " + data.priorityScore : ""));
+            }
+            if (data.urgent) addMeta("спешен сигнал");
+            if (data.mine && data.created) addMeta("подаден на " + data.created);
+            if (data.extra) {
+                addMeta(data.extra === 1
+                    ? "и още един сигнал наоколо"
+                    : "и още " + data.extra + " сигнала наоколо");
+            }
+
+            // Снимката се маха напълно, когато я няма: празен alt би се чел
+            // като раздел без съдържание.
+            if (data.photo) {
+                photoBox.src = data.photo;
+                photoBox.alt = "Снимка към сигнала";
+                photoBox.hidden = false;
+            } else {
+                photoBox.removeAttribute("src");
+                photoBox.hidden = true;
+            }
+
+            confirmButton.dataset.id = currentId;
+            confirmButton.disabled = false;
+            confirmButton.removeAttribute("data-close");
+            confirmButton.textContent = "Потвърждавам този сигнал";
+            // Собственият сигнал остава без бутон за потвърждение: сървърът
+            // би отхвърлил такъв опит, а на човека не трябва да му се предлага
+            // действие, което не му работи.
+            confirmButton.hidden = Boolean(data.mine);
+            openLink.href = "/Details/" + encodeURIComponent(currentId);
+            setStatus("", null);
+
+            if (modal) {
+                dialog.showModal();
+            } else {
+                dialog.classList.add("is-fallback");
+            }
+            (data.mine ? differentButton : confirmButton).focus();
+            return true;
+        }
+
+        dialog.addEventListener("click", function (event) {
+            // Копчето за затваряне и фона извън картата: двете места, където
+            // човек очаква, че един клик приключва прозореца.
+            if (event.target.closest("[data-close]")) {
+                closeDialog();
+                return;
+            }
+
+            const inside = dialog.querySelector(".duplicate-dialog-inner");
+            if (event.target === dialog || (inside && !inside.contains(event.target))) closeDialog();
+        });
+
+        // При браузър без <dialog> Esc не се грижи сам за нищо.
+        document.addEventListener("keydown", function (event) {
+            if (event.key === "Escape" && dialog.classList.contains("is-fallback")) closeDialog();
+        });
+
+        differentButton.addEventListener("click", function () {
+            // Отметката се слага вместо човека: той току-що каза, че проблемът
+            // е различен, а без нея сървърът би спрял сигнала.
+            markDifferent();
+            answered.add(currentId);
+            closeDialog();
+        });
+
+        confirmButton.addEventListener("click", async function () {
+            const id = confirmButton.dataset.id;
+            if (!id) return;
+
+            // Токенът за защита срещу фалшифициране се взема от собствената
+            // форма на страницата: същият ред важи за всеки POST към сървъра.
+            const token = document.querySelector("input[name=__RequestVerificationToken]");
+            const body = new FormData();
+            if (token) body.append(token.name, token.value);
+
+            confirmButton.disabled = true;
+            setStatus("Записване…", null);
+
+            try {
+                // Изпращането е към същия обработчик, който ползва бутонът
+                // „Потвърди този проблем“ на страницата на сигнала, затова и
+                // правилата са едни и същи: без опит за двойно потвърждение.
+                const response = await fetch("/Details/" + encodeURIComponent(id) + "?handler=Confirm", {
+                    method: "POST",
+                    body,
+                    headers: { Accept: "text/html" }
+                });
+
+                if (response.ok) {
+                    setStatus("Потвърждението е записано.", "saved");
+                    answered.add(id);
+                    // Началната страница е крайната точка: сигналът с вече
+                    // вдигнат приоритет е там, а форматът зад гърба на
+                    // човека няма повече смисъл след потвърждението.
+                    window.setTimeout(function () {
+                        window.location.assign("/Index");
+                    }, 800);
+                    return;
+                }
+
+                // Сървърът отговаря с причината на български; тя се показва
+                // вместо общо „грешка“, защото човекът трябва да разбере дали
+                // вече е потвърдил или сигналът е приключен.
+                const reason = (await response.text()).trim();
+                if (response.status === 400 && reason.indexOf("Вече си потвърдил") !== -1) {
+                    // Потвърдено е по-рано: не е грешка, а свършена работа,
+                    // затова се казва с същия тон и остава на екран.
+                    setStatus("Този сигнал вече е потвърден от теб.", "saved");
+                    answered.add(id);
+                    confirmButton.textContent = "Затвори прозореца";
+                    confirmButton.setAttribute("data-close", "");
+                    confirmButton.disabled = false;
+                    return;
+                }
+
+                setStatus(reason && reason.length < 200 ? reason : "Потвърждението не се записа.", "error");
+                confirmButton.disabled = false;
+            } catch (error) {
+                setStatus("Няма връзка със сървъра — опитай отново след малко.", "error");
+                confirmButton.disabled = false;
+            }
+        });
+
+        window.civicDuplicateDialog = {
+            supported: modal,
+            // Проверката за близки сигнали вика това веднага след отговора:
+            // най-близкият сигнал влиза в прозореца, заедно с броя на
+            // останалите, които остават зад него.
+            open(matches) {
+                if (!matches || matches.length === 0) return false;
+                if (answered.has(String(matches[0].id))) return false;
+
+                const first = matches[0];
+                return openDialog({
+                    id: first.id,
+                    title: first.title,
+                    address: first.address,
+                    status: first.status,
+                    distance: Math.round(first.distanceMeters),
+                    photo: first.photo,
+                    priority: first.priorityLabel,
+                    priorityScore: first.priorityScore === null || first.priorityScore === undefined
+                        ? ""
+                        : Math.round(first.priorityScore),
+                    urgent: Boolean(first.isUrgent),
+                    mine: Boolean(first.isMine),
+                    created: first.createdAtText,
+                    extra: matches.length - 1
+                });
+            }
+        };
     })();
 </script>

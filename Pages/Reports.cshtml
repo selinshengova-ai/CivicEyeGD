@@ -1,3 +1,10 @@
+@*
+    CivicEye GD — публичният списък на всички сигнали.
+    Търсенето и филтрирането се вършат в модела зад страницата; тук
+    остава резултатът и формата, която възпроизвежда условията, при
+    които той е получен.
+*@
+
 @page
 @model CivicEyeGD.Pages.ReportsModel
 
@@ -20,22 +27,56 @@
             </a>
         </div>
 
+        @* Четирите числа са за сигналите след филтъра, а не за всички
+           регистрирани: числата се променят при всяко търсене, за да
+           усети потребителят веднага ефекта на своите условия. Лентата е
+           една обща рамка с четири равни полета, защото четири отделни
+           карти биха изглеждали като табело, а не като граждански списък. *@
+        @{
+            var awaitingCount = Model.Reports.Count(r => !ReportStatuses.IsClosed(r.Status));
+            var urgentCount = Model.Reports.Count(r => Model.IsUrgent(r));
+        }
         <div class="reports-summary">
             <div class="reports-summary-card">
-                <span>Намерени сигнали</span>
+                <span>Намерени</span>
                 <strong>@Model.Reports.Count</strong>
+            </div>
+            <div class="reports-summary-card">
+                <span>Чакащи решение</span>
+                <strong>@awaitingCount</strong>
+            </div>
+            <div class="reports-summary-card">
+                <span>Приключени</span>
+                <strong>@(Model.Reports.Count - awaitingCount)</strong>
+            </div>
+            @* Моделът брои само активните с приоритет 70 или нагоре,
+               затова числото е работа, а не спомени от минали месеци. *@
+            <div class="reports-summary-card">
+                <span>С висок приоритет</span>
+                <strong>@urgentCount</strong>
             </div>
         </div>
 
+        @* Филтърът е HTML форма с метод get, не JavaScript: условията влизат
+            в адреса, затова връзката може да се споделя и запазва, бутона
+            „назад“ работи естествено, а без включен скрипт страницата
+            остава напълно използвана. *@
         <form method="get" class="reports-filters">
             <div class="reports-search">
+                @* Полето има видим етикет, свързан с него, а не само заместващ
+                    текст: последният изчезва при писане, а етикетът остава и
+                    бива изчитан от екранните четци. *@
                 <label for="search">Търсене</label>
                 <input id="search"
                        name="search"
                        value="@Model.Search"
-                       placeholder="Заглавие, описание или адрес..." />
+                       placeholder="Заглавие, описание или адрес…" />
             </div>
 
+            @* Изпратените стойности се връщат обратно в полетата от модела:
+                след заявка формата възпроизвежда условията на резултата, а
+                потребителят не преписва нищо. Първата опция е с празна
+                стойност — тя отговаря на „без филтър“. *@
             <div>
                 <label for="category">Категория</label>
                 <select id="category" name="category">
@@ -64,22 +105,53 @@
                 </select>
             </div>
 
-            <button type="submit" class="reports-filter-btn">
-                Филтрирай
-            </button>
+            @* Подредбата е четвъртото поле на същата форма, защото
+                списъкът без ред не отговаря на въпроса „кое чака“:
+                трите варианта идват от модела, а не са домислени тук,
+                и се слагат в адреса заедно с филтрите — затова
+                подреденият списък може да се прати по имейл. *@
+            <div>
+                <label for="sort">Подреди</label>
+                <select id="sort" name="sort">
+                    @foreach (var option in ReportsModel.SortOptions)
+                    {
+                        <option value="@option.Value"
+                                selected="@(Model.Sort == option.Value)">
+                            @option.Text
+                        </option>
+                    }
+                </select>
+            </div>
 
-            <a asp-page="/Reports" class="reports-reset-btn">
-                Изчисти
-            </a>
+            @* Двата бутона са в един общ блок, а не в две отделни колонки:
+               оставени сами, те избутват „Изчисти“ на втория ред и под
+               полето за търсене остава празно място. *@
+            <div class="reports-filter-actions">
+                <button type="submit" class="reports-filter-btn">
+                    Филтрирай
+                </button>
+
+                @* „Изчисти“ е обикновена връзка, не бутон със скрипт: адресът
+                   без параметри е точно списъкът без филтър, затова нулирането
+                   на полетата става само с презареждане на страницата. *@
+                <a asp-page="/Reports" asp-route-sort="@Model.Sort" class="reports-reset-btn">
+                    Изчисти
+                </a>
+            </div>
         </form>
 
+        @* Числото не се повтаря тук: то вече стои в лентата над формата, а
+           редът под заглавието отговаря само на въпроса „по какво е
+           нареден списъкът“. *@
         <div class="reports-list-heading">
             <h2>Регистрирани сигнали</h2>
-            <span>@Model.Reports.Count резултата</span>
+            <span>Подредено: @Model.SortText</span>
         </div>
 
         @if (Model.Reports.Count == 0)
         {
+            @* При липса на резултат екранът не е просто празен: обяснява
+                възможните причини и предлага изход — нови условия или нов сигнал. *@
             <div class="reports-empty">
                 <div class="reports-empty-icon">◎</div>
                 <h3>Няма намерени сигнали</h3>
@@ -99,11 +171,31 @@
                             <span class="report-category">
                                 @report.Category
                             </span>
+                            @* Номерът със символа # е вътрешният идентификатор на
+                                сигнала: удобен е за разговор („виж сигнал 42“) и
+                                остава траен, дори заглавието да бъде редактирано. *@
                             <span class="report-id">
                                 #@report.Id
                             </span>
+
+                            @* Чипът с приоритета е отговорът на въпроса
+                                „кое чака повече“, който досега се виждаше
+                                чак след отваряне на сигнала. При
+                                приключените сигнали той отпада: там
+                                думата за приоритет би звучала като покана
+                                за действие, а долу вече стои статусът,
+                                който казва, че нищо не чака. *@
+                            @if (!ReportStatuses.IsClosed(report.Status))
+                            {
+                                <span class="priority-chip @(Model.IsUrgent(report) ? "high" : null)">
+                                    @Model.LabelOf(report) · @NumberText.Score(Model.ScoreOf(report))
+                                </span>
+                            }
                         </div>
 
+                        @* Заглавието е основната връзка към детайлите — най-голямата
+                            мишена за натискане; повторението долу в дъното е втори
+                            шанс за този, който е прочел описанието до края. *@
                         <h3>
                             <a asp-page="/Details"
                                asp-route-id="@report.Id"
@@ -124,8 +216,17 @@
                                 <strong>Дата:</strong>
                                 @report.CreatedAt.ToDayText()
                             </span>
+                            @* Редицата се печата само ако има потвърждения: нулата
+                                е шум, а не информация, затова редът изчезва вместо
+                                да показва „потвърден от нула“. *@
                             @if (report.Confirmations.Any())
                             {
+                                @* В българския съществителното след число приема
+                                    специална бройна форма, различна от множественото
+                                    число. Затова думата не се образува автоматично с
+                                    наставка, а помощен метод избира правилната форма
+                                    по числото — изречението е грамотено при едно
+                                    потвърждение и при стотици. *@
                                 <span>
                                     <strong>Потвърден от:</strong> @report.Confirmations.Count @BulgarianPlural.Of(report.Confirmations.Count, "гражданин", "граждани")
                                 </span>

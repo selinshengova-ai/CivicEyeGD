@@ -17,18 +17,21 @@ public class CreateModel : PageModel
     private readonly ApplicationDbContext _context;
     private readonly UserManager<IdentityUser> _userManager;
     private readonly ReportImageStorage _imageStorage;
+    private readonly ReportPriorityService _priorityService;
     private readonly ILogger<CreateModel> _logger;
 
     public CreateModel(
         ApplicationDbContext context,
         UserManager<IdentityUser> userManager,
         ReportImageStorage imageStorage,
+        ReportPriorityService priorityService,
         IConfiguration configuration,
         ILogger<CreateModel> logger)
     {
         _context = context;
         _userManager = userManager;
         _imageStorage = imageStorage;
+        _priorityService = priorityService;
         GoogleMapsApiKey = configuration["GoogleMapsApi:ApiKey"] ?? string.Empty;
         _logger = logger;
     }
@@ -64,8 +67,85 @@ public class CreateModel : PageModel
 
         var matches = await FindNearbyAsync(category, latitude.Value, longitude.Value);
 
-        return new JsonResult(new { matches });
+        // Прозорецът с вече подадения сигнал трябва да покаже снимката и
+        // приоритета му, не само текста: гражданинът преценява дали е
+        // същият проблем на поглед, а не на дума. Разбивката идва от същата
+        // услуга, от която я чете публичната карта, затова числата съвпадат.
+        return new JsonResult(new { matches = await DescribeAsync(matches) });
     }
+
+    // Близките записи се връщат като по-богати редове за скрипта. Полетата,
+    // които тестът и старият код вече четат (Id, Status, DistanceMeters),
+    // остават с същите имена; добавят се само нови, за да не се чупи нищо.
+    private async Task<IReadOnlyList<object>> DescribeAsync(IReadOnlyList<NearbyReport> matches)
+    {
+        if (matches.Count == 0)
+        {
+            return [];
+        }
+
+        var ids = matches.Select(match => match.Id).ToList();
+
+        var full = await _context.Reports
+            .AsNoTracking()
+            .Include(report => report.Images)
+            .Include(report => report.Confirmations)
+            .Include(report => report.SeverityRatings)
+            .Where(report => ids.Contains(report.Id))
+            .ToDictionaryAsync(report => report.Id);
+
+        return matches.Select(match =>
+        {
+            string? photo = null;
+            double? priorityScore = null;
+            string? priorityLabel = null;
+            bool? isUrgent = null;
+
+            if (full.TryGetValue(match.Id, out var report))
+            {
+                // Първата снимка по номер е тази, която гражданинът е сложил
+                // най-рано — тя е най-близка до кадрите под картата.
+                photo = report.Images
+                    .OrderBy(image => image.Id)
+                    .Select(image => $"/report-images/{image.Id}")
+                    .FirstOrDefault();
+
+                var breakdown = _priorityService.Breakdown(
+                    report.IndependentAverageSeverity,
+                    report.IndependentConfirmationCount,
+                    report.AdminPriorityAdjustment);
+
+                priorityScore = breakdown.Score;
+                priorityLabel = _priorityService.GetPriorityLabel(breakdown.Score);
+                isUrgent = _priorityService.IsUrgent(report);
+            }
+
+            return (object)new
+            {
+                match.Id,
+                match.Title,
+                match.Address,
+                match.Status,
+                match.DistanceMeters,
+                Photo = photo,
+                PriorityScore = priorityScore,
+                PriorityLabel = priorityLabel,
+                IsUrgent = isUrgent,
+                // Собствения сигнал не се потвърждава: текстът в прозореца
+                // се сменя, а бутонът отпада. Датата влиза в него, защото
+                // „този, който подаде преди месец" е друг от „този, който
+                // току-що опита два пъти".
+                IsMine = IsOwnReport(match),
+                CreatedAtText = match.CreatedAt.ToDayText()
+            };
+        }).ToList();
+    }
+
+    // Един сигнал е „мой", когато авторът му е влезлият потребител.
+    // Сравнението е на ниво страница, не в базата: близките се избират
+    // по категория и разстояние, а не по автор.
+    public bool IsOwnReport(NearbyReport match) =>
+        match.AuthorUserId is not null && match.AuthorUserId == _userManager.GetUserId(User);
 
     public async Task<IActionResult> OnPostAsync()
     {
@@ -77,10 +157,10 @@ public class CreateModel : PageModel
             return Page();
         }
 
-        // Предупреждението се появява и в браузъра, докато маркерът се
-        // мести, но проверката тук е задължителна: заявка може да го
-        // заобиколи. Един наистина различен проблем не се блокира —
-        // иска се само явно признание под предупреждението.
+        // Изскачащият прозорец предупреждава още докато маркерът се мести,
+        // но проверката тук е задължителна: заявка може да го заобиколи.
+        // Един наистина различен проблем не се блокира — нужно е само
+        // признаването му да е изрично, а не подразбиращо се.
         if (!Report.DuplicateAcknowledged)
         {
             NearbyDuplicates = await FindNearbyAsync(
@@ -92,7 +172,8 @@ public class CreateModel : PageModel
                     string.Empty,
                     "На това място вече има подаден сигнал от същата категория. "
                     + "Отвори го и го потвърди вместо да създадеш дубликат. "
-                    + "Ако проблемът е различен, отметни полето под предупреждението и изпрати отново.");
+                    + "Ако проблемът е различен, отметни „Това е различен проблем“ "
+                    + "и изпрати отново.");
                 return Page();
             }
         }

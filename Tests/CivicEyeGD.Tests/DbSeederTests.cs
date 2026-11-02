@@ -112,6 +112,21 @@ public sealed class DbSeederTests : IDisposable
         Assert.NotNull(await Users.FindByEmailAsync("moeto.demo@civiceye.test"));
     }
 
+    [Fact]
+    public async Task DemoReportsSwitchedOff_KeepsTheTownAsTheAuthorLeftIt()
+    {
+        await DbSeeder.SeedAsync(_host.Services, TestHost.Config(
+            ("Seed:DemoReports", "false"),
+            ("SeedAccounts:CitizenPassword", CitizenPassword),
+            ("SeedAccounts:AdminPassword", "Adminovata!26"),
+            ("SeedAccounts:SecondCitizenPassword", "Vtoriata!2026")));
+
+        // Акаунтите са задължителни по регламента, затова се създават и без
+        // примерните сигнали – само те се изключват с ключа.
+        Assert.Equal(3, await _host.Context.Users.CountAsync());
+        Assert.Empty(await _host.Context.Reports.ToListAsync());
+    }
+
     private static IConfiguration WithAllVoters() => TestHost.Config(
         ("SeedAccounts:CitizenPassword", CitizenPassword),
         ("SeedAccounts:AdminPassword", "Adminovata!26"),
