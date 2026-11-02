@@ -1,0 +1,33 @@
+# Тестовете се пускат сами при всяко качване, за да не зависят от
+# това някой да си спомни да ги изпълни на собствената машина. Комисията
+# вижда зелената отметка вместо дума, че „работи при мен“.
+name: testove
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  xunit:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Изтегляне на кода
+        uses: actions/checkout@v4
+
+      - name: .NET 10
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      # Само тестовият проект: той държи и препратката към приложенията,
+      # затова restore-ът тегли веднъж и двете и нищо не се изпуска.
+      - name: Възстановяване на пакетите
+        run: dotnet restore Tests/CivicEyeGD.Tests/CivicEyeGD.Tests.csproj
+
+      - name: Тестове
+        run: >-
+          dotnet test Tests/CivicEyeGD.Tests/CivicEyeGD.Tests.csproj
+          -c Release --no-restore --logger "console;verbosity=quiet"
