@@ -1,4 +1,5 @@
 using System.Text;
+using System.Text.Json;
 using CivicEyeGD.Data;
 using CivicEyeGD.Pages;
 using Microsoft.AspNetCore.Mvc;
@@ -18,24 +19,114 @@ public sealed class UrgencyAndExportTests : IDisposable
     public void Dispose() => _host.Dispose();
 
     [Theory]
-    [InlineData(4.0, ReportStatuses.New, true)]
-    [InlineData(5.0, ReportStatuses.InProgress, true)]
-    [InlineData(3.9, ReportStatuses.New, false)]
-    [InlineData(0.0, ReportStatuses.New, false)]
-    [InlineData(5.0, ReportStatuses.Resolved, false)]
-    [InlineData(5.0, ReportStatuses.Rejected, false)]
-    public void IsUrgentOnlyForSeriousOpenReports(
+    [InlineData(5.0, 0, 0, ReportStatuses.New, true)]
+    [InlineData(5.0, 0, 0, ReportStatuses.InProgress, true)]
+    [InlineData(4.0, 10, 0, ReportStatuses.New, true)]
+    [InlineData(4.0, 0, 5, ReportStatuses.New, false)]
+    [InlineData(4.0, 0, 0, ReportStatuses.New, false)]
+    [InlineData(3.9, 0, 0, ReportStatuses.New, false)]
+    [InlineData(0.0, 0, 0, ReportStatuses.New, false)]
+    [InlineData(5.0, 0, 0, ReportStatuses.Resolved, false)]
+    [InlineData(5.0, 0, 0, ReportStatuses.Rejected, false)]
+    public void IsUrgentUsesThePriorityScoreNotTheRawSeverity(
         double severity,
+        int confirmations,
+        int adjustment,
         string status,
         bool expected)
     {
-        var report = new MapModel.MapReport
-        {
-            Severity = severity,
-            Status = status
-        };
+        // В това е целият смисъл на теста: прагът е 70 от формулата,
+        // а не 4 от скалата, и приключен сигнал не е спешен колкото и да
+        // е висок. Картата, списъкът и таблото питат точно този метод.
+        Assert.Equal(
+            expected,
+            _host.Priority.IsUrgent(severity, confirmations, adjustment, status));
+    }
 
-        Assert.Equal(expected, report.IsUrgent);
+    [Fact]
+    public async Task MapListAndDashboardNameTheSameUrgentReports()
+    {
+        var author = await _host.CreateUserAsync("urgent.author");
+
+        var top = await AddUrgentReportAsync(author, 5, 0, ReportStatuses.New, "Затънал отвод");
+        var mid = await AddUrgentReportAsync(author, 4, 0, ReportStatuses.New, "Счупена плоча");
+        var crowd = await AddUrgentReportAsync(author, 4, 10, ReportStatuses.New, "Тъмна алея");
+        var done = await AddUrgentReportAsync(author, 5, 0, ReportStatuses.Resolved, "Ремонтиран мост");
+
+        var map = _host.CreatePageModel<MapModel>();
+        await map.OnGetAsync(showClosed: true);
+
+        var list = _host.CreatePageModel<ReportsModel>();
+        await list.OnGetAsync(null, null, null, null);
+
+        var dashboard = _host.CreatePageModel<CivicEyeGD.Pages.Admin.IndexModel>();
+        await dashboard.OnGetAsync(null);
+
+        // Трите страници питат различни неща — JSON, ред от списък и
+        // брояч в таблото — и отговарят с едни и същи две заглавия.
+        Assert.Equal(2, map.UrgentCount);
+        Assert.Equal(2, list.Reports.Count(list.IsUrgent));
+        Assert.Equal(2, dashboard.HighPriorityCount);
+
+        var pulseTitles = PulseTitles(map.ReportsJson);
+        Assert.Equal(
+            new HashSet<string> { "Затънал отвод", "Тъмна алея" },
+            pulseTitles);
+
+        Assert.True(_host.Priority.IsUrgent(top));
+        Assert.False(_host.Priority.IsUrgent(mid));
+        Assert.True(_host.Priority.IsUrgent(crowd));
+        Assert.False(_host.Priority.IsUrgent(done));
+
+        Assert.Equal(list.IsUrgent(mid), dashboard.IsHighPriority(mid));
+        Assert.Equal(list.IsUrgent(crowd), dashboard.IsHighPriority(crowd));
+    }
+
+    // Пулсацията се чете от JSON-а, защото точно той решава кой маркер
+    // трепти: проверката е за изпратеното, не за поредното копие на
+    // правилото в C#.
+    private static HashSet<string> PulseTitles(string reportsJson)
+    {
+        using var document = JsonDocument.Parse(reportsJson);
+
+        var urgent = new HashSet<string>();
+
+        foreach (var element in document.RootElement.EnumerateArray())
+        {
+            if (element.GetProperty("isUrgent").GetBoolean())
+            {
+                urgent.Add(element.GetProperty("title").GetString()!);
+            }
+        }
+
+        return urgent;
+    }
+
+    private async Task<Report> AddUrgentReportAsync(
+        string userId,
+        int rating,
+        int confirmations,
+        string status,
+        string title)
+    {
+        var report = await AddReportWithSeverityAsync(userId, rating, status, title);
+
+        for (var index = 0; index < confirmations; index++)
+        {
+            // Всеки глас идва от отделен гражданин: UniqueIndex-ът би
+            // отхвърлил второ потвърждение от същия, а формулата брои
+            // именно хора, не щраквания.
+            var voter = await _host.CreateUserAsync($"confirm-{report.Id}-{index}");
+            _host.Context.Confirmations.Add(new Confirmation
+            {
+                ReportId = report.Id,
+                UserId = voter
+            });
+        }
+
+        await _host.Context.SaveChangesAsync();
+
+        return report;
     }
 
     [Fact]
@@ -50,12 +141,40 @@ public sealed class UrgencyAndExportTests : IDisposable
         var model = _host.CreatePageModel<MapModel>();
         await model.OnGetAsync();
 
-        Assert.Equal(3, model.ReportsCount);
+        // Приключилият сигнал не е задача, която чака, затова го няма в
+        // изгледа по подразбиране; числото му остава в статистиката.
+        Assert.Equal(2, model.ReportsCount);
+        Assert.Equal(1, model.ClosedCount);
         Assert.Equal(1, model.UrgentCount);
+        Assert.DoesNotContain("\"isClosed\":true", model.ReportsJson);
 
         // Ключовете са camelCase, защото картата ги чете точно така.
         Assert.Contains("\"isUrgent\":true", model.ReportsJson);
         Assert.Contains("\"isUrgent\":false", model.ReportsJson);
+
+        await model.OnGetAsync(showClosed: true);
+
+        Assert.Equal(3, model.ReportsCount);
+        Assert.Contains("\"isClosed\":true", model.ReportsJson);
+    }
+
+    [Fact]
+    public async Task MapStatisticsCountEveryStatusIncludingHiddenClosed()
+    {
+        var author = await _host.CreateUserAsync("map.stats");
+
+        await _host.AddReportAsync(author);
+        await _host.AddReportAsync(author, r => r.Status = ReportStatuses.Resolved);
+        await _host.AddReportAsync(author, r => r.Status = ReportStatuses.Rejected);
+
+        var model = _host.CreatePageModel<MapModel>();
+        await model.OnGetAsync();
+
+        Assert.Equal(3, model.TotalReportCount);
+        Assert.Equal(2, model.ClosedCount);
+        Assert.Equal(3, model.StatusStatistics.Sum(row => row.Count));
+        Assert.Equal(1, model.StatusStatistics.Single(row => row.Status == ReportStatuses.New).Count);
+        Assert.Equal(1, model.StatusStatistics.Single(row => row.Status == ReportStatuses.Rejected).Count);
     }
 
     [Fact]

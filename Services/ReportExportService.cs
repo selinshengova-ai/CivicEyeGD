@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Text;
 using ClosedXML.Excel;
 
@@ -15,18 +16,31 @@ public sealed record ReportExportRow(
     string Category,
     string Status,
     string Address,
+    // Датата идва вече в местно време: конвертирането е направено
+    // веднъж при съставянето на реда, за да не го повтаря всеки формат
+    // поотделно и да не се разминат CSV и книгата.
     DateTime CreatedAt,
     double AverageSeverity,
     int Confirmations,
     double Priority,
+    // Етикетът пътува готов, заедно с числото: думите „Висок приоритет“
+    // се определят по същите граници като в сайта, а не по нова
+    // преценка на това място.
     string PriorityLabel);
 
 /// <summary>
 /// Приготвя сигналите за експорт: работна книга .xlsx за Excel и
 /// разделен текст за програми, които четат CSV.
 /// </summary>
+// Двата формата отговарят на различни хора: служителят филтрира
+// таблицата в Excel, а скрипт или стара програма очаква обикновен текст
+// без стилове и заглавки. Затова редовете са едни и същи, а писането
+// е два пъти.
 public sealed class ReportExportService
 {
+    // Един масив за двете формати: колоните на работната книга и
+    // заглавния ред на CSV вървят по един и същи ред, така файлът не
+    // може да размени местата на две полета.
     private static readonly string[] Headers =
     {
         "№", "Заглавие", "Описание", "Категория", "Статус", "Адрес",
@@ -41,6 +55,12 @@ public sealed class ReportExportService
         6, 30, 52, 18, 14, 24, 18, 12, 13, 11, 17
     };
 
+    // Работната книга се пише чрез библиотека, защото .xlsx не е текст:
+    // това е архив zip с няколко XML части (лист, стилове, общи
+    // текстове и връзките между тях). Ръчно написана книга би счупила
+    // някоя от връзките, а Excel би отказал целия файл.
+    // На сървъра няма инсталиран Excel и не е нужен: се получават само
+    // байтове, които отговорът на заявката носи.
     public byte[] BuildWorkbook(IReadOnlyList<ReportExportRow> rows)
     {
         using var workbook = new XLWorkbook();
@@ -52,6 +72,9 @@ public sealed class ReportExportService
         }
 
         var headerRange = sheet.Range(1, 1, 1, Headers.Length);
+        // Заглавният ред е оцветен и удебелен, защото ще се използва
+        // за филтриране: без ясна граница служителът не би разбрал
+        // дали ред 1 е данни, или надписи на колоните.
         headerRange.Style.Font.Bold = true;
         headerRange.Style.Font.FontColor = XLColor.FromHtml("#F6F8F5");
         headerRange.Style.Fill.PatternType = XLFillPatternValues.Solid;
@@ -83,7 +106,13 @@ public sealed class ReportExportService
             sheet.Cell(line, 7).Style.NumberFormat.Format = "dd.mm.yyyy hh:mm";
             sheet.Cell(line, 8).Style.NumberFormat.Format = "0.0";
             sheet.Cell(line, 10).Style.NumberFormat.Format = "0.0";
+            // Форматът е само изображение: датата и приоритетът остават
+            // число и момент от времето, затова Excel може да подрежда
+            // по тях и да ги филтрира по диапазон.
 
+            // Пречупването важи само за двете свободни полета —
+            // заглавието и описанието са изречения на гражданина, а
+            // адресът и статусът са кратки и се сравняват с поглед.
             sheet.Cell(line, 2).Style.Alignment.WrapText = true;
             sheet.Cell(line, 3).Style.Alignment.WrapText = true;
 
@@ -128,6 +157,9 @@ public sealed class ReportExportService
             sheet.Column(column + 1).Width = ColumnWidths[column];
         }
 
+        // Заглавният ред остава неподвижен, а колоните получават филтър,
+        // защото списъкът расте по-бързо от екрана: без тях служителят
+        // би превъртял до дъното, за да разбере коя колона какво съдържа.
         sheet.SheetView.FreezeRows(1);
         sheet.Range(1, 1, Math.Max(rows.Count + 1, 1), Headers.Length).SetAutoFilter(true);
 
@@ -137,6 +169,9 @@ public sealed class ReportExportService
         sheet.PageSetup.FitToPages(1, 0);
         sheet.PageSetup.SetRowsToRepeatAtTop(1, 1);
 
+        // Книгата се сглобява в паметта и се връща като байтове: на
+        // сървъра не остава временен файл, който друга заявка би могла
+        // да отвори, и няма нищо за изтриване след изтеглянето.
         using var stream = new MemoryStream();
         workbook.SaveAs(stream);
         return stream.ToArray();
@@ -147,10 +182,17 @@ public sealed class ReportExportService
     public byte[] BuildCsv(IReadOnlyList<ReportExportRow> rows)
     {
         var builder = new StringBuilder();
+        // Краят на реда се слага изрично като \r\n, а не с разделителя
+        // на операционната система: форматът го изисква еднакво,
+        // независимо дали сървърът е Windows или Linux, иначе файлът
+        // би се четял различно на друга машина.
         builder.Append(string.Join(',', Headers.Select(Cell))).Append("\r\n");
 
         foreach (var row in rows)
         {
+            // Номерът на сигнала не минава през Cell: той е цяло число
+            // без разделители и без водещ знак, затова не се нуждае
+            // нито от кавички, нито от неутрализиране.
             builder.Append(string.Join(',', new[]
             {
                 row.Id.ToString(),
@@ -159,14 +201,21 @@ public sealed class ReportExportService
                 Cell(row.Category),
                 Cell(row.Status),
                 Cell(row.Address),
-                Cell(row.CreatedAt.ToString("dd.MM.yyyy HH:mm")),
-                Cell(row.AverageSeverity.ToString("0.0")),
-                Cell(row.Confirmations.ToString()),
-                Cell(row.Priority.ToString("0.0")),
+                Cell(row.CreatedAt.ToString("dd.MM.yyyy HH:mm", CultureInfo.InvariantCulture)),
+                // Числата са с инвариантен разделител: на машина с български
+                // език "0.0" би дало запетая, а тя е и разделителят на
+                // колоните. Работната книга пази числа, затова и тук двете
+                // числа изглеждат еднакво.
+                Cell(row.AverageSeverity.ToString("0.0", CultureInfo.InvariantCulture)),
+                Cell(row.Confirmations.ToString(CultureInfo.InvariantCulture)),
+                Cell(row.Priority.ToString("0.0", CultureInfo.InvariantCulture)),
                 Cell(row.PriorityLabel)
             })).Append("\r\n");
         }
 
+        // Текстът е UTF-8, а пред него седи BOM-ът: без тези три байта
+        // Excel на Windows търси местната кодова страница и кирилицата
+        // се изобразява като неразбираеми знаци.
         return Encoding.UTF8.GetPreamble()
             .Concat(Encoding.UTF8.GetBytes(builder.ToString()))
             .ToArray();
@@ -174,15 +223,26 @@ public sealed class ReportExportService
 
     // Кавички с удвояване на стойностите вътре; водещите =, +, - и @ се
     // неутрализират, защото Excel иначе изпълнява текста като формула.
+    // Формула в клетка може да прочете съседни клетки и да изпрати
+    // съдържанието им навън, а заглавията и описанията са свободен текст
+    // на гражданите: един сигнал би стигнал, за да се изпълни чужд код
+    // в компютъра на служителя. Този път е задължителен именно за CSV,
+    // защото там няма тип на клетката, който да спре изчислението.
     private static string Cell(string? value)
     {
         var text = value ?? string.Empty;
 
         if (text.Length > 0 && (text[0] is '=' or '+' or '-' or '@'))
         {
+            // Водещият знак се спасява с апостроф, а не се изтрива:
+            // служителят трябва да вижда същия текст, какъвто е писал
+            // подателят, иначе файлът би криел част от сигнала.
             text = "'" + text;
         }
 
+        // Всяка стойност е в кавички, дори без запетая вътре, а
+        // собствените ѝ кавички се удвояват: описание с нов ред или със
+        // запетая не бива да разместява колоните на следващите редове.
         return "\"" + text.Replace("\"", "\"\"") + "\"";
     }
 }

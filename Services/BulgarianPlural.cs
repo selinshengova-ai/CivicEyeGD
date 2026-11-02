@@ -7,6 +7,10 @@ namespace CivicEyeGD.Services;
 /// </summary>
 public static class BulgarianPlural
 {
+    // Двете форми ги подава извикващият, а не се образуват автоматично:
+    // в български множественото число е непредсказуемо за програма —
+    // „гражданин“ дава „граждани“, а не „гражданини“ по някакво правило.
+    // Така единствената логика тук остава числото 1 и то се тества веднъж.
     public static string Of(int count, string singular, string plural) =>
         count == 1 ? singular : plural;
 }
