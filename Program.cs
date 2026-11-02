@@ -20,7 +20,7 @@ Directory.CreateDirectory(appDataPath);
 
 // Паролите на демо акаунтите не влизат в хранилището, а на споделен хост
 // променливи на средата обикновено не се задават. Локално те идват от
-// user-secrets, на сайта – от този файл: той е извън wwwroot, не се
+// user-secrets, на сайта — от този файл: той е извън wwwroot, не се
 // обслужва като статичен и е изключен от publish, затова не попада в
 // архива за олимпиадата.
 var seedSecretsFile = Path.Combine(appDataPath, "seed-accounts.json");
@@ -120,6 +120,7 @@ builder.Services.AddSingleton<ReportImageStorage>();
 builder.Services.AddSingleton<ReportPriorityService>();
 builder.Services.AddSingleton<ReportExportService>();
 builder.Services.AddSingleton<ReportPdfService>();
+builder.Services.AddScoped<ReportOfficeService>();
 
 var app = builder.Build();
 
@@ -172,7 +173,12 @@ app.Use(async (context, next) =>
     headers["X-Frame-Options"] = "DENY";
     headers["X-Content-Type-Options"] = "nosniff";
     headers["Referrer-Policy"] = "strict-origin-when-cross-origin";
-    headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=(), payment=()";
+    // Геолокацията е разрешена само за собствения произход, а не забранена
+    // с празни скоби: без това бутонът „Местоположението ми“ получава отказ
+    // още преди браузърът да попита човека, и то с грешно обяснение.
+    // Камерата, микрофонът и плащанията наистина не се ползват и остават
+    // затворени.
+    headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=(self), payment=()";
 
     await next();
 });
