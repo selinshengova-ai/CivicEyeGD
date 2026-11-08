@@ -164,6 +164,17 @@ public static class ReportStatistics
     public static IReadOnlyList<ReportExportRow> Open(IReadOnlyList<ReportExportRow> rows) =>
         rows.Where(row => !ReportStatuses.IsClosed(row.Status)).ToList();
 
+    /// <summary>Работната опашка, наредена така, че спешното е пръв.</summary>
+    // Редът е число, а не впечатление: документът и всяка друга работна
+    // списъчна форма го споделят, за да не се различават по това коя
+    // секция е сортирана наум. При равен приоритет номерът решава,
+    // защото по-малкият номер е подаден по-отдавна.
+    public static IReadOnlyList<ReportExportRow> ByUrgency(IReadOnlyList<ReportExportRow> rows) =>
+        Open(rows)
+            .OrderByDescending(row => row.Priority)
+            .ThenBy(row => row.Id)
+            .ToList();
+
     private static IEnumerable<StatisticBar> Group(
         IReadOnlyList<ReportExportRow> rows,
         Func<ReportExportRow, string> keySelector) =>

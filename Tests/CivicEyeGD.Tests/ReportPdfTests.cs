@@ -144,6 +144,27 @@ public sealed class ReportPdfTests : IDisposable
     }
 
     [Fact]
+    public void OpenQueueIsOrderedByUrgencyAndThenByNumber()
+    {
+        var rows = new[]
+        {
+            Row(1, "Нисък, но стар", ReportCategories.RoadSurface, ReportStatuses.New, 20),
+            Row(2, "Спешен", ReportCategories.Sidewalks, ReportStatuses.InProgress, 95),
+            Row(3, "Приключен не участва", ReportCategories.Other, ReportStatuses.Resolved, 99),
+            Row(4, "Същият приоритет, по-нов", ReportCategories.StreetLighting, ReportStatuses.New, 95)
+        };
+
+        // Редът на хартия е числото, по което службата взима решение:
+        // спешното е пръв, а при равни точки по-старият сигнал изпреварва,
+        // защото чака от по-дълго. Приключените изобщо не влизат в
+        // работната опашка.
+        var queue = ReportStatistics.ByUrgency(rows);
+
+        Assert.Equal(["Спешен", "Същият приоритет, по-нов", "Нисък, но стар"],
+            queue.Select(row => row.Title).ToArray());
+    }
+
+    [Fact]
     public async Task AdminDownloadsPdfReportWithBulgarianText()
     {
         var author = await _host.CreateUserAsync("pdf.author");

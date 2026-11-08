@@ -105,6 +105,42 @@
                избраният филтър трябва да се чуе. *@
         </div>
 
+        @* Лентата за реакцията е единствената част от таблото, която не
+           е филтър: картите горе броят сигнали, а тук се броят дни.
+           Числата са по всички сигнали и не се променят с филтъра,
+           защото описват работата на службата, а не на избраните редове.
+           Празно число остава тире, а не нула: нулата би рекла
+           „реагирано веднага“, където просто няма какво да се усредни. *@
+        <div class="admin-response">
+            <div class="admin-response-figure">
+                <span>Средно време за реакция</span>
+                <strong>@ReportResponse.Days(Model.AverageResponseDays)</strong>
+                <em>
+                    по @Model.MeasuredResponseCount
+                    @BulgarianPlural.Of(Model.MeasuredResponseCount, "сигнал", "сигнала") с първа намеса
+                </em>
+            </div>
+            <div class="admin-response-figure">
+                <span>Най-бавна реакция</span>
+                <strong>@ReportResponse.Days(Model.LongestResponseDays)</strong>
+                <em>толкова е чакал сигнал, преди някой да го поеме</em>
+            </div>
+            <div class="admin-response-figure">
+                <span>Активни без намеса</span>
+                <strong>@Model.AwaitingFirstActionCount</strong>
+                <em>
+                    @if (Model.OldestWaitDays is { } oldest)
+                    {
+                        @:най-старият чака @ReportResponse.Days(oldest)
+                    }
+                    else
+                    {
+                        @:всеки активен сигнал вече е поет
+                    }
+                </em>
+            </div>
+        </div>
+
         @* Заглавката на списъка и числото до нея са от филтрирания набор,
            затова винаги съвпадат с броя на картите под тях — служителят
            с поглед проверява дали филтърът е приложен както трябва. *@
@@ -203,6 +239,17 @@
                         <div class="report-meta admin-meta">
                             <span><strong>Адрес</strong>@report.Address</span>
                             <span><strong>Дата</strong>@report.CreatedAt.ToDayText()</span>
+                            @* Едно число за времето, с надпис, който
+                               казва кое е: „Реакция“ брои дните до
+                               първата намеса, „Чака“ — дните, през
+                               които все още няма такава. Двете не се
+                               бъркат, защото надписът се сменя заедно
+                               с числото; приключен сигнал без дневник
+                               не показва ред, защото не чака нищо. *@
+                            @if (Model.ResponseOf(report) is { } response)
+                            {
+                                <span><strong>@response.Label</strong>@response.Text</span>
+                            }
                             <span><strong>Последна промяна</strong>@(Model.LastChangeOf(report) is { } lastChange ? lastChange.ToDayText() : "няма записани промени")</span>
                             <span><strong>Независимо</strong>@report.IndependentConfirmationCount @BulgarianPlural.Of(report.IndependentConfirmationCount, "потвърждение", "потвърждения"), @report.SeverityRatings.Count(r => r.UserId != report.UserId) @BulgarianPlural.Of(report.SeverityRatings.Count(r => r.UserId != report.UserId), "оценка", "оценки")</span>
                         </div>

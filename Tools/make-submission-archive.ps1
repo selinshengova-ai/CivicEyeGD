@@ -1,5 +1,5 @@
 ﻿# Правя чист архив за изпращане при НОИТ: само код, документация и тестове.
-# Изключва локални данни, тайни и всего, което се генерира при build.
+# Изключва локални данни, тайни и всичко, което се генерира при build.
 # Употреба:  powershell -File Tools\make-submission-archive.ps1
 # Архивът се записва в submission\ и не влиза в самия себе си.
 
@@ -11,7 +11,7 @@ $outDir = Join-Path $root 'submission'
 
 $excludeDirs = @(
     '.git', '.private', '.vs', '.vscode', 'bin', 'obj', 'App_Data и App_Data-backup',
-    'publish', 'TestResults', 'submission', 'node_modules'
+    'publish', 'TestResults', 'submission', 'node_modules', 'shots'
 )
 Write-Output ("Изключени папки: " + ($excludeDirs -join ', '))
 
@@ -22,7 +22,9 @@ if (-not (Test-Path $outDir)) { New-Item -ItemType Directory -Path $outDir | Out
 # Всяко копие на папката с данни е извън архива, не само оригиналът:
 # в резервното копие има ключ за подпис на бисквитите и снимките,
 # които гражданин е качил.
-$excludeNamePattern = '\\(\.git|\.private|\.vs|\.vscode|bin|obj|App_Data[^\\]*|publish[^\\]*|TestResults|submission|node_modules)\\'
+# 'shots' е временната папка, в която локални проверки са слагали
+# изход от build-а; в нея няма нито ред от проекта.
+$excludeNamePattern = '\\(\.git|\.private|\.vs|\.vscode|bin|obj|App_Data[^\\]*|publish[^\\]*|TestResults|submission|node_modules|shots)\\'
 $excludeExtensionPattern = '\.(db|db-shm|db-wal|log|user)$'
 
 $sourceFiles = Get-ChildItem -LiteralPath $root -Recurse -File -Force |
@@ -61,6 +63,51 @@ foreach ($file in $secretFiles) { $problems += "файл със тайни: $($f
 $dataFiles = Get-ChildItem $staging -Recurse -File |
     Where-Object { $_.Extension -in '.db', '.db-shm', '.db-wal' -or $_.FullName -match '\\report-images\\' }
 foreach ($file in $dataFiles) { $problems += "локални данни: $($file.Name)" }
+
+# 4. Няма ли в архива сглобен изход? При НОИТ се изпраща кодът, а не
+# билдираните библиотеки; преди време една временна папка с такъв изход се
+# беше промъкнала вътре и архивът скочи от 12 MB на 107 MB.
+$binaryFiles = Get-ChildItem $staging -Recurse -File |
+    Where-Object { $_.Extension -in '.dll', '.exe', '.pdb', '.so', '.dylib' }
+foreach ($file in $binaryFiles) { $problems += "сглобен изход: $($file.Name)" }
+
+# 5. Вътрешни пътеки от този компютър. Word оставя в .docx външни връзки към
+#    оригиналните снимки, а в тях се чете потребителското име на Windows;
+#    за журито те са едновременно излишна лична информация и счупени линкове.
+#    Проверката гледа и текстовите файлове, и XML-частите вътре в пакетите,
+#    защото при компресията пътеките не се виждат като сурови байтове.
+Add-Type -AssemblyName System.IO.Compression
+Add-Type -AssemblyName System.IO.Compression.FileSystem
+$user = $env:USERNAME
+# Самото име на схемата се сглобява на две, за да не се открои скриптът
+# като файл с вътрешна пътека, когато проверява себе си.
+$needle = 'file:' + '///'
+$textExt = '.md', '.html', '.htm', '.txt', '.json', '.cshtml', '.ps1', '.yml', '.yaml', '.cs', '.css', '.js'
+foreach ($file in Get-ChildItem $staging -Recurse -File) {
+    $where = $file.FullName.Substring($staging.Length)
+    if ($file.Extension -in '.docx', '.pptx', '.xlsx') {
+        $package = [System.IO.Compression.ZipFile]::OpenRead($file.FullName)
+        try {
+            foreach ($entry in $package.Entries) {
+                if ($entry.FullName -notmatch '\.(xml|rels)$') { continue }
+                $stream = $entry.Open()
+                try {
+                    $reader = New-Object System.IO.StreamReader($stream, [System.Text.Encoding]::ASCII)
+                    $body = $reader.ReadToEnd()
+                } finally { $stream.Dispose() }
+                if ($body -like ('*' + $needle + '*') -or ($user -and $body -like ('*' + $user + '*'))) {
+                    $problems += "вътрешна пътека в $where -> $($entry.FullName)"
+                }
+            }
+        } finally { $package.Dispose() }
+    }
+    elseif ($file.Extension -in $textExt) {
+        $body = Get-Content -LiteralPath $file.FullName -Raw
+        if ($body -like ('*' + $needle + '*') -or ($user -and $body -like ('*' + $user + '*'))) {
+            $problems += "вътрешна пътека в $where"
+        }
+    }
+}
 
 if ($problems.Count -gt 0) {
     Write-Output 'АРХИВЪТ НЕ Е ГОТОВ — намерени са:'

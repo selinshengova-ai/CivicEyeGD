@@ -57,6 +57,26 @@ public class IndexModel : PageModel
 
     public int HighPriorityCount { get; private set; }
 
+    // Трите числа на реакцията се смятат винаги върху всички сигнали,
+    // като четирите карти над тях: служителят сравнява опашката с
+    // миналото, а не с избор на филтър.
+    public double? AverageResponseDays { get; private set; }
+    public int? LongestResponseDays { get; private set; }
+
+    // Бройката на сигналите, по които има какво да се усреднява: без
+    // нея средното число вися само, а една реакция не е резултат.
+    public int MeasuredResponseCount { get; private set; }
+
+    // Колко активни сигнала все още нямат нито една намеса и колко
+    // дни е изчакал най-старият от тях.
+    public int AwaitingFirstActionCount { get; private set; }
+    public int? OldestWaitDays { get; private set; }
+
+    // Едно и също време за цялата заявка: ако всяка картичка прочете
+    // часовника сама, две числа, събрани за секунда, биха могли да се
+    // различат, а служителът ги сравнява с поглед.
+    private DateTime _nowUtc;
+
     public string FilterStatus { get; private set; } = string.Empty;
 
     public string ListTitle { get; private set; } = "Активни сигнали";
@@ -72,11 +92,14 @@ public class IndexModel : PageModel
             ? $"Сигнал #{deletedId} е изтрит заедно със снимките, оценките и дневника."
             : null;
 
+        _nowUtc = DateTime.UtcNow;
+
         LoadFilters(filterStatus);
 
         var all = await ReadReportsAsync();
 
         CountStatuses(all);
+        MeasureResponse(all);
         Reports = SortByPriority(ApplyFilter(all));
     }
 
@@ -142,7 +165,8 @@ public class IndexModel : PageModel
                 AverageSeverity(report),
                 report.IndependentConfirmationCount,
                 priority,
-                _priorityService.GetPriorityLabel(priority)));
+                _priorityService.GetPriorityLabel(priority),
+                ReportResponse.ResponseDays(report)));
         }
 
         return rows;
@@ -177,6 +201,25 @@ public class IndexModel : PageModel
         _priorityService.GetPriorityLabel(PriorityOf(report));
 
     public bool IsHighPriority(Report report) => _priorityService.IsUrgent(report);
+
+    // Едно число за времето на всеки ред и надпис, което казва какво
+    // е то: когато общината е реагирала — колко дни отне първата
+    // намеса; когато сигналът все още чака — колко дни е изчакал
+    // дотогава. Приключен сигнал без дневник не показва нищо, защото
+    // той не чака и не е реагиран.
+    public WaitingLine? ResponseOf(Report report)
+    {
+        if (ReportResponse.ResponseDays(report) is { } responded)
+        {
+            return new WaitingLine("Реакция", ReportResponse.Days(responded));
+        }
+
+        return ReportStatuses.IsClosed(report.Status)
+            ? null
+            : new WaitingLine("Чака", ReportResponse.Days(ReportResponse.WaitingDays(report, _nowUtc)));
+    }
+
+    public sealed record WaitingLine(string Label, string Text);
 
     private void LoadFilters(string? filterStatus)
     {
@@ -229,6 +272,27 @@ public class IndexModel : PageModel
         // Същият метод, който оцветява картичките: иначе числото горе
         // и червените долу могат да се разминат за един и същ сигнал.
         HighPriorityCount = active.Count(IsHighPriority);
+    }
+
+    // Реакцията се мери по всички сигнали, а изчакването — само по
+    // активните: приключените вече нямат на какво да чакат, и ако
+    // влязат в бройката, таблото би търсело вина там, където работата
+    // е свършена.
+    private void MeasureResponse(List<Report> all)
+    {
+        AverageResponseDays = ReportResponse.AverageResponseDays(all);
+        LongestResponseDays = ReportResponse.LongestResponseDays(all);
+        MeasuredResponseCount = all.Count(report => ReportResponse.ResponseDays(report) is not null);
+
+        var waiting = all
+            .Where(report => !ReportStatuses.IsClosed(report.Status))
+            .Where(report => ReportResponse.FirstActionAt(report) is null)
+            .ToList();
+
+        AwaitingFirstActionCount = waiting.Count;
+        OldestWaitDays = waiting.Count == 0
+            ? null
+            : waiting.Max(report => ReportResponse.WaitingDays(report, _nowUtc));
     }
 
     private List<Report> SortByPriority(List<Report> reports) =>

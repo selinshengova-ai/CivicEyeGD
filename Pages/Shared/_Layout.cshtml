@@ -222,13 +222,17 @@
 
 @* Футерът съдържа връзка към политиката за данните — задължителна видимост
     на такъв текст — и годината, изчислена на сървъра при генериране на
-    страницата, не от скрипт: и при изключен JavaScript стои вярна. *@
+    страницата, не от скрипт: и при изключен JavaScript стои вярна.
+    „Кредити“ и лицензът са тук по същата причина: чуждият труд и правата
+    върху него се посочват на място, което не зависи от това дали човек е
+    влязъл в системата. *@
 <footer class="civic-footer">
     <div class="container civic-footer-inner">
         <a class="civic-footer-brand" asp-page="/Index">CivicEye <span>GD</span></a>
         <p class="civic-footer-text">По-достъпна градска среда започва с общи усилия.</p>
         <a class="civic-footer-link" asp-page="/Privacy">Поверителност</a>
-        <span class="civic-footer-year">© @DateTime.Now.Year</span>
+        <a class="civic-footer-link" asp-page="/Credits">Кредити</a>
+        <span class="civic-footer-year">© @DateTime.Now.Year · GPL-3.0</span>
     </div>
 </footer>
 

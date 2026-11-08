@@ -55,6 +55,21 @@
         @RenderBody()
     </main>
 
+    @* Този футер е статичен: не чете база, не пита за сесия и не зависи от
+       менюто, затова не руши правилството екранът да се изобразява при всяко
+       състояние. Посочването на лиценза и връзката към текстовете за правата
+       не бива да изисква вход — регламентът ги чете като видими, не като
+       скрити след презадената врата. *@
+    <footer class="civic-footer">
+        <div class="container civic-footer-inner">
+            <a class="civic-footer-brand" asp-page="/Welcome">CivicEye <span>GD</span></a>
+            <p class="civic-footer-text">Платформа за граждански сигнали · Гоце Делчев</p>
+            <a class="civic-footer-link" asp-page="/Privacy">Поверителност</a>
+            <a class="civic-footer-link" asp-page="/Credits">Кредити</a>
+            <span class="civic-footer-year">© @DateTime.Now.Year · GPL-3.0</span>
+        </div>
+    </footer>
+
     <script src="~/lib/jquery/dist/jquery.min.js"></script>
     <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
     

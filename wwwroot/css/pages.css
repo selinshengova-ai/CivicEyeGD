@@ -364,10 +364,12 @@ html[data-theme="dark"] .details-mini-map { border-color: var(--dark-border); }
 }
 
 .admin-stat-card {
-    background: #fff;
+    /* Същият токен като при падащото меню: картите носят число с багрения
+       текст, а фиксирано бяло зад светъл текст в тъмната тема го изтрива. */
+    background: var(--civic-surface);
     padding: 18px 20px;
     border-radius: 14px;
-    border: 1px solid var(--civic-border, #e0e8e1);
+    border: 1px solid var(--civic-border);
     display: flex;
     flex-direction: column;
     gap: 8px;
@@ -420,6 +422,67 @@ html[data-theme="dark"] .admin-stat-card span {
 
 html[data-theme="dark"] .admin-stat-card strong {
     color: var(--dark-accent);
+}
+
+/* Лентата за реакцията не е филтър, затова не прилича на картите над
+   нея: там трите числа не се кликват. auto-fit я сгъва сама на тясно,
+   за всеки ред няма отделно условие за широчина на екрана. */
+.admin-response {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+    gap: 10px 24px;
+    margin: -10px 0 26px;
+    padding: 16px 20px;
+    border: 1px solid var(--civic-border);
+    border-left: 4px solid var(--civic-green);
+    border-radius: var(--civic-radius-sm);
+    background: var(--civic-surface-soft);
+}
+
+.admin-response-figure {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    min-width: 0;
+}
+
+.admin-response-figure span {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--civic-muted);
+}
+
+.admin-response-figure strong {
+    font-size: 22px;
+    font-weight: 800;
+    line-height: 1.1;
+    color: var(--civic-accent-text);
+}
+
+/* Надписите под числата обясняват от какво са сметнати; без тях
+   средното дни и броят без намеса биха приличали на едно и също. */
+.admin-response-figure em {
+    font-style: normal;
+    font-size: 12px;
+    line-height: 1.5;
+    color: var(--civic-muted);
+}
+
+html[data-theme="dark"] .admin-response {
+    background: var(--dark-surface);
+    border-color: var(--dark-border);
+    border-left-color: var(--dark-accent);
+}
+
+html[data-theme="dark"] .admin-response-figure strong {
+    color: var(--dark-accent);
+}
+
+html[data-theme="dark"] .admin-response-figure span,
+html[data-theme="dark"] .admin-response-figure em {
+    color: var(--dark-text-muted);
 }
 
 /* Адаптивност за мобилни */
@@ -1309,9 +1372,11 @@ html[data-theme="dark"] .details-breakdown-total {
     gap: 4px;
     min-width: 220px;
     padding: 8px;
-    border: 1px solid var(--civic-border, #e0e8e1);
+    border: 1px solid var(--civic-border);
     border-radius: 12px;
-    background: #fff;
+    /* Фонът идва от токена, не е фиксирано бяло: в тъмната тема надписите
+       на редовете са светли, и зад бяло поле те ставаха невидими. */
+    background: var(--civic-surface);
     box-shadow: 0 12px 28px rgba(18, 59, 50, 0.12);
 }
 
@@ -1397,6 +1462,42 @@ html[data-theme="dark"] .details-breakdown-total {
     margin-top: 28px;
     color: var(--civic-muted);
     font-size: 13px;
+}
+
+/* Страницата „Кредити" показва чуждите библиотеки в таблица: редът дава
+   име, версия, лиценз и приложение наведнъж, докато същото в абзаци би
+   изисквало три прочитания. Цветовете са токени, не числа — и в тъмната
+   тема редовете трябва да си останат черни върху светло. */
+.credits-table-scroll {
+    margin: 10px 0 18px;
+    overflow-x: auto;
+}
+
+.credits-table {
+    width: 100%;
+    min-width: 520px;
+    border-collapse: collapse;
+    font-size: 13px;
+}
+
+.credits-table th,
+.credits-table td {
+    padding: 8px 10px;
+    text-align: left;
+    vertical-align: top;
+    border-bottom: 1px solid var(--civic-border);
+}
+
+.credits-table thead th {
+    color: var(--civic-accent-text);
+    background: var(--civic-surface-soft);
+    border-bottom: 2px solid var(--civic-border);
+    font-weight: 650;
+    white-space: nowrap;
+}
+
+.credits-table code {
+    font-size: 12px;
 }
 
 /* Хартиен вариант на таблото и на сигнала: без навигация, бутони и форми.

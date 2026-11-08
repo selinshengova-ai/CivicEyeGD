@@ -15,11 +15,17 @@ namespace CivicEyeGD.Tests;
 /// </summary>
 public sealed class AuthorizationMetadataTests
 {
+    // Публичните страници са точно тези, които комисията отваря без парола:
+    // картата, списъците, сигнала, политиката за данните и кредитите.
+    // Всяка нова страница зад FallbackPolicy се хваща от теста, ако не е
+    // тук и не носи атрибута.
     private static readonly Type[] PublicPages =
     [
+        typeof(CreditsModel),
         typeof(DetailsModel),
         typeof(IndexModel),
         typeof(MapModel),
+        typeof(PrivacyModel),
         typeof(ReportsModel)
     ];
 

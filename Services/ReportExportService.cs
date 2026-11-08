@@ -26,7 +26,11 @@ public sealed record ReportExportRow(
     // Етикетът пътува готов, заедно с числото: думите „Висок приоритет“
     // се определят по същите граници като в сайта, а не по нова
     // преценка на това място.
-    string PriorityLabel);
+    string PriorityLabel,
+    // Дните до първата намеса идват вече преброени. Липсват там, където
+    // намеса все още няма: празната клетка е отговорът на въпроса
+    // „реагира ли се“, а нулата би твърдяла обратното.
+    int? ResponseDays = null);
 
 /// <summary>
 /// Приготвя сигналите за експорт: работна книга .xlsx за Excel и
@@ -41,18 +45,21 @@ public sealed class ReportExportService
     // Един масив за двете формати: колоните на работната книга и
     // заглавния ред на CSV вървят по един и същи ред, така файлът не
     // може да размени местата на две полета.
+    // Новата колона застана последна, а не до датата: първите
+    // единадесет имена са вече описани в документацията и служат на
+    // таблици, които се сравняват по номер на колона.
     private static readonly string[] Headers =
     {
         "№", "Заглавие", "Описание", "Категория", "Статус", "Адрес",
         "Дата на подаване", "Средна сериозност", "Потвърждения",
-        "Приоритет", "Етикет"
+        "Приоритет", "Етикет", "Реакция, дни"
     };
 
     // Ширините са подбрани спрямо съдържанието: описанието е най-дългото
     // поле, а номерата и етикетите не заслужават празно пространство.
     private static readonly double[] ColumnWidths =
     {
-        6, 30, 52, 18, 14, 24, 18, 12, 13, 11, 17
+        6, 30, 52, 18, 14, 24, 18, 12, 13, 11, 17, 12
     };
 
     // Работната книга се пише чрез библиотека, защото .xlsx не е текст:
@@ -102,6 +109,15 @@ public sealed class ReportExportService
             sheet.Cell(line, 9).Value = row.Confirmations;
             sheet.Cell(line, 10).Value = row.Priority;
             sheet.Cell(line, 11).Value = row.PriorityLabel;
+
+            // Клетката за реакцията се пълни само където има число:
+            // служителят търси „без намеса“ с празни полета във
+            // филтъра, а нулата би се броила като дни и би излязла
+            // по-бърза от всяка истинска реакция.
+            if (row.ResponseDays is { } days)
+            {
+                sheet.Cell(line, 12).Value = days;
+            }
 
             sheet.Cell(line, 7).Style.NumberFormat.Format = "dd.mm.yyyy hh:mm";
             sheet.Cell(line, 8).Style.NumberFormat.Format = "0.0";
@@ -209,7 +225,11 @@ public sealed class ReportExportService
                 Cell(row.AverageSeverity.ToString("0.0", CultureInfo.InvariantCulture)),
                 Cell(row.Confirmations.ToString(CultureInfo.InvariantCulture)),
                 Cell(row.Priority.ToString("0.0", CultureInfo.InvariantCulture)),
-                Cell(row.PriorityLabel)
+                Cell(row.PriorityLabel),
+                // Празно поле, а не нула, където намеса още няма:
+                // текстът „няма“ би се чел като стойност, а празното
+                // поле се разбира от всяка програма като липса.
+                Cell(row.ResponseDays?.ToString(CultureInfo.InvariantCulture) ?? string.Empty)
             })).Append("\r\n");
         }
 

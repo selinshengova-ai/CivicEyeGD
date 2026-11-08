@@ -1,4 +1,5 @@
 using CivicEyeGD.Data;
+using CivicEyeGD.Services;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -11,6 +12,10 @@ namespace CivicEyeGD.Tests;
 /// работи с пароли. Тестове заключват, че те идват само от конфигурация:
 /// без ключ акаунт няма, слаба парола не минава, а новата парола в
 /// конфигурацията заменя старата в базата.
+///
+/// Втората група пази самите примерни сигнали: те трябва да покриват
+/// всяка категория и статус, дневникът им да е свързан с делото, за
+/// което говори, и да оставят поне един спешен сигнал за демонстрацията.
 /// </summary>
 public sealed class DbSeederTests : IDisposable
 {
@@ -48,7 +53,7 @@ public sealed class DbSeederTests : IDisposable
         Assert.True(await Users.CheckPasswordAsync(citizen, CitizenPassword));
 
         Assert.NotNull(await Users.FindByEmailAsync(SecondEmail));
-        Assert.Equal(8, await _host.Context.Reports.CountAsync());
+        Assert.Equal(17, await _host.Context.Reports.CountAsync());
 
         // Преходите по статус ги пише администраторът, защото и в таблата
         // само той може да ги направи.
@@ -125,6 +130,169 @@ public sealed class DbSeederTests : IDisposable
         // примерните сигнали – само те се изключват с ключа.
         Assert.Equal(3, await _host.Context.Users.CountAsync());
         Assert.Empty(await _host.Context.Reports.ToListAsync());
+    }
+
+    [Fact]
+    public async Task SampleSignalsCoverEveryCategoryAndStatus()
+    {
+        await DbSeeder.SeedAsync(_host.Services, WithAllVoters());
+
+        var reports = await _host.Context.Reports.ToListAsync();
+
+        // Една категория или статус без пример се вижда веднага по
+        // топлинната матрица в PDF отчета: редът или колоната остават
+        // празни и числата зад тях изглеждат сгрешени.
+        foreach (var category in ReportCategories.All)
+        {
+            Assert.Contains(reports, report => report.Category == category);
+        }
+
+        foreach (var status in ReportStatuses.All)
+        {
+            Assert.Contains(reports, report => report.Status == status);
+        }
+    }
+
+    [Fact]
+    public async Task SampleSignalDatesStayBehindTheMomentTheyDescribe()
+    {
+        await DbSeeder.SeedAsync(_host.Services, WithAllVoters());
+
+        var now = DateTime.UtcNow;
+
+        var reports = await _host.Context.Reports
+            .Include(report => report.StatusHistories)
+            .Include(report => report.SeverityRatings)
+            .Include(report => report.Confirmations)
+            .ToListAsync();
+
+        // Дните в seed-а са относителни спрямо старта. Сгрешена стойност
+        // ги пуска в бъдещето и тогава витрината брои „решени този месец“
+        // за сигнал, който още не е станал.
+        foreach (var report in reports)
+        {
+            Assert.True(report.CreatedAt <= now);
+
+            foreach (var step in report.StatusHistories)
+            {
+                Assert.True(step.ChangedAt > report.CreatedAt);
+                Assert.True(step.ChangedAt <= now);
+            }
+
+            foreach (var rating in report.SeverityRatings)
+            {
+                Assert.True(rating.CreatedAt >= report.CreatedAt && rating.CreatedAt <= now);
+            }
+
+            foreach (var confirmation in report.Confirmations)
+            {
+                Assert.True(confirmation.CreatedAt >= report.CreatedAt && confirmation.CreatedAt <= now);
+            }
+        }
+    }
+
+    [Fact]
+    public async Task SampleSignalsLeaveOneReportUrgentOnTheMap()
+    {
+        await DbSeeder.SeedAsync(_host.Services, WithAllVoters());
+
+        var priority = new ReportPriorityService();
+
+        var reports = await _host.Context.Reports
+            .Include(report => report.SeverityRatings)
+            .Include(report => report.Confirmations)
+            .ToListAsync();
+
+        // Пулсиращият маркер се ражда само от сигнал, минал прага по
+        // гласовете на Други. Без такъв в примерните данни най-видното
+        // доказателство на защитата просто липсва.
+        Assert.Contains(
+            reports,
+            report => report.Status == ReportStatuses.New && priority.IsUrgent(report));
+    }
+
+    [Fact]
+    public async Task SampleSignalsShowBothASlowAndAFastOfficeReaction()
+    {
+        await DbSeeder.SeedAsync(_host.Services, WithAllVoters());
+
+        var reports = await _host.Context.Reports
+            .Include(report => report.StatusHistories)
+            .ToListAsync();
+
+        var reactions = reports
+            .Where(report => report.StatusHistories.Count > 0)
+            .Select(report => report.StatusHistories.Min(step => (step.ChangedAt - report.CreatedAt).TotalDays))
+            .ToList();
+
+        Assert.NotEmpty(reactions);
+
+        // Средното време за реакция има смисъл само ако извадката е
+        // различна: един и същ брой дни за всеки сигнал би показал
+        // число, което нищо не описва.
+        Assert.True(reactions.Max() >= 10);
+        Assert.True(reactions.Min() <= 5);
+        Assert.True(reactions.Distinct().Count() > 3);
+    }
+
+    [Fact]
+    public async Task SampleSignalsRecordTheAdministratorAdjustmentWhereClaimed()
+    {
+        await DbSeeder.SeedAsync(_host.Services, WithAllVoters());
+
+        var reports = await _host.Context.Reports
+            .Include(report => report.StatusHistories)
+            .Where(report => report.AdminPriorityAdjustment != 0)
+            .ToListAsync();
+
+        Assert.NotEmpty(reports);
+
+        // Корекцията без запис в дневника е невидима намеса, а тя е
+        // точно противното на това, което страницата на сигнала обещава.
+        foreach (var report in reports)
+        {
+            Assert.Contains(
+                report.StatusHistories,
+                step => step.NewPriorityAdjustment == report.AdminPriorityAdjustment);
+        }
+    }
+
+    [Fact]
+    public async Task SampleSignalsAreSpreadAcrossTheTownWithoutColliding()
+    {
+        await DbSeeder.SeedAsync(_host.Services, WithAllVoters());
+
+        var places = (await _host.Context.Reports.ToListAsync())
+            .Select(report => (report.Id, Latitude: report.Latitude!.Value, Longitude: report.Longitude!.Value))
+            .ToList();
+
+        // И двата набора от числа са за картата: точка извън кутията не
+        // се вижда изобщо, а две в рамките на радиуса за дубликати се
+        // сливат в един маркер — и примерните данни започват да си
+        // противоречат сами със собствената си проверка.
+        foreach (var (id, latitude, longitude) in places)
+        {
+            Assert.True(
+                ReportGeography.IsWithinTown(latitude, longitude),
+                $"Сигнал {id} е извън границите на града.");
+        }
+
+        foreach (var first in places)
+        {
+            foreach (var second in places.Where(other => other.Id > first.Id))
+            {
+                var meters = ReportGeography.DistanceMeters(
+                    first.Latitude,
+                    first.Longitude,
+                    second.Latitude,
+                    second.Longitude);
+
+                Assert.True(
+                    meters > ReportDuplicates.RadiusMeters,
+                    $"Сигнали {first.Id} и {second.Id} са на {meters:F0} m — "
+                    + "една точка за два различни проблема.");
+            }
+        }
     }
 
     private static IConfiguration WithAllVoters() => TestHost.Config(
