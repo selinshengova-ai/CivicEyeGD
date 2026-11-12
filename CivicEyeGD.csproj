@@ -26,7 +26,12 @@
     <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="10.0.13" />
     <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.0.2" />
     <PackageReference Include="QuestPDF" Version="2026.9.1" />
-    <PackageReference Include="System.Security.Cryptography.Pkcs" Version="9.0.21" />
+    <!-- Microsoft.EntityFrameworkCore.SqlServer влачи Microsoft.Data.SqlClient,
+         и той — System.Security.Cryptography.Pkcs 9.0.11, за който NuGet дава
+         предупреждение за уязвимост (NU1903/NU1902). Проектът не ползва
+         PKCS#7 никъде; препратката тук е само за да се вдигне версията на
+         поправената и build-ът да излезе без предупреждения. -->
+    <PackageReference Include="System.Security.Cryptography.Pkcs" Version="10.0.15" />
   </ItemGroup>
 
   <ItemGroup>
