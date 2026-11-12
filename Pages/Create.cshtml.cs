@@ -40,6 +40,15 @@ public class CreateModel : PageModel
     // за да не попадне в изходния код и в публичния архив.
     public string GoogleMapsApiKey { get; }
 
+    // Същите граници, с които сървърът отхвърля координати извън града.
+    // Кутията за търсене на адрес се смята тук, а не е преписана на ръка
+    // в скрипта, за да не може подсказката да предложи точка, която
+    // форматът после няма да приеме. Форматът на Nominatim е
+    // ляво,горе,дясно,долу.
+    public string TownViewbox =>
+        $"{ReportGeography.MinLongitude},{ReportGeography.MaxLatitude},"
+        + $"{ReportGeography.MaxLongitude},{ReportGeography.MinLatitude}";
+
     public IReadOnlyList<string> Categories => ReportCategories.All;
 
     [BindProperty]

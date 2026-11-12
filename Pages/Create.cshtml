@@ -235,7 +235,7 @@
                 <div class="photo-picker">
                     <input id="photo-input" name="Photos" type="file" class="photo-input" accept="image/*" multiple />
                     <label for="photo-input" class="photo-picker-button">
-                        <span aria-hidden="true">＋</span> Избери или снимай
+                        <span aria-hidden="true">+</span> Избери или снимай
                     </label>
                 </div>
                 <p id="photo-message" class="photo-message" role="status" aria-live="polite"></p>
@@ -689,7 +689,9 @@
                     url.searchParams.set("countrycodes", "bg");
                     // Правоъгълникът на града и bounded спират имена, които се
                     // повтарят в други населени места: извън него няма резултат.
-                    url.searchParams.set("viewbox", "23.65,41.62,23.82,41.50");
+                    // Границите идват от ReportGeography — същите, с които
+                    // сървърът проверява приетата точка.
+                    url.searchParams.set("viewbox", "@Model.TownViewbox");
                     url.searchParams.set("bounded", "1");
                     // Имената се искат на български, за да се разпознаят от
                     // жителите и да се четат на кирилица в подсказката долу.
