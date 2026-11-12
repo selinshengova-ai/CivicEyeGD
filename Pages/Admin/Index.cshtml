@@ -251,7 +251,7 @@
                                 <span><strong>@response.Label</strong>@response.Text</span>
                             }
                             <span><strong>Последна промяна</strong>@(Model.LastChangeOf(report) is { } lastChange ? lastChange.ToDayText() : "няма записани промени")</span>
-                            <span><strong>Независимо</strong>@report.IndependentConfirmationCount @BulgarianPlural.Of(report.IndependentConfirmationCount, "потвърждение", "потвърждения"), @report.SeverityRatings.Count(r => r.UserId != report.UserId) @BulgarianPlural.Of(report.SeverityRatings.Count(r => r.UserId != report.UserId), "оценка", "оценки")</span>
+                            <span><strong>Независимо</strong>@report.IndependentConfirmationCount @BulgarianPlural.Of(report.IndependentConfirmationCount, "потвърждение", "потвърждения"), @report.IndependentRaterCount @BulgarianPlural.Of(report.IndependentRaterCount, "оценка", "оценки")</span>
                         </div>
                     </div>
 

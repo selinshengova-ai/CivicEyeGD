@@ -67,50 +67,21 @@ public class MapModel : PageModel
             })
             .ToListAsync();
 
-        // Правилото е същото като в Report.IndependentAverageSeverity:
-        // оценката на автора не се брои, защото той самият не е
-        // независим свидетел. Съгласуваност с Details, таблото и експорта.
-        var averages = await (
-            from rating in _context.SeverityRatings
-            join report in _context.Reports on rating.ReportId equals report.Id
-            where rating.UserId != report.UserId
-            group rating by rating.ReportId into group_
-            select new
-            {
-                ReportId = group_.Key,
-                Average = group_.Average(rating => rating.Rating)
-            })
-            .AsNoTracking()
-            .ToListAsync();
-
-        var averageByReport = averages.ToDictionary(
-            average => average.ReportId,
-            average => average.Average);
-
-        // Потвържденията се броят по същата логика като средната
-        // сериозност: гласът на подателя не е независим. Без тази
-        // крачка картата би дала по-висок приоритет от таблото.
-        var confirmations = await (
-            from confirmation in _context.Confirmations
-            join report in _context.Reports on confirmation.ReportId equals report.Id
-            where confirmation.UserId != report.UserId
-            group confirmation by confirmation.ReportId into group_
-            select new
-            {
-                ReportId = group_.Key,
-                Count = group_.Count()
-            })
-            .AsNoTracking()
-            .ToListAsync();
-
-        var confirmationByReport = confirmations.ToDictionary(
-            confirmation => confirmation.ReportId,
-            confirmation => confirmation.Count);
+        // Двете мерки идват от базата с правило, записано в
+        // IndependentVotes: оценката и потвърждението на подателя не се
+        // броят, защото той не е независим свидетел. Тук се изчисляват
+        // от SQL, а не от заредените обекти, защото картата минава през
+        // всички сигнали на града; в страниците на отделен сигнал същото
+        // правило важи през Report.IndependentAverageSeverity.
+        var averageByReport =
+            await IndependentVotes.AverageSeverityByReportAsync(_context);
+        var confirmationByReport =
+            await IndependentVotes.ConfirmationCountByReportAsync(_context);
 
         foreach (var report in reports)
         {
             var independentAverage = averageByReport.TryGetValue(report.Id, out var average)
-                ? Math.Round(average, 2)
+                ? average
                 : 0;
             var independentConfirmations = confirmationByReport.TryGetValue(report.Id, out var count)
                 ? count

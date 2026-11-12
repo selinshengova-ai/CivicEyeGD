@@ -87,35 +87,33 @@ public class Report
     // „висок приоритет“ с едно щракване, а точността на йерархията е
     // целият смисъл на системата за общината.
     //
+    // Самата проверка е в IndependentVotes — там, където е и SQL
+    // вариантът ѝ за картата, за да не казват двете места различни неща.
+    //
     // [NotMapped] е задължителен: EF Core иначе разбира
     // IndependentRatings като втора навигация към SeverityRatings и
     // създава сянка външен ключ ReportId1, което развали миграцията.
     [NotMapped]
-    public IEnumerable<SeverityRating> IndependentRatings =>
-        SeverityRatings.Where(rating => rating.UserId != UserId);
+    public IEnumerable<SeverityRating> IndependentRatings => IndependentVotes.RatingsOf(this);
 
     // Броят на независимите оценяващи — показва на гражданина колко
     // малка е извадката, докато средното все още няма тежест.
     [NotMapped]
-    public int IndependentRaterCount => IndependentRatings.Count();
+    public int IndependentRaterCount => IndependentVotes.RaterCountOf(this);
 
     // Това е S във формулата за приоритет; закръгля се до два знака,
     // за да съвпада числото на екрана с това в изчисленията. При нула
     // оцени дава 0, а ReportPriorityService го тълкува като най-ниска
     // сериозност — сигналът не става спешен само от липса на гласове.
     [NotMapped]
-    public double IndependentAverageSeverity =>
-        IndependentRaterCount > 0
-            ? Math.Round(IndependentRatings.Average(rating => rating.Rating), 2)
-            : 0;
+    public double IndependentAverageSeverity => IndependentVotes.AverageSeverityOf(this);
 
     // Това е C във формулата; броят се само гласовете на други, защото
     // и потвърждението на подателя е от интерес. ReportPriorityService
     // го ограничава на 10 — след това потвържденията не добавят тежест,
     // за да не „удавят“ сериозността на масови, но леки проблеми.
     [NotMapped]
-    public int IndependentConfirmationCount =>
-        Confirmations.Count(confirmation => confirmation.UserId != UserId);
+    public int IndependentConfirmationCount => IndependentVotes.ConfirmationsOf(this);
 
     // Проверката приема null и го тълкува като „не съвпада“, защото
     // страниците я викат и за непознат посетител — така извикателят
