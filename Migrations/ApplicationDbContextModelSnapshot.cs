@@ -90,7 +90,11 @@ namespace CivicEyeGD.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("CreatedAt");
+
                     b.HasIndex("UserId");
+
+                    b.HasIndex("Latitude", "Longitude");
 
                     b.ToTable("Reports");
                 });
