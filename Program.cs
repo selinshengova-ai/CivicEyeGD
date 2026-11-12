@@ -60,6 +60,7 @@ builder.Services
     .AddIdentity<IdentityUser, IdentityRole>(options =>
     {
         options.SignIn.RequireConfirmedAccount = false;
+        options.User.RequireUniqueEmail = true;
         options.Password.RequiredLength = 8;
         options.Password.RequireDigit = true;
         options.Password.RequireUppercase = false;
@@ -70,6 +71,21 @@ builder.Services
     })
     .AddEntityFrameworkStores<ApplicationDbContext>()
     .AddDefaultTokenProviders();
+
+// Входната бисквита идва с 14 дни живот по подразбиране и с „Remember me“
+// наравно. На общ компютър това е отворена врата към чужд акаунт, затова
+// сесията се скъсява до седмица с плъзгащо подновяване: човек, който
+// работи със сайта всеки ден, не влиза наново, а изоставеният браузър
+// спира да бъде ключ. HttpOnly и Lax са стойностите по подразбиране и са
+// изписани изрично, за да се виждат при одит.
+builder.Services.ConfigureApplicationCookie(options =>
+{
+    options.ExpireTimeSpan = TimeSpan.FromDays(7);
+    options.SlidingExpiration = true;
+    options.Cookie.HttpOnly = true;
+    options.Cookie.SameSite = SameSiteMode.Lax;
+    options.Cookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
+});
 
 // Identity иначе говори на английски за грешки в паролата и имейла,
 // а останалите текстове в приложението са български.
