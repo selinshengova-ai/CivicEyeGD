@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="bg">
+<head>
+<meta charset="utf-8">
+<title>Флаер — CivicEye GD</title>
+<!--
+  Едностраничен флаер за A4: той виси на таблата в училище и се раздава на
+  защитата. Версията за печат е отделна от сайта, защото принтерът няма
+  тъмна тема, няма скрол и не показва втора страница. Затова листът е с
+  фиксирана височина, а текстът е събран така, че да влезе в него; ако
+  нещо порасне, .sheet го отрязва, затова височината се мери, не се очаква.
+-->
+<style>
+    @page {
+        size: A4 portrait;
+        margin: 0;
+    }
+
+    :root {
+        --green: #1b4d3e;
+        --green-dark: #12392e;
+        --green-soft: #e8f2ec;
+        --lime: #d7f36b;
+        --red: #c2413b;
+        --ink: #1d3028;
+        --muted: #5b6b62;
+        --line: #d7e3da;
+    }
+
+    * {
+        box-sizing: border-box;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+    }
+
+    html, body {
+        margin: 0;
+        padding: 0;
+        background: #ffffff;
+        color: var(--ink);
+        font-family: "Segoe UI", "Noto Sans", system-ui, sans-serif;
+    }
+
+    /* 297 мм е целият флаер. */
+    .sheet {
+        width: 210mm;
+        height: 297mm;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+    }
+
+    .top {
+        background: var(--green-dark);
+        color: #ffffff;
+        padding: 9mm 14mm 8mm;
+        display: flex;
+        align-items: flex-end;
+        justify-content: space-between;
+        gap: 8mm;
+    }
+
+    .brand {
+        font-size: 27pt;
+        font-weight: 700;
+        letter-spacing: -0.4pt;
+        line-height: 1;
+    }
+
+    .brand span {
+        color: var(--lime);
+    }
+
+    .tagline {
+        margin-top: 2.5mm;
+        font-size: 11.5pt;
+        color: #cfe3d6;
+    }
+
+    .contest {
+        text-align: right;
+        font-size: 8.5pt;
+        line-height: 1.5;
+        color: #a9c7b6;
+        text-transform: uppercase;
+        letter-spacing: 0.6pt;
+    }
+
+    .contest strong {
+        display: block;
+        color: #ffffff;
+        font-size: 10pt;
+        letter-spacing: 0.2pt;
+    }
+
+    .body {
+        display: flex;
+        gap: 9mm;
+        padding: 8mm 14mm 5mm;
+    }
+
+    .left {
+        flex: 1.5;
+        display: flex;
+        flex-direction: column;
+        gap: 5mm;
+    }
+
+    .right {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        gap: 5mm;
+    }
+
+    .steps {
+        display: flex;
+        flex-direction: column;
+        gap: 4mm;
+    }
+
+    .step {
+        display: flex;
+        gap: 4mm;
+        align-items: flex-start;
+    }
+
+    .num {
+        flex: none;
+        width: 9.5mm;
+        height: 9.5mm;
+        border-radius: 50%;
+        background: var(--green);
+        color: #ffffff;
+        font-size: 12pt;
+        font-weight: 700;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .step h3 {
+        margin: 0 0 0.8mm;
+        font-size: 12.5pt;
+        color: var(--green-dark);
+    }
+
+    .step p {
+        margin: 0;
+        font-size: 10pt;
+        line-height: 1.4;
+        color: var(--muted);
+    }
+
+    .section-title {
+        font-size: 8pt;
+        font-weight: 700;
+        letter-spacing: 1.1pt;
+        text-transform: uppercase;
+        color: var(--red);
+        margin: 0 0 2.5mm;
+    }
+
+    .card {
+        border: 0.5mm solid var(--line);
+        border-radius: 3.5mm;
+        padding: 4mm 4.5mm;
+    }
+
+    .card p {
+        margin: 0;
+        font-size: 10pt;
+        line-height: 1.45;
+        color: var(--ink);
+    }
+
+    .card p + p {
+        margin-top: 2mm;
+        color: var(--muted);
+    }
+
+    .qr {
+        background: var(--green-soft);
+        border-radius: 3.5mm;
+        padding: 5mm;
+        text-align: center;
+    }
+
+    .qr img {
+        width: 40mm;
+        height: 40mm;
+        display: block;
+        margin: 0 auto 3mm;
+    }
+
+    .qr .url {
+        font-size: 12.5pt;
+        font-weight: 700;
+        color: var(--green-dark);
+    }
+
+    .qr .hint {
+        margin-top: 1.5mm;
+        font-size: 9pt;
+        line-height: 1.4;
+        color: var(--muted);
+    }
+
+    /* Лентата е с пълна ширина: чиповете се редят по четирите колони на
+       листа, а не един под друг, защото иначе флаерът не свършва на A4. */
+    .band {
+        margin: 0 14mm;
+        padding: 4mm 0 0;
+        border-top: 0.5mm solid var(--line);
+    }
+
+    .chips {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 2.5mm;
+    }
+
+    .chip {
+        border: 0.4mm solid var(--line);
+        border-radius: 2.5mm;
+        padding: 1.8mm 2.4mm;
+        font-size: 8.5pt;
+        line-height: 1.3;
+        color: var(--green-dark);
+        background: #ffffff;
+    }
+
+    .foot {
+        margin-top: auto;
+        padding: 5mm 14mm 7mm;
+        display: flex;
+        justify-content: space-between;
+        gap: 8mm;
+        font-size: 9pt;
+        line-height: 1.5;
+        color: var(--muted);
+    }
+
+    .foot strong {
+        color: var(--green-dark);
+        font-size: 10.5pt;
+    }
+
+    .foot .right-note {
+        text-align: right;
+    }
+</style>
+</head>
+<body>
+<div class="sheet">
+
+    <header class="top">
+        <div>
+            <div class="brand">Civic<span>Eye</span> GD</div>
+            <div class="tagline">Сигналите на Гоце Делчев — на една карта, с ясен приоритет.</div>
+        </div>
+        <div class="contest">
+            <strong>НОИТ 2026/2027</strong>
+            направление<br>„Софтуерни приложения“
+        </div>
+    </header>
+
+    <div class="body">
+        <div class="left">
+            <div>
+                <p class="section-title">Как работи</p>
+                <div class="steps">
+                    <div class="step">
+                        <div class="num">1</div>
+                        <div>
+                            <h3>Снимаш проблема</h3>
+                            <p>Заглавие, описание, категория и снимка. Координатите идват от картата или от телефона.</p>
+                        </div>
+                    </div>
+                    <div class="step">
+                        <div class="num">2</div>
+                        <div>
+                            <h3>Соседите потвърждават</h3>
+                            <p>Всеки гласува за сериозността от 1 до 5 и маркира, че вижда същото. Гласът на подателя не се брои.</p>
+                        </div>
+                    </div>
+                    <div class="step">
+                        <div class="num">3</div>
+                        <div>
+                            <h3>Приоритетът смята сам</h3>
+                            <p>Формулата събира средната сериозност от съседите, броя потвърждения и корекцията на служителя. По нея се подрежда списъкът.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <p class="section-title">Защо не се дублира</p>
+                <p>Преди изпращане платформата търси същия сигнал в радиус 50 метра и предлага да го потвърдиш, вместо да го описваш наново.</p>
+                <p>Една дупка остава един сигнал с десет потвърждения, а не десет сигнала, които общината чете като десет проблема.</p>
+            </div>
+
+            <div class="card">
+                <p class="section-title">Какво вижда служителят</p>
+                <p>Табло с активните и приключените сигнали, средното време до първата намеса и кой чака най-дълго.</p>
+                <p>От там излиза отчетът за деня: PDF с диаграми и топлинна карта, Excel или CSV.</p>
+            </div>
+        </div>
+
+        <div class="right">
+            <div class="qr">
+                <!-- PNG, не SVG: при печат в PDF Edge прескача векторното
+                     изображение и оставя празна рамка. Растровата версия е
+                     със 740 пиксела и се печата на около 470 dpi. -->
+                <img src="media/qr-civiceye-gd.png" alt="QR код към civiceye.runasp.net">
+                <div class="url">civiceye.runasp.net</div>
+                <div class="hint">Сканирай с камерата на телефона<br>и виждаш живите сигнали на града.</div>
+            </div>
+
+            <div class="card">
+                <p class="section-title">Технология</p>
+                <p>ASP.NET Core 10 · Entity Framework Core · SQLite · Leaflet · QuestPDF.</p>
+                <p>Списъкът, картата и тестовете четат един и същ код: нищо в демонстрацията не е нагласено за показ.</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="band">
+        <p class="section-title">Какво вече работи</p>
+        <div class="chips">
+            <span class="chip">Публична карта на сигналите</span>
+            <span class="chip">Списък с филтри</span>
+            <span class="chip">Тъмна тема</span>
+            <span class="chip">Работи и на телефон</span>
+            <span class="chip">Снимки без EXIF</span>
+            <span class="chip">Ръководство за подаване</span>
+            <span class="chip">288 автоматични теста</span>
+            <span class="chip">PDF отчет с топлинна карта</span>
+            <span class="chip">Отворен код, GPL v3</span>
+        </div>
+    </div>
+
+    <footer class="foot">
+        <div>
+            <strong>Селин Красимирова Шенгова</strong><br>
+            ПМГ „Яне Сандански“, гр. Гоце Делчев · научен ръководител: г-жа Караахмед
+        </div>
+        <div class="right-note">
+            <strong>Уеб приложение за НОИТ 2026/2027</strong><br>
+            <span style="color:var(--green-dark)">civiceye.runasp.net</span>
+        </div>
+    </footer>
+
+</div>
+</body>
+</html>
