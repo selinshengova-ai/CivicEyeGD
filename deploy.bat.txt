@@ -1,0 +1,18 @@
+
+@echo off
+set SOURCE_PATH=C:\Users\sshen\Documents\CivicEyeGD - Copy\CivicEyeGD\publish
+set DEST_SITE=site101782
+set DEST_URL=https://site101782.siteasp.net:8172/msdeploy.axd?site=site101782
+set USERNAME=site101782
+set PASSWORD="6Sk_Fy-4s!2W"
+
+"C:\Program Files (x86)\IIS\Microsoft Web Deploy V3\msdeploy.exe" ^
+  -verb:sync ^
+  -source:contentPath="%SOURCE_PATH%" ^
+  -dest:contentPath="%DEST_SITE%",computerName="%DEST_URL%",userName="%USERNAME%",password="%PASSWORD%",authtype="Basic",includeAcls="False" ^
+  -allowUntrusted ^
+  -disableLink:AppPoolExtension ^
+  -disableLink:ContentExtension ^
+  -disableLink:CertificateExtension ^
+  -verbose
+pause
