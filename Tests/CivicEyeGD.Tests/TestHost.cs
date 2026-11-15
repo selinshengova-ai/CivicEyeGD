@@ -68,6 +68,12 @@ public sealed class TestHost : IDisposable
             .AddRoles<IdentityRole>()
             .AddEntityFrameworkStores<ApplicationDbContext>();
 
+        // Сървърът превежда грешките на Identity на български
+        // (Program.cs:92). Тестовете за парола твърдят нещо конкретно за
+        // текста, който гражданинът вижда, затова и тук описващият е
+        // същият, а не английският по подразбиране.
+        services.AddScoped<IdentityErrorDescriber, BulgarianIdentityErrorDescriber>();
+
         _services = services.BuildServiceProvider();
         _scope = _services.CreateScope();
 

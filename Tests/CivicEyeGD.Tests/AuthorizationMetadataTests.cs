@@ -3,6 +3,7 @@ using CivicEyeGD.Pages;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using AdminDashboard = CivicEyeGD.Pages.Admin.IndexModel;
+using ProfilePage = CivicEyeGD.Pages.Account.ProfileModel;
 
 namespace CivicEyeGD.Tests;
 
@@ -63,6 +64,7 @@ public sealed class AuthorizationMetadataTests
     [Theory]
     [InlineData(typeof(CreateModel))]
     [InlineData(typeof(MyReportsModel))]
+    [InlineData(typeof(ProfilePage))]
     public void PersonalPages_AreNotAnonymous(Type pageModel) =>
         Assert.Null(pageModel.GetCustomAttribute<AllowAnonymousAttribute>());
 
