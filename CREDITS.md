@@ -55,10 +55,10 @@
 
 - **.NET SDK 10** и `dotnet` CLI — изграждане, тестове, локален сървър.
 - **[xUnit](https://xunit.net/)** 2.9.3 (Apache-2.0) и `Microsoft.NET.Test.Sdk`
-  (MIT) — 288 автоматизирани теста в `Tests/CivicEyeGD.Tests`.
+  (MIT) — 298 автоматизирани теста в `Tests/CivicEyeGD.Tests`.
 - **[QRCoder](https://github.com/Shane32/QRCoder)** 1.8.1 (MIT) — генерира QR
-  кода към `civiceye.runasp.net` за флаера и за последния кадър на
-  презентацията. Библиотеката не е зависимост на приложението: пусната е
+  кода към `civiceye.runasp.net`, който е на корицата на
+  документацията. Библиотеката не е зависимост на приложението: пусната е
   веднъж извън проекта, а резултатът ѝ е файлът
   `Docs/media/qr-civiceye-gd.png`.
 - **[ZXing.Net](https://github.com/micjahn/ZXing.Net)** 0.16.11 (Apache-2.0)
