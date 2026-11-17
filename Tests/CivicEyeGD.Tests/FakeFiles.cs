@@ -79,7 +79,7 @@ public static class FakeFiles
         0xAE, 0x42, 0x60, 0x82
     ];
 
-    /// <summary>WEBP с кадрови блок VP8  и един EXIF блок.</summary>
+    /// <summary>WEBP с кадрови блок VP8 и един EXIF блок.</summary>
     public static readonly byte[] WebpWithExif =
     [
         0x52, 0x49, 0x46, 0x46, 0x1E, 0x00, 0x00, 0x00,

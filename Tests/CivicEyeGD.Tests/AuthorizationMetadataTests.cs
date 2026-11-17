@@ -4,6 +4,11 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using AdminDashboard = CivicEyeGD.Pages.Admin.IndexModel;
 using ProfilePage = CivicEyeGD.Pages.Account.ProfileModel;
+using DeletePage = CivicEyeGD.Pages.Account.DeleteModel;
+using ForgotPasswordPage = CivicEyeGD.Pages.Account.ForgotPasswordModel;
+using LoginPage = CivicEyeGD.Pages.Account.LoginModel;
+using RegisterPage = CivicEyeGD.Pages.Account.RegisterModel;
+using SecurityQuestionPage = CivicEyeGD.Pages.Account.SecurityQuestionModel;
 
 namespace CivicEyeGD.Tests;
 
@@ -17,16 +22,21 @@ namespace CivicEyeGD.Tests;
 public sealed class AuthorizationMetadataTests
 {
     // Публичните страници са точно тези, които комисията отваря без парола:
-    // картата, списъците, сигнала, политиката за данните и кредитите.
+    // картата, списъците, сигнала, политиката за данните и кредитите, плюс
+    // трите страници зад входа — те изрично съществуват за човек, който
+    // още не е влязъл.
     // Всяка нова страница зад FallbackPolicy се хваща от теста, ако не е
     // тук и не носи атрибута.
     private static readonly Type[] PublicPages =
     [
         typeof(CreditsModel),
         typeof(DetailsModel),
+        typeof(ForgotPasswordPage),
         typeof(IndexModel),
+        typeof(LoginPage),
         typeof(MapModel),
         typeof(PrivacyModel),
+        typeof(RegisterPage),
         typeof(ReportsModel)
     ];
 
@@ -65,6 +75,12 @@ public sealed class AuthorizationMetadataTests
     [InlineData(typeof(CreateModel))]
     [InlineData(typeof(MyReportsModel))]
     [InlineData(typeof(ProfilePage))]
+
+    // Страницата с въпроса няма AllowAnonymous и не трябва да има: той
+    // подменя сегашната парола като доказателство, а гост няма как да знае
+    // парола, която още не е влязла.
+    [InlineData(typeof(SecurityQuestionPage))]
+    [InlineData(typeof(DeletePage))]
     public void PersonalPages_AreNotAnonymous(Type pageModel) =>
         Assert.Null(pageModel.GetCustomAttribute<AllowAnonymousAttribute>());
 

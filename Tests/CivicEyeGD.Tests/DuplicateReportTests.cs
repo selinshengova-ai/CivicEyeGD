@@ -229,7 +229,7 @@ public sealed class DuplicateReportTests : IDisposable
         var match = Assert.Single(MatchesOf(result));
 
         // Прозорецът сменя текста си за собствения сигнал и му дава датата:
-        // „този, който подаде преди месец" е друг случай от двойното изпращане.
+        // Сигнал, подаден отпреди месец, е друг случай от двойното изпращане.
         Assert.True(match.GetProperty("IsMine").GetBoolean());
         Assert.Equal("20.10.2026", match.GetProperty("CreatedAtText").GetString());
     }

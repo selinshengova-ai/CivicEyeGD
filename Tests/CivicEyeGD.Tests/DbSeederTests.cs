@@ -86,6 +86,40 @@ public sealed class DbSeederTests : IDisposable
     }
 
     [Fact]
+    public async Task SquattedAdminEmail_IsNotPromotedToAdministrator()
+    {
+        // Днес паролите на демо акаунтите ги няма в конфигурация, а
+        // имейлът на служителя е публичен — той е в документацията. Затова
+        // първата стъпка е реалистична атака: някой си регистрира сметка
+        // с точно този имейл и я държи заета.
+        var squatter = new IdentityUser
+        {
+            Id = Guid.NewGuid().ToString(),
+            UserName = AdminEmail,
+            Email = AdminEmail,
+            EmailConfirmed = true
+        };
+
+        Assert.True((await Users.CreateAsync(squatter, "NejseParola!26")).Succeeded);
+
+        // Утре собственикът на инсталацията задава парола и рестартира.
+        await DbSeeder.SeedAsync(_host.Services, WithAllVoters());
+
+        var admin = await Users.FindByEmailAsync(AdminEmail);
+
+        Assert.NotNull(admin);
+        Assert.False(await Users.IsInRoleAsync(admin, "Administrator"));
+
+        // Чуждата парола остава чужда: seed-ът не я подменя, защото не
+        // е неговата сметка.
+        Assert.True(await Users.CheckPasswordAsync(admin, "NejseParola!26"));
+
+        // Без служител дневникът на статуса няма кой да пише, затова и
+        // примерните сигнали остават извън базата.
+        Assert.Empty(await _host.Context.Reports.ToListAsync());
+    }
+
+    [Fact]
     public async Task PasswordBelowTheRules_LeavesNoHalfMadeAccount()
     {
         await DbSeeder.SeedAsync(_host.Services, TestHost.Config(
@@ -204,7 +238,7 @@ public sealed class DbSeederTests : IDisposable
             .ToListAsync();
 
         // Пулсиращият маркер се ражда само от сигнал, минал прага по
-        // гласовете на Други. Без такъв в примерните данни най-видното
+        // гласовете на други. Без такъв в примерните данни най-видното
         // доказателство на защитата просто липсва.
         Assert.Contains(
             reports,

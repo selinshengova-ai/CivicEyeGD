@@ -183,7 +183,7 @@ public sealed class PasswordChangeTests : IDisposable
 
         await model.OnPostAsync();
 
-        // В заявката няма поле „потребител": другият профил не може да
+        // В заявката няма поле „потребител“: другият профил не може да
         // бъде посочен с нищо друго освен с влезлия, затова и остава
         // със старата си парола.
         var other = await Users.FindByIdAsync(otherId);

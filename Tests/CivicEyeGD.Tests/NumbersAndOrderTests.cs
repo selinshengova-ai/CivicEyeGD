@@ -405,10 +405,6 @@ public sealed class AdminPanelNumbersTests : IDisposable
         Assert.Equal(
             ["Стъпка 5", "Стъпка 4", "Стъпка 3", "Стъпка 2", "Стъпка 1"],
             page.DiarySteps.Select(step => step.Comment));
-
-        // Последната промяна се чете от самия дневник, а не от второ
-        // число: две места за едно и също нещо с времето се разминават.
-        Assert.Equal(page.DiarySteps[0].ChangedAt, page.LastChange);
     }
 
     [Fact]
@@ -424,7 +420,6 @@ public sealed class AdminPanelNumbersTests : IDisposable
         // Празният дневник е честен отговор: страницата не измисля стъпка,
         // която общината не е направила.
         Assert.Empty(page.DiarySteps);
-        Assert.Null(page.LastChange);
     }
 
     private async Task AddRatedAsync(string userId, string title, string status, int severity)

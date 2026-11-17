@@ -1,6 +1,8 @@
 using System.Security.Claims;
+using System.Text.Encodings.Web;
 using CivicEyeGD.Data;
 using CivicEyeGD.Services;
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
@@ -16,6 +18,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 namespace CivicEyeGD.Tests;
 
@@ -62,16 +65,43 @@ public sealed class TestHost : IDisposable
         services.AddDbContext<ApplicationDbContext>(options =>
             options.UseSqlite($"Data Source={DatabaseFileName}"));
 
+        // Доставчикът на токени за възстановяване подписва стойности през
+        // DataProtection. В уеб приложението идва с самото изграждане на
+        // сайта, а тук услугите се сглобяват на ръка, затова се добавя
+        // изрично — иначе генерирането на токена нямаше как да тръгне.
+        services.AddDataProtection();
+
         // AddRoles е задължително, иначе UserManager.GetRolesAsync хвърля
         // NotSupportedException, а историята на статуса пита именно ролите.
+        // AddDefaultTokenProviders е второто задължително: възстановяването
+        // на парола минава през GeneratePasswordResetTokenAsync, а без
+        // доставчиците на токени извикването спира с изключение. В Program.cs
+        // същият ред съществува, затова тестове минават по същия път.
         services.AddIdentityCore<IdentityUser>()
             .AddRoles<IdentityRole>()
-            .AddEntityFrameworkStores<ApplicationDbContext>();
+            .AddEntityFrameworkStores<ApplicationDbContext>()
+            .AddDefaultTokenProviders()
 
-        // Сървърът превежда грешките на Identity на български
-        // (Program.cs:92). Тестовете за парола твърдят нещо конкретно за
-        // текста, който гражданинът вижда, затова и тук описващият е
-        // същият, а не английският по подразбиране.
+            // Регистрацията вписва човека веднага след създаването, а
+            // AddIdentityCore не добавя сам SignInManager — той идва с
+            // AddIdentity. Без този ред PageModel-ът на регистрацията нямаше
+            // как да бъде конструиран изобщо.
+            .AddSignInManager<SignInManager<IdentityUser>>();
+
+        // Изтриването на профил разписва и бисквитата за вход, а тук няма
+        // браузър, на който бисквитата да се сложи или свали. Затова схемата
+        // на Identity идва с обработчик, който не върши нищо: извикването
+        // минава по същия път като в Program.cs, а проверките в тестовете
+        // остават за базата, не за бисквитата.
+        services.AddAuthentication()
+            .AddScheme<AuthenticationSchemeOptions, SilentSignOutHandler>(
+                IdentityConstants.ApplicationScheme,
+                options => { });
+
+        // Сървърът превежда грешките на Identity на български — същият
+        // описвател е регистриран и в Program.cs. Тестовете за парола
+        // твърдят нещо конкретно за текста, който гражданинът вижда,
+        // затова и тук той е българският, а не английският по подразбиране.
         services.AddScoped<IdentityErrorDescriber, BulgarianIdentityErrorDescriber>();
 
         _services = services.BuildServiceProvider();
@@ -123,7 +153,7 @@ public sealed class TestHost : IDisposable
     }
 
     /// <summary>
-    /// Потребител с ролята „Administrator" в базата: историята на
+    /// Потребител с ролята „Administrator“ в базата: историята на
     /// статуса пита точно това, за да покаже служителя като длъжност,
     /// а не като имейл.
     /// </summary>
@@ -185,6 +215,15 @@ public sealed class TestHost : IDisposable
 
         configureRequest?.Invoke(httpContext);
 
+        // SignInManager си търси контекста не през RequestServices, а през
+        // IHttpContextAccessor, който при истинска заявка го слага самото
+        // ASP.NET. Без този ред влизането след регистрация спира с
+        // „HttpContext must not be null“ — тоест би показал грешка там,
+        // където страницата е изправна.
+        _scope.ServiceProvider
+            .GetRequiredService<IHttpContextAccessor>()
+            .HttpContext = httpContext;
+
         var model = ActivatorUtilities.CreateInstance<TModel>(_scope.ServiceProvider);
 
         var viewData = new ViewDataDictionary(new EmptyModelMetadataProvider(), new ModelStateDictionary());
@@ -240,6 +279,41 @@ public sealed class TestHost : IDisposable
         {
             // временната папка остава и системата я почистя при нужда
         }
+    }
+
+    /// <summary>
+    /// Схема за вход без бисквита. Изтриването на профил разписва
+    /// бисквитата след изтриването в базата, а регистрацията я слага,
+    /// без никой да я иска: без регистрирана схема самото извикване спира
+    /// с изключение — и тестът би показал грешка там, където нищо не е
+    /// сгрешено. Обработчикът не върши нищо и точно това е неговата роля:
+    /// да замени механизма, а не проверката.
+    /// </summary>
+    private sealed class SilentSignOutHandler :
+        AuthenticationHandler<AuthenticationSchemeOptions>,
+        IAuthenticationSignInHandler
+    {
+        public SilentSignOutHandler(
+            IOptionsMonitor<AuthenticationSchemeOptions> options,
+            ILoggerFactory logger,
+            UrlEncoder encoder)
+            : base(options, logger, encoder)
+        {
+        }
+
+        protected override Task<AuthenticateResult> HandleAuthenticateAsync()
+            => Task.FromResult(AuthenticateResult.NoResult());
+
+        // Двете реализации са задължителни като интерфейсни, не само като
+        // желания резултат: AuthenticationService търси точния интерфейс и
+        // отказва с изключение, ако го няма — независимо че обработчикът
+        // умее да не прави нищо. Входът е нужен на регистрацията, а
+        // разписването на бисквитата — на изтриването на профила.
+        Task IAuthenticationSignInHandler.SignInAsync(ClaimsPrincipal user, AuthenticationProperties? properties)
+            => Task.CompletedTask;
+
+        Task IAuthenticationSignOutHandler.SignOutAsync(AuthenticationProperties? properties)
+            => Task.CompletedTask;
     }
 
     private sealed class TempEnvironment : IWebHostEnvironment

@@ -4,7 +4,7 @@ using CivicEyeGD.Services;
 namespace CivicEyeGD.Tests;
 
 /// <summary>
-/// Каталога от категории, статуси и географските граници на града са
+/// Каталогът от категории, статуси и географски граници на града е
 /// единственият източник на истина за сървърната валидация.
 /// </summary>
 public class ReportVocabularyTests

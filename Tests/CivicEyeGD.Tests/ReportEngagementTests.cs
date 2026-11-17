@@ -89,10 +89,14 @@ public sealed class ReportEngagementTests : IDisposable
         var (authorId, _, reportId) = await ReportWithVoterAsync();
         var model = DetailsPage(authorId);
 
-        var badRequest = Assert.IsType<BadRequestObjectResult>(await model.OnPostConfirmAsync(reportId));
+        // Оценката пътува с потвърждението, затова се проверява заедно с
+        // него: отказът по едното не трябва да запише другото.
+        var badRequest = Assert.IsType<BadRequestObjectResult>(
+            await model.OnPostConfirmAsync(reportId, rating: 5));
 
         Assert.Equal("Не можеш да потвърдиш собствения си сигнал.", badRequest.Value);
         Assert.Equal(0, await _host.Context.Confirmations.CountAsync());
+        Assert.Empty(await RatingsAsync(reportId));
     }
 
     [Fact]
@@ -106,6 +110,61 @@ public sealed class ReportEngagementTests : IDisposable
         Assert.IsType<PageResult>(result);
         Assert.Equal("Благодарим! Потвърждението ти е записано.", model.SuccessMessage);
         Assert.Equal(1, await _host.Context.Confirmations.CountAsync());
+
+        // Прозорецът изпраща оценка само ако е избрана; без нея потвърждението
+        // не превръща човека в гласоподавател.
+        Assert.Empty(await RatingsAsync(reportId));
+    }
+
+    [Fact]
+    public async Task ConfirmationWithRating_WritesBothInOneCall()
+    {
+        var (_, voterId, reportId) = await ReportWithVoterAsync();
+        var model = DetailsPage(voterId);
+
+        var result = await model.OnPostConfirmAsync(reportId, rating: 4);
+
+        Assert.IsType<PageResult>(result);
+        Assert.Equal(
+            "Благодарим! Потвърждението и оценката ти са записани.",
+            model.SuccessMessage);
+
+        Assert.Equal(1, await _host.Context.Confirmations.CountAsync());
+        var rating = Assert.Single(await RatingsAsync(reportId));
+        Assert.Equal(4, rating.Rating);
+        Assert.Equal(voterId, rating.UserId);
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(6)]
+    [InlineData(-2)]
+    public async Task ConfirmationWithRatingOutsideTheScale_WritesNothing(int rating)
+    {
+        var (_, voterId, reportId) = await ReportWithVoterAsync();
+        var model = DetailsPage(voterId);
+
+        var badRequest = Assert.IsType<BadRequestObjectResult>(
+            await model.OnPostConfirmAsync(reportId, rating));
+
+        Assert.Equal("Оценката трябва да е между 1 и 5.", badRequest.Value);
+        Assert.Equal(0, await _host.Context.Confirmations.CountAsync());
+        Assert.Empty(await RatingsAsync(reportId));
+    }
+
+    [Fact]
+    public async Task ConfirmationWithRating_CorrectsAnEarlierRating()
+    {
+        var (_, voterId, reportId) = await ReportWithVoterAsync();
+
+        await DetailsPage(voterId).OnPostRateAsync(reportId, rating: 2);
+
+        var model = DetailsPage(voterId);
+        await model.OnPostConfirmAsync(reportId, rating: 5);
+
+        // Един ред на човек и тук: поправката замества вота, не го дублира.
+        var rating = Assert.Single(await RatingsAsync(reportId));
+        Assert.Equal(5, rating.Rating);
     }
 
     [Fact]
@@ -114,10 +173,12 @@ public sealed class ReportEngagementTests : IDisposable
         var (_, voterId, reportId) = await ReportWithVoterAsync(ReportStatuses.Resolved);
         var model = DetailsPage(voterId);
 
-        var badRequest = Assert.IsType<BadRequestObjectResult>(await model.OnPostConfirmAsync(reportId));
+        var badRequest = Assert.IsType<BadRequestObjectResult>(
+            await model.OnPostConfirmAsync(reportId, rating: 3));
 
         Assert.Equal("Приключен сигнал не приема нови потвърждения.", badRequest.Value);
         Assert.Equal(0, await _host.Context.Confirmations.CountAsync());
+        Assert.Empty(await RatingsAsync(reportId));
     }
 
     [Fact]

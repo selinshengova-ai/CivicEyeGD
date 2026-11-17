@@ -267,6 +267,36 @@ public sealed class UrgencyAndExportTests : IDisposable
     }
 
     [Fact]
+    public async Task TheThreeExportsSurviveATownWithNoReports()
+    {
+        // Празната база е реалният случай: сигналите се изчистват, а
+        // таблото предлага трите файла все едно. Деленето на нулата в
+        // процента и празната диаграма се виждат чак пред комисията,
+        // затова проверката е тук, където може да гръмне.
+        var model = _host.CreatePageModel<CivicEyeGD.Pages.Admin.IndexModel>();
+
+        var pdf = Assert.IsType<FileContentResult>(await model.OnGetExportPdfAsync(null));
+        var csv = Assert.IsType<FileContentResult>(await model.OnGetExportAsync(null));
+        var xlsx = Assert.IsType<FileContentResult>(await model.OnGetExportXlsxAsync(null));
+
+        Assert.Equal("application/pdf", pdf.ContentType);
+        Assert.StartsWith("%PDF-", Encoding.ASCII.GetString(pdf.FileContents, 0, 5));
+
+        // CSV-ът остава само със заглавния ред: служителят вижда, че
+        // нищо не е изгубено, а не получил празен файл.
+        var csvText = Encoding.UTF8.GetString(csv.FileContents);
+        Assert.StartsWith("\ufeff\"№\",\"Заглавие\"", csvText);
+        Assert.Single(csvText.TrimEnd('\r', '\n').Split('\n'));
+
+        using var stream = new MemoryStream(xlsx.FileContents);
+        using var workbook = new ClosedXML.Excel.XLWorkbook(stream);
+        var sheet = workbook.Worksheet("Сигнали");
+
+        Assert.Single(sheet.RowsUsed());
+        Assert.Equal("№", sheet.Cell(1, 1).GetString());
+    }
+
+    [Fact]
     public async Task AdminCsvQuotesAndNeutralisesFormulas()
     {
         var author = await _host.CreateUserAsync("inject.author");
