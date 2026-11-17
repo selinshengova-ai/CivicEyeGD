@@ -74,10 +74,11 @@
                 <span>Всички активни</span>
                 <strong>@Model.TotalActiveCount</strong>
             </a>
-            @* Двете междинни карти са истинските статуси в базата –
-               Подаден и В процес. Имената се вземат от общия списък на
-               статусите, за да не може надписът на картата и стойността,
-               която сървърът разпознава, да се разминат. *@
+            @* Двете междинни карти са истинските статуси в базата — Подаден и
+               В процес. Стойността, която влиза в адреса, идва от общия списък
+               на статусите, затова не може да се разминее с текста, който
+               сървърът разпознава. Надписите са думите на таблото: „Нови“ е
+               по-ясен за служителя от банковото „Подаден“. *@
             <a asp-page="/Admin/Index" asp-route-filterStatus="@ReportStatuses.New"
                class="admin-stat-card @(Model.FilterStatus == ReportStatuses.New ? "is-active" : null)"
                aria-current="@(Model.FilterStatus == ReportStatuses.New ? "true" : null)">
@@ -184,7 +185,7 @@
                         </a>
 
                         <button type="button" onclick="window.print()">
-                            Принтирай таблото
+                            Отпечатай таблото
                         </button>
                     </div>
                 </details>
@@ -225,7 +226,7 @@
                            там са историята, снимките и полетата за
                            промяна, затова таблото не ги преизгражда. *@
                         <h3>
-                            <a asp-page="/Details" asp-route-id="@report.Id" class="report-title-link">
+                            <a asp-page="/Details" asp-route-id="@report.Id" asp-route-filterStatus="@Model.FilterStatus" class="report-title-link">
                                 @report.Title
                             </a>
                         </h3>
@@ -260,7 +261,7 @@
                        отговарят на въпроса „има ли изобщо снимка“, преди
                        служителят да отвори сигнала; кликът им сочи натам. *@
                     <div class="admin-report-open">
-                        <a class="admin-open-button" asp-page="/Details" asp-route-id="@report.Id">
+                        <a class="admin-open-button" asp-page="/Details" asp-route-id="@report.Id" asp-route-filterStatus="@Model.FilterStatus">
                             Отвори сигнала
                         </a>
 
@@ -281,7 +282,7 @@
                                        базата и дали типът му е разрешен,
                                        затова маскиран изпълним файл не
                                        се показва. *@
-                                    <a asp-page="/Details" asp-route-id="@report.Id" title="Виж снимката в сигнала">
+                                    <a asp-page="/Details" asp-route-id="@report.Id" asp-route-filterStatus="@Model.FilterStatus" title="Виж снимката в сигнала">
                                         <img class="admin-image-thumb"
                                              src="/report-images/@image.Id"
                                              alt="Снимка към сигнал #@report.Id" />

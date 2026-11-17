@@ -31,7 +31,7 @@
     window.gm_authFailure = window.civicHideStreetView;
 </script>
 @* Скриптът на Google не идва сам с страницата: тръгва чак когато човекът
-   натисне „Уличен изглед". При отказ на ключа Google изписва собственото
+   натисне „Уличен изглед“. При отказ на ключа Google изписва собственото
    си прозорце с грешка право върху формата и то не може да бъде скрито
    отвън; панорамата пък е спомагателна, повечето подаващи я не отварят,
    затова и тя, и нейният скрипт чакат един клик. *@
@@ -49,8 +49,13 @@
            името на избраната снимка, а нейното съдържание изобщо не тръгва. *@
         <form method="post" enctype="multipart/form-data">
             @* ModelOnly оставя тук само грешките, които нямат собствено поле
-               — например броят на снимките — и те не се дублират под полето. *@
-            <div asp-validation-summary="ModelOnly" class="text-danger validation-summary"></div>
+               — например броят на снимките — и те не се дублират под полето.
+               aria-live казва на екранния четец да прочете новите думи, след
+               като проверката в браузъра попълни раздела; без него человекът
+               чува същото съдържание като при отваряне на страницата и не
+               разбира, че грешката току-що се е появила. "polite", а не
+               "assertive", защото прекъсването наред с изреченото затруднява. *@
+            <div asp-validation-summary="ModelOnly" class="text-danger validation-summary" aria-live="polite"></div>
 
             <div class="form-field">
                 <label asp-for="Report.Title" class="form-label">
@@ -102,8 +107,8 @@
                         <button id="map-search-button" type="button" class="btn-civic-secondary">Търси</button>
                     </div>
 
-                    @* aria-live кара екранния чет да прочете новия резултат, без
-                       да прекъсва човекът, който още въвежда в полето. *@
+                    @* aria-live кара екранния четец да прочете новия резултат, без
+                       да прекъсва човека, който още въвежда в полето. *@
                     <p id="map-search-message" class="status-message" aria-live="polite"></p>
 
                     @* Координатите никой не ги пише с ръка: скриптът ги слага в
@@ -124,7 +129,7 @@
                             <span class="panel-icon" aria-hidden="true">⌖</span>
                             <h2>Карта</h2>
                         </div>
-                        @* role="application" казва на екранния чет, че клавишите
+                        @* role="application" казва на екранния четец, че клавишите
                            управляват картата, а не поредица от връзки в страницата. *@
                         <div id="report-location-map" role="application" aria-label="Карта за избор на местоположение"></div>
                         <p id="selected-location-message" class="status-message" aria-live="polite"></p>
@@ -177,7 +182,7 @@
                             {
                                 <li>
                                     <a class="duplicate-link" asp-page="/Details" asp-route-id="@match.Id">@match.Title</a>
-                                    <span class="duplicate-meta">@match.Address · на @(Math.Round(match.DistanceMeters)) m от теб</span>
+                                    <span class="duplicate-meta">@match.Address · на @(Math.Round(match.DistanceMeters)) метра от теб</span>
                                 </li>
                             }
                         </ul>
@@ -208,7 +213,7 @@
 
             <div class="form-field">
                 <label class="form-label">
-                    Оценка за сериозност (1-5) <span class="required-mark">*</span>
+                    Оценка за сериозност (1–5) <span class="required-mark">*</span>
                 </label>
                 @* Скалата е прекъсната от едно до пет, затова са радиобутони,
                    а не числово поле: петте носят едно и също име, така че до
@@ -244,7 +249,7 @@
             </div>
 
             @* Отказът е връзка, не бутон: той не праща нищо и не оставя
-               непълнен сигнал в опашката на сървъра. Редът е последният и
+               недопълнен сигнал в опашката на сървъра. Редът е последният и
                се отличава с отделна лента, за да е ясно, че след него нищо
                няма — форматът приключва тук. *@
             <div class="form-actions">
@@ -267,17 +272,39 @@
         <dialog id="duplicate-dialog" class="duplicate-dialog" aria-labelledby="duplicate-dialog-title">
             <div class="duplicate-dialog-inner">
                 <button type="button" class="duplicate-dialog-close" data-close aria-label="Затвори прозореца">✕</button>
-                <img id="duplicate-dialog-photo" class="duplicate-dialog-photo" alt="" hidden />
-                <p id="duplicate-dialog-kicker" class="duplicate-dialog-kicker">ВЕЧЕ ПОДАДЕН СИГНАЛ</p>
+                <img id="duplicate-dialog-photo" class="duplicate-dialog-photo" alt="Снимка към вече подадения сигнал" hidden />
+                @* Надписът и обяснението идват от скрипта: прозорецът се
+                   отваря единствено след проверката за близък сигнал, а
+                   тогава двете се подменят според това чий е сигналът.
+                   Една и съща фраза на две места винаги остава с едната
+                   версия, затова текстът живее само в скрипта, а тук
+                   елементите са празни. *@
+                <p id="duplicate-dialog-kicker" class="duplicate-dialog-kicker"></p>
                 <h2 id="duplicate-dialog-title"></h2>
                 <p id="duplicate-dialog-address" class="duplicate-dialog-address"></p>
                 <ul id="duplicate-dialog-meta" class="duplicate-dialog-meta"></ul>
-                @* Текстът е само един ред: прозорецът изскача за няколко
-                   секунди и човекът трябва да разбере избора си, без да
-                   чете параграф. *@
-                <p id="duplicate-dialog-note" class="duplicate-dialog-note">
-                    Потвърди съществуващия сигнал вместо нов за същото място.
-                </p>
+                <p id="duplicate-dialog-note" class="duplicate-dialog-note"></p>
+                @* Оценката пътува с потвърждението в същата заявка и се
+                   записва с него: човекът казва с един клик и двете неща за
+                   сигнала, който току-що разпозна. Полето е по желание и
+                   няма предварително отметнат отговор — нищо не се записва
+                   вместо човека. При собствен сигнал отпада заедно с бутона
+                   за потвърждение: подателят не участва в оценката си. *@
+                <fieldset id="duplicate-severity" class="duplicate-severity" hidden>
+                    <legend>
+                        Оценка за сериозност (1–5)
+                        <span class="duplicate-severity-optional">по желание</span>
+                    </legend>
+                    <div class="severity-rating-group">
+                        @for (int i = 1; i <= 5; i++)
+                        {
+                            <label class="severity-radio">
+                                <input type="radio" name="duplicate-severity" value="@i" />
+                                <span>@i</span>
+                            </label>
+                        }
+                    </div>
+                </fieldset>
                 <div class="duplicate-dialog-actions">
                     <button type="button" id="duplicate-confirm-button" class="btn-civic-primary duplicate-confirm-button" data-id="">
                         Потвърждавам този сигнал
@@ -314,6 +341,10 @@
         const searchInput = document.getElementById("map-address-search");
         const searchButton = document.getElementById("map-search-button");
         const searchMessage = document.getElementById("map-search-message");
+        // Думата за близкия сигнал, когато сървърът вече е спрял поста. Тя
+        // няма да е тук при първото попълване — затова всяко ползване на
+        // нея отдолу проверява дали съществува.
+        const blockedNotice = document.querySelector(".duplicate-blocked");
         // Имената на скритите полета ги определя връзката с модела и тук се
         // повтарят буквално: с по-късо или по-хубаво име постът ги губи.
         const latitudeInput = document.getElementById("Report_Latitude");
@@ -325,7 +356,6 @@
         const initialPosition = [41.5667, 23.7333];
 
         const map = L.map(mapElement).setView(initialPosition, 16);
-        window.reportMap = map;
 
         L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
             // Плочите спират на мащаб 19, затова по-високите нива се уголемяват
@@ -672,6 +702,12 @@
             searchButton.textContent = "Търсене…";
             searchMessage.textContent = "";
 
+            // Чужд сървър, който мълчи, не е грешка — той е чакане без
+            // край. Едно ограничение за двете търсения връща бутона и
+            // думата, ако Nominatim не отговори за десет секунди.
+            const controller = new AbortController();
+            const deadline = window.setTimeout(() => controller.abort(), 10000);
+
             try {
                 // Nominatim тук не познава адреса с представка „ул.“, но я
                 // разбира без нея. Повтаряме само при празен резултат:
@@ -697,7 +733,10 @@
                     // жителите и да се четат на кирилица в подсказката долу.
                     url.searchParams.set("accept-language", "bg");
 
-                    const response = await fetch(url.toString(), { headers: { "Accept": "application/json" } });
+                    const response = await fetch(url.toString(), {
+                        headers: { "Accept": "application/json" },
+                        signal: controller.signal
+                    });
                     if (!response.ok) throw new Error("Search failed");
                     return await response.json();
                 };
@@ -731,11 +770,16 @@
                 // избран; маркерът все пак остава за ръчната корекция.
                 searchMessage.textContent = "Намерено: " + result.display_name + ". Избери точката на самия проблем върху картата.";
             } catch (error) {
-                searchMessage.textContent = "Търсенето не успя. Провери връзката и опитай отново.";
+                // Двете причини се казват различно: при мълчащ сървър
+                // човекът не е счупил нищо и не трябва да чете за връзка.
+                searchMessage.textContent = error instanceof DOMException && error.name === "AbortError"
+                    ? "Търсенето не завърши навреме. Опитай отново."
+                    : "Търсенето не успя. Провери връзката и опитай отново.";
             } finally {
                 // Подписът и активното състояние се връщат и при успех, и при
                 // грешка: в противен случай един отказ би оставил бутона
                 // заключен за цялата сесия на попълване.
+                window.clearTimeout(deadline);
                 searchButton.disabled = false;
                 searchButton.textContent = "Търси";
             }
@@ -778,9 +822,9 @@
             // Същата проверка като на сървъра. Тук е, защото след отказания
             // пост прикачените снимки не се възстановяват — браузърът не
             // позволява да се попълни файловото поле отново.
-            if (!notice.hidden && !acknowledge.checked) {
+            if (blockedNotice && !acknowledge.checked) {
                 event.preventDefault();
-                notice.scrollIntoView({ behavior: "smooth", block: "center" });
+                blockedNotice.scrollIntoView({ behavior: "smooth", block: "center" });
             }
         });
     });
@@ -870,7 +914,7 @@
                 remove.type = "button";
                 remove.className = "photo-remove-button";
                 remove.textContent = "Премахни";
-                // Надписът за екранния чет носи името на файла: пет еднакви
+                // Надписът за екранния четец носи името на файла: пет еднакви
                 // копчета „Премахни“ не казват кое какво маха.
                 remove.setAttribute("aria-label", "Премахни " + file.name);
 
@@ -964,6 +1008,8 @@
     // сигнал се потвърждава с клик, а различен проблем просто се затваря и
     // попълването продължава. Собственият сигнал е трети случай: той не се
     // потвърждава от автора си, затова за него текстът е друг и бутонът отпада.
+    // Към потвърждението се предлага и оценка за сериозността — по желание,
+    // за да не се губи вторият клик по страницата на сигнала.
     (function () {
         const dialog = document.getElementById("duplicate-dialog");
         if (!dialog) return;
@@ -978,12 +1024,13 @@
         const differentButton = document.getElementById("duplicate-different-button");
         const openLink = document.getElementById("duplicate-open-link");
         const statusBox = document.getElementById("duplicate-dialog-status");
+        const severityBox = document.getElementById("duplicate-severity");
         // Отметката живее във формата, не в прозореца: само така постът я
         // носи на сървъра. Прозорецът я попълва от името на човека, когато
         // той каже, че проблемът е различен.
         const acknowledge = document.getElementById("Report_DuplicateAcknowledged");
 
-        // Native <dialog> дава моддалност, блокировка на tab-редата, замъглен
+        // Native <dialog> дава модалност, блокировка на tab-редата, замъглен
         // фон и затваряне с Esc. Без него същото съдържание се показва като
         // насложен слой.
         const modal = typeof dialog.showModal === "function";
@@ -1062,7 +1109,7 @@
 
             metaList.textContent = "";
             addMeta(data.status);
-            if (data.distance) addMeta("на " + data.distance + " m от теб");
+            if (data.distance) addMeta("на " + data.distance + " метра от теб");
             if (data.priority) {
                 addMeta(data.priority + (data.priorityScore ? ": " + data.priorityScore : ""));
             }
@@ -1093,6 +1140,13 @@
             // би отхвърлил такъв опит, а на човека не трябва да му се предлага
             // действие, което не му работи.
             confirmButton.hidden = Boolean(data.mine);
+            // Прозорецът се отваря за друг сигнал, затова носената преди
+            // оценка се изтрива: изборът за един проблем не става глас за
+            // следващия, без човекът да е казал нещо.
+            for (const input of severityBox.querySelectorAll("input")) {
+                input.checked = false;
+            }
+            severityBox.hidden = confirmButton.hidden;
             openLink.href = "/Details/" + encodeURIComponent(currentId);
             setStatus("", null);
 
@@ -1140,6 +1194,11 @@
             const body = new FormData();
             if (token) body.append(token.name, token.value);
 
+            // Оценката тръгва само ако е избрана: без нея сървърът записва
+            // потвърждението и нищо повече.
+            const chosenRating = severityBox.querySelector("input:checked");
+            if (chosenRating) body.append("rating", chosenRating.value);
+
             confirmButton.disabled = true;
             setStatus("Записване…", null);
 
@@ -1147,6 +1206,8 @@
                 // Изпращането е към същия обработчик, който ползва бутонът
                 // „Потвърди този проблем“ на страницата на сигнала, затова и
                 // правилата са едни и същи: без опит за двойно потвърждение.
+                // Разликата е една — тук с поста върви и оценката, ако е
+                // избрана, и се записва в същата транзакция.
                 const response = await fetch("/Details/" + encodeURIComponent(id) + "?handler=Confirm", {
                     method: "POST",
                     body,
@@ -1154,7 +1215,9 @@
                 });
 
                 if (response.ok) {
-                    setStatus("Потвърждението е записано.", "saved");
+                    setStatus(chosenRating
+                        ? "Потвърждението и оценката са записани."
+                        : "Потвърждението е записано.", "saved");
                     answered.add(id);
                     // Началната страница е крайната точка: сигналът с вече
                     // вдигнат приоритет е там, а форматът зад гърба на

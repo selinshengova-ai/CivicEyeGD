@@ -106,14 +106,20 @@
                                    изтегляне. *@
                                 @foreach (var image in Model.Report.Images)
                                 {
-                                    <a href="javascript:void(0)" 
-                                       class="open-image-modal" 
+                                    @* Бутон, а не връзка с javascript: адрес.
+                                       Връзката се активира само с Enter,
+                                       докато бутонът се активира и с Space;
+                                       освен това екранният четец обявява
+                                       връзка без дестинация като празно
+                                       място, което не води никъде. *@
+                                    <button type="button"
+                                       class="open-image-modal"
                                        data-image-src="/report-images/@image.Id">
-                                        @* Текстът за четящите програми е обща
+                                        @* Етикетът за екранния четец е обща
                                            фраза, а не описание на кадъра: тук
                                            за снимката е известен само номерът ѝ. *@
                                         <img src="/report-images/@image.Id" alt="Снимка към сигнала" />
-                                    </a>
+                                    </button>
                                 }
                             </div>
                         </div>
@@ -304,11 +310,12 @@
 
                                 <div class="admin-field">
                                     <label class="admin-field-label" for="office-comment">Бележка</label>
-                                    @* Бележката е ограничена до 500 знака,
-                                       защото тя не остава служебна: влиза в
-                                       публичния дневник на сигнала. *@
+                                    @* Таванът идва от същата константа, с която
+                                       сървърът съкращава текста: бележката не
+                                       остава служебна — влиза в публичния
+                                       дневник на сигнала. *@
                                     <textarea id="office-comment" name="comment" class="form-textarea"
-                                              rows="3" maxlength="500"
+                                              rows="3" maxlength="@DetailsModel.MaxCommentLength"
                                               placeholder="Какво е направено или защо сигналът се отхвърля."></textarea>
                                 </div>
 
@@ -328,6 +335,7 @@
                                изпрати и заявка за изтриване. Токенът идва от
                                същия помощник, а сървърът приема само запис. *@
                             <form method="post" asp-page-handler="Delete" asp-route-id="@Model.Report.Id"
+                                  asp-route-filterStatus="@Model.FilterStatus"
                                   class="admin-delete-form"
                                   data-confirm-text="Изтриването е необратимо. Сигнал #@Model.Report.Id и снимките му ще изчезнат заедно с оценките, потвържденията и дневника. Да се изтрие ли?">
                                 <button type="submit" class="admin-delete-button">Изтрий сигнала</button>
@@ -445,7 +453,7 @@
                                един ред текст и връзка навън, а точността на
                                качването се преценяваше чак след отварянето
                                на голямата карта. Контейнерът е готов празен,
-                               плънките идват при зареждането. *@
+                               плочките идват при зареждането. *@
                             <div id="detailsMiniMap"
                                  class="details-mini-map"
                                  data-lat="@Model.Report.Latitude.Value.ToString(System.Globalization.CultureInfo.InvariantCulture)"
@@ -474,20 +482,23 @@
 <!-- Модален прозорец за снимки -->
 @* Прозорецът за преглед е готов в изпратения HTML от началото и се
    показва само с промяна на видимостта: няма второ зареждане на
-   страницата, а изображението се пълни чак при щракване. *@
+   страницата, а изображението идва чак при щракване. *@
 @* Слойът стои извън проверката за съществуващ сигнал, защото скриптът
    го търси по номер винаги: изчисти ли го при липсващ сигнал, същият
    скрипт спира дотам и не закача нищо друго в страницата. *@
-<div id="imageModal" class="image-modal">
-    <span class="image-modal-close">&times;</span>
-    <img class="image-modal-content" id="modalImage" src="" alt="Преглед на снимка" />
+<div id="imageModal" class="image-modal" role="dialog" aria-modal="true" aria-label="Преглед на снимка">
+    @* Кръстът е бутон с име: като надпис той не се фокусира и не се
+       обявява от четящите програми, а затварянето е задължително
+       действие за всеки слой. *@
+    <button type="button" class="image-modal-close" aria-label="Затвори прегледа на снимката">&times;</button>
+    <img class="image-modal-content" id="modalImage" alt="Преглед на снимка" />
 </div>
 
 @section Scripts {
     @* Leaflet идва в секцията за скриптове, тоест след тялото, за да
        съществува контейнерът на мини-картата, когато кодът тръгва. Същата
        точна версия като на публичната карта, за да изглежда еднакво.
-       Плънките на OpenStreetMap не искат ключ и акаунт, а липсата им се
+       Плочките на OpenStreetMap не искат ключ и акаунт, а липсата им се
        различава от липсата на сигнал: без библиотеката се чете ред текст. *@
     <link rel="stylesheet"
           href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
@@ -545,16 +556,12 @@
             const modal = document.getElementById("imageModal");
             const modalImg = document.getElementById("modalImage");
             const closeBtn = document.querySelector(".image-modal-close");
-            // Връзките се събират наведнъж и всяка получава свой слушател, за да
-            // не се разпитва документа отново при всяко отваряне на снимка.
-            const imageLinks = document.querySelectorAll(".open-image-modal");
+            // Бутоните се събират наведнъж и всеки получава свой слушател, за
+            // да не се разпитва документа отново при всяко отваряне на снимка.
+            const imageButtons = document.querySelectorAll(".open-image-modal");
 
-            imageLinks.forEach(link => {
-                link.addEventListener("click", function (e) {
-                    // Спираме действието по подразбиране на връзката: нейният
-                    // адрес е поставен само за вид, а превъртане не трябва да
-                    // се случи.
-                    e.preventDefault();
+            imageButtons.forEach(button => {
+                button.addEventListener("click", function () {
                     // Пътят се чете от атрибута с името data-image-src, а не от
                     // реда на елементите: той вече е същият, с който малката
                     // картина е заредена.

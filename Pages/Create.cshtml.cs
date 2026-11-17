@@ -83,9 +83,9 @@ public class CreateModel : PageModel
         return new JsonResult(new { matches = await DescribeAsync(matches) });
     }
 
-    // Близките записи се връщат като по-богати редове за скрипта. Полетата,
-    // които тестът и старият код вече четат (Id, Status, DistanceMeters),
-    // остават с същите имена; добавят се само нови, за да не се чупи нищо.
+    // Близките записи се връщат като по-богати редове за скрипта. Трите
+    // полета, които тестовете и диалогът четат и досега (Id, Status,
+    // DistanceMeters), запазват имената си; добавят се само нови.
     private async Task<IReadOnlyList<object>> DescribeAsync(IReadOnlyList<NearbyReport> matches)
     {
         if (matches.Count == 0)
@@ -142,15 +142,16 @@ public class CreateModel : PageModel
                 IsUrgent = isUrgent,
                 // Собствения сигнал не се потвърждава: текстът в прозореца
                 // се сменя, а бутонът отпада. Датата влиза в него, защото
-                // „този, който подаде преди месец" е друг от „този, който
-                // току-що опита два пъти".
+                // сигнал, подаден преди месец, е друг случай от сигнал,
+                // опитан току-що два пъти: при втория человекът повтаря
+                // собствения си запис, при първия просто не го помни.
                 IsMine = IsOwnReport(match),
                 CreatedAtText = match.CreatedAt.ToDayText()
             };
         }).ToList();
     }
 
-    // Един сигнал е „мой", когато авторът му е влезлият потребител.
+    // Един сигнал е „мой“, когато авторът му е влезлият потребител.
     // Сравнението е на ниво страница, не в базата: близките се избират
     // по категория и разстояние, а не по автор.
     public bool IsOwnReport(NearbyReport match) =>
@@ -238,7 +239,7 @@ public class CreateModel : PageModel
                 _imageStorage.Delete(fileName);
             }
             _logger.LogError(ex, "Неуспешно записване на нов сигнал.");
-            ModelState.AddModelError(string.Empty, "Сигналът не беше записан заради временен проблем. Моля, опитай отново.");
+            ModelState.AddModelError(string.Empty, "Сигналът не беше записан заради временен проблем. Опитай отново след малко.");
             return Page();
         }
 
@@ -314,28 +315,35 @@ public class CreateModel : PageModel
         }
     }
 
+    // Всеки текст, който би могъл да се появи пред човека, е написан
+    // тук и на български: без собствен ErrorMessage се вижда
+    // стандартното английско съобщение на библиотеката.
     public class ReportInput
     {
         [Required(ErrorMessage = "Въведи заглавие.")]
-        [StringLength(100)]
+        [StringLength(100, ErrorMessage = "Заглавието не може да е по-дълго от 100 знака.")]
         public string Title { get; set; } = string.Empty;
 
         [Required(ErrorMessage = "Избери категория.")]
         public string Category { get; set; } = string.Empty;
 
         [Required(ErrorMessage = "Въведи местоположение.")]
-        [StringLength(200)]
+        [StringLength(200, ErrorMessage = "Местоположението не може да е по-дълго от 200 знака.")]
         public string Address { get; set; } = string.Empty;
 
         [Required(ErrorMessage = "Въведи описание.")]
-        [StringLength(2000)]
+        [StringLength(2000, ErrorMessage = "Описанието не може да е по-дълго от 2000 знака.")]
         public string Description { get; set; } = string.Empty;
 
         public double? Latitude { get; set; }
         public double? Longitude { get; set; }
 
-        [Required(ErrorMessage = "Моля, изберете оценка за сериозност.")]
-        [Range(1, 5, ErrorMessage = "Оценката трябва да е между 1 и 5.")]
+        // Оценката винаги идва като число: форматът я изисква, а при
+        // ръчно сглобена заявка началната тройка не оставя сигнал без
+        // оценка. Затова тук проверява само Range — изискване за
+        // задължителност по поле, което не може да остане празно, е
+        // мъртъв код.
+        [Range(SeverityRating.MinRating, SeverityRating.MaxRating, ErrorMessage = SeverityRating.RangeErrorMessage)]
         public int Severity { get; set; } = 3; // По подразбиране 3
 
         // Отметнато, когато потребителят е виждал предупреждението за

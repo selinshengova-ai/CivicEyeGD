@@ -68,19 +68,24 @@ public class DetailsModel : PageModel
     // трябва да е върху същото число, което видът показва.
     public IReadOnlyList<StatusHistory> DiarySteps { get; private set; } = new List<StatusHistory>();
 
-    // Последната намеса или null, ако общината не се е мякала. Чете се от
-    // самия дневник: второ число за едно и също нещо с времето се разминава
-    // с първото.
-    public DateTime? LastChange => DiarySteps.Count > 0 ? DiarySteps[0].ChangedAt : null;
+    // Филтърът, с който служителят е дошъл от таблото. Страницата го пази
+    // само за да го върне на формата за изтриване: без него служителят се
+    // озовава на нефилтриран списък след всяка заявка.
+    public string? FilterStatus { get; private set; }
 
-    public async Task<IActionResult> OnGetAsync(int id)
+    public async Task<IActionResult> OnGetAsync(int id, string? filterStatus = null)
     {
+        FilterStatus = filterStatus;
         await LoadReportAsync(id);
         if (Report is null) return NotFound();
         return Page();
     }
 
-    public async Task<IActionResult> OnPostConfirmAsync(int id)
+    // Потвърждението приема и оценка, но само когато идва от прозореца за
+    // вече подаден сигнал: там човекът току-що е разпознал проблема и
+    // неговата сериозност му е известна, затова двата гласа се записват в
+    // една заявка. Страницата на сигнала си остава с две отделни бутона.
+    public async Task<IActionResult> OnPostConfirmAsync(int id, int? rating = null)
     {
         await LoadReportAsync(id);
         if (Report is null) return NotFound();
@@ -103,12 +108,26 @@ public class DetailsModel : PageModel
             return BadRequest("Вече си потвърдил този проблем.");
         }
 
+        // Проверката е преди какъвто и да е запис: отказът по формата на
+        // данните не трябва да остави потвърждение без оценка, нито обратно.
+        if (rating is < SeverityRating.MinRating or > SeverityRating.MaxRating)
+        {
+            return BadRequest(SeverityRating.RangeErrorMessage);
+        }
+
         _context.Confirmations.Add(new Confirmation
         {
             ReportId = id,
             UserId = userId,
             CreatedAt = DateTime.UtcNow
         });
+
+        if (rating.HasValue)
+        {
+            // Същите правила като при отделното гласуване: един ред на
+            // човек, поправка вместо втори запис.
+            await SetRatingAsync(id, userId, rating.Value);
+        }
 
         // Две щраквания подред: и двете минават през проверката, преди
         // първият запис да е готов. Тогава правилото за уникалност спира
@@ -124,7 +143,9 @@ public class DetailsModel : PageModel
         }
 
         await LoadReportAsync(id);
-        SuccessMessage = "Благодарим! Потвърждението ти е записано.";
+        SuccessMessage = rating.HasValue
+            ? "Благодарим! Потвърждението и оценката ти са записани."
+            : "Благодарим! Потвърждението ти е записано.";
         return Page();
     }
 
@@ -133,9 +154,9 @@ public class DetailsModel : PageModel
         await LoadReportAsync(id);
         if (Report is null) return NotFound();
 
-        if (rating < 1 || rating > 5)
+        if (rating < SeverityRating.MinRating || rating > SeverityRating.MaxRating)
         {
-            ErrorMessage = "Оценката трябва да е между 1 и 5.";
+            ErrorMessage = SeverityRating.RangeErrorMessage;
             return Page();
         }
 
@@ -154,17 +175,7 @@ public class DetailsModel : PageModel
             return Page();
         }
 
-        var existing = await _context.SeverityRatings.FirstOrDefaultAsync(r => r.ReportId == id && r.UserId == userId);
-
-        if (existing is null)
-        {
-            _context.SeverityRatings.Add(new SeverityRating { ReportId = id, UserId = userId, Rating = rating, CreatedAt = DateTime.UtcNow });
-        }
-        else
-        {
-            existing.Rating = rating;
-            existing.CreatedAt = DateTime.UtcNow;
-        }
+        await SetRatingAsync(id, userId, rating);
 
         try
         {
@@ -179,6 +190,35 @@ public class DetailsModel : PageModel
         await LoadReportAsync(id);
         SuccessMessage = "Оценката ти е записана.";
         return Page();
+    }
+
+    // Един ред с оценка на човек: първата се записва, а следващата я
+    // поправя, вместо да добавя втори. И двата пътя минават оттук —
+    // отделното гласуване и оценката, която пристига с потвърждението от
+    // прозореца за дубликат, — за да не казват различни неща за едно и
+    // също правило. Самият запис не завършва тук: потвърждението и
+    // оценката трябва да станат в една заявка, затова SaveChanges
+    // остава на извикващия.
+    private async Task SetRatingAsync(int id, string userId, int rating)
+    {
+        var existing = await _context.SeverityRatings
+            .FirstOrDefaultAsync(r => r.ReportId == id && r.UserId == userId);
+
+        if (existing is null)
+        {
+            _context.SeverityRatings.Add(new SeverityRating
+            {
+                ReportId = id,
+                UserId = userId,
+                Rating = rating,
+                CreatedAt = DateTime.UtcNow
+            });
+        }
+        else
+        {
+            existing.Rating = rating;
+            existing.CreatedAt = DateTime.UtcNow;
+        }
     }
 
     // Колко тежи една точка от корекцията по скалата 0..100. Числото стои
@@ -199,8 +239,9 @@ public class DetailsModel : PageModel
     // повече, отколкото сървърът приема.
     public const int MaxCommentLength = ReportOfficeService.MaxCommentLength;
 
-    // Намесва се същата услуга като в таблото, затова статусът, бележката
-    // и корекцията изглеждат по един и същи начин и на двете места.
+    // Единственото място, от което служителят променя сигнал, е този
+    // панел: записването минава през ReportOfficeService, същата услуга,
+    // която изтрива под него, за да важи едно и също правило и на двете.
     public async Task<IActionResult> OnPostOfficeAsync(
         int id,
         string newStatus,
@@ -230,8 +271,9 @@ public class DetailsModel : PageModel
 
         await LoadReportAsync(id);
 
-        // Двете съобщения са едни и същи и на таблото, и тук: service-ът
-        // решава дали е имало намеса, страницата само я описва.
+        // Услугата решава дали изобщо е имало намеса; страницата само я
+        // описва, затова и двете изречения идват от Outcome, а не от
+        // сравнение на полетата преди и след записването.
         SuccessMessage = outcome == ReportOfficeService.Outcome.Saved
             ? $"Промените по сигнала са записани. Сега е „{Report!.Status}“."
             : "Нищо не се промени — статусът и корекцията са същите, а бележка не е оставена.";

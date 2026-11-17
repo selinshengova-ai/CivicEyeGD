@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using CivicEyeGD.Data;
 using CivicEyeGD.Services;
 using Microsoft.AspNetCore.Authorization;
@@ -7,9 +8,10 @@ using Microsoft.EntityFrameworkCore;
 
 namespace CivicEyeGD.Pages;
 
-// Публичната карта е обещанието на проекта: без вход тя не е публична.
-// Тук няма Google нищо: картата е само Leaflet, за да остане лека и да
-// не показва грешка на чужд сервиз пред гражданите.
+// Публичната карта е лицето на проекта пред гражданите, затова се
+// обслужва и без вход. Тук няма нищо от Google: картата е само Leaflet,
+// за да остане лека, да не иска чужд ключ и да не показва грешка на
+// чужд сервиз пред гражданите.
 [AllowAnonymous]
 public class MapModel : PageModel
 {
@@ -99,7 +101,8 @@ public class MapModel : PageModel
 
         // Приключените сигнали остават в числата, но не в изгледа по
         // подразбиране: картата е за това какво чака общината, а не за
-        // архив. Отметката ги връща, когато някой иска историчен изглед.
+        // архив. Връзката над картата ги показва, когато някой търси
+        // историчен изглед.
         ClosedCount = reports.Count(report => report.IsClosed);
 
         var shown = ShowClosedReports
@@ -150,6 +153,12 @@ public class MapModel : PageModel
         public string Category { get; set; } = string.Empty;
         public string Address { get; set; } = string.Empty;
         public string Status { get; set; } = string.Empty;
+
+        // Трябва тук, защото по него се преценява isUrgent за маркерите;
+        // в JSON-а не влиза — картата го прочете веднъж, преди да пусне
+        // готовата отметка, а самата намеса е число на служителя, не
+        // нещо, което гражданинът търси в картата.
+        [JsonIgnore]
         public int AdminPriorityAdjustment { get; set; }
         public double Latitude { get; set; }
         public double Longitude { get; set; }
