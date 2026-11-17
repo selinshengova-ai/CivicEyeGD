@@ -68,7 +68,11 @@ public static class IndependentVotes
             // Core превръща в SQL само изрази, не извиквания на CLR
             // метод. Промяната в правилото затова се прави на двете
             // места в този файл — те са един до друг точно за това.
-            where rating.UserId != report.UserId
+            // В SQL NULL не е равен и не е различен от нищо, а изтрит
+            // акаунт оставя подателя именно такъв. Празният текст го
+            // връща към правилото отгоре: липсващ подател и реален
+            // гласуващ са различни хора.
+            where rating.UserId != (report.UserId ?? string.Empty)
             group rating by rating.ReportId into grouped
             select new
             {
@@ -90,8 +94,9 @@ public static class IndependentVotes
             from confirmation in context.Confirmations.AsNoTracking()
             join report in context.Reports.AsNoTracking() on confirmation.ReportId equals report.Id
             // Пак сравнение на местата, не IsIndependent: заявката трябва
-            // да остане преводима в SQL.
-            where confirmation.UserId != report.UserId
+            // да остане преводима в SQL. Празният текст пази същото
+            // поведение при изтрит подател, както при оценките отгоре.
+            where confirmation.UserId != (report.UserId ?? string.Empty)
             group confirmation by confirmation.ReportId into grouped
             select new
             {
