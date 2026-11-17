@@ -31,6 +31,10 @@
 .reports-filters label { display: block; margin-bottom: 8px; color: var(--civic-muted); font-size: 12px; font-weight: 700; }
 .reports-filters input, .reports-filters select { width: 100%; min-height: 44px; padding: 9px 11px; border: 1px solid #D8E1D9; border-radius: 9px; background: #FFFFFF; color: #20352D; font: inherit; font-size: 13px; }
 .reports-filters input:focus, .reports-filters select:focus { border-color: #527C67; outline: 3px solid rgba(82, 124, 103, .13); }
+/* Горната рамка е на 13% алфа — за мишката стига, но човек без мишка
+   трябва да вижда къде е фокусът: плътният пръстен в токена се вижда и
+   на светлата, и на тъмната тема, докато прозрачното зелено изчезва на бяло. */
+.reports-filters input:focus-visible, .reports-filters select:focus-visible { outline: 3px solid var(--civic-accent-text); outline-offset: 2px; }
 .reports-filter-btn, .reports-reset-btn { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; padding: 0 15px; border: 0; border-radius: 9px; font-size: 13px; font-weight: 700; text-decoration: none; white-space: nowrap; }
 .reports-filter-btn { background: #123B32; color: #FFFFFF; }
 .reports-filter-btn:hover { background: #1B5144; }
@@ -56,8 +60,6 @@
 .report-meta strong { color: var(--civic-accent-text); }
 .report-card-bottom { margin-top: auto; padding-top: 5px; }
 .report-status { display: inline-flex; padding: 7px 11px; border: 1px solid #DDE7DD; border-radius: 8px; background: #F3F7F0; color: #315B47; font-size: 12px; font-weight: 800; }
-.report-map-link { color: #315B47 !important; font-size: 12px; font-weight: 700; text-decoration: none; }
-.report-map-link:hover { text-decoration: underline; }
 
 /* --- Празно състояние --- */
 .reports-empty { padding: 55px 20px; border: 1px dashed var(--civic-border); border-radius: 16px; background: var(--civic-surface); text-align: center; }
@@ -106,11 +108,8 @@ html[data-theme="dark"] #civicMap { border-color: var(--dark-border); }
 .map-message:empty { display: none; }
 
 /* --- Leaflet --- */
-#city-map { width: 100%; height: 450px; min-height: 320px; overflow: hidden; background: #e8eef0; border: 1px solid var(--civic-border); border-radius: 19px; box-shadow: var(--civic-shadow-sm); z-index: 1; }
 .leaflet-container { font-family: "Segoe UI", Inter, Arial, sans-serif; }
-.leaflet-control-zoom, .leaflet-control-layers { overflow: hidden; border: 1px solid #dce5dd !important; border-radius: 11px !important; box-shadow: 0 4px 14px rgba(24, 59, 45, 0.09) !important; }
-.leaflet-control-layers { padding: 6px; color: var(--civic-text); font-size: 13px; }
-.leaflet-control-layers label { margin-bottom: 5px; cursor: pointer; }
+.leaflet-control-zoom { overflow: hidden; border: 1px solid #dce5dd !important; border-radius: 11px !important; box-shadow: 0 4px 14px rgba(24, 59, 45, 0.09) !important; }
 .leaflet-control-attribution { font-size: 10px !important; }
 /* Връзката в авторското право на Leaflet идва със синето на Bootstrap.
    На десет пункта то пада под прага за четимост, затова взема зеленото
@@ -119,13 +118,6 @@ html[data-theme="dark"] #civicMap { border-color: var(--dark-border); }
 .leaflet-popup-content-wrapper { border-radius: 12px; }
 .leaflet-popup-content { line-height: 1.55; }
 .leaflet-popup-content p { margin: 7px 0; }
-.map-legend { display: flex; flex-wrap: wrap; gap: 18px; margin-top: 16px; }
-.map-legend-item { display: inline-flex; align-items: center; gap: 8px; color: var(--civic-muted); font-size: 13px; font-weight: 600; }
-.legend-dot { display: inline-block; width: 10px; height: 10px; flex: 0 0 10px; border-radius: 50%; }
-.legend-new { background: var(--civic-blue); }
-.legend-progress { background: var(--civic-orange); }
-.legend-resolved { background: var(--civic-success); }
-.map-empty-message { min-height: 20px; margin: 12px 0 0; color: var(--civic-muted); font-size: 12px; }
 
 /* --- Детайли (Details) --- */
 .details-page { padding: 40px 20px; background: transparent; }
@@ -181,9 +173,6 @@ html[data-theme="dark"] #civicMap { border-color: var(--dark-border); }
 .details-engagement .details-confirmed-note { margin: 0 0 12px; }
 .details-engagement form + form { margin-top: 10px; }
 .details-engagement .details-vote-note { margin: 0; }
-.details-history-list { list-style: none; padding: 0; margin: 0; }
-.details-history-list li { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid var(--civic-border); font-size: 14px; }
-.details-history-list li:last-child { border-bottom: none; }
 
 /* Двете ленти след действие: едната е за записано, другата за отказано.
    Цветът им идва от общите токени, за да са едни и същи и на телефон,
@@ -295,8 +284,8 @@ html[data-theme="dark"] .details-mini-map { border-color: var(--dark-border); }
     .reports-page { padding: 30px 0 48px; }
     .reports-heading { align-items: flex-start; flex-direction: column; }
     .reports-summary { grid-template-columns: 1fr 1fr; }
-    /* На тясно четирите числа се нареджат по две, а разделителната линия
-       пада пред всяка лява колона, за да не остане черта в въздуха. */
+    /* На тясно четирите числа се нареждат по две, а разделителната линия
+       пада пред всяка лява колона, за да не остане черта във въздуха. */
     .reports-summary-card { padding: 13px 15px; }
     .reports-summary-card:nth-child(odd) { border-left: 0; }
     .reports-summary-card strong { font-size: 23px; }
@@ -343,11 +332,27 @@ html[data-theme="dark"] .details-mini-map { border-color: var(--dark-border); }
     cursor: pointer;
     z-index: 10001;
     transition: color 0.2s;
+    /* Бутон, не надпис: клавиатурата стига до него само ако няма
+       собствена рамка и фон, които да го направят различен от текста. */
+    background: none;
+    border: 0;
+    padding: 0;
+    line-height: 1;
+}
+
+/* Миниатюрите се отварят с бутон, затова носят оформлението на
+   изображението, а не на връзка. */
+.open-image-modal {
+    display: block;
+    padding: 0;
+    border: 0;
+    background: none;
+    cursor: pointer;
 }
 
 .image-modal-close:hover,
 .image-modal-close:focus {
-    color: var(--dark-accent, #d7f36b);
+    color: var(--civic-lime);
     text-decoration: none;
     cursor: pointer;
 }
@@ -381,8 +386,8 @@ html[data-theme="dark"] .details-mini-map { border-color: var(--dark-border); }
 
 /* Която и да е карта е филтър: активната се различава по ръба, не по цвят. */
 .admin-stat-card.is-active {
-    border-color: var(--civic-green, #1b4d3e);
-    box-shadow: 0 4px 14px rgba(18, 59, 50, 0.03), inset 3px 0 0 var(--civic-lime, #d7f36b);
+    border-color: var(--civic-green);
+    box-shadow: 0 4px 14px rgba(18, 59, 50, 0.03), inset 3px 0 0 var(--civic-lime);
 }
 
 .admin-stat-card:hover {
@@ -393,7 +398,7 @@ html[data-theme="dark"] .details-mini-map { border-color: var(--dark-border); }
 .admin-stat-card span {
     font-size: 12px;
     font-weight: 650;
-    color: var(--civic-muted, #66766d);
+    color: var(--civic-muted);
     text-transform: uppercase;
     letter-spacing: 0.5px;
 }
@@ -567,7 +572,7 @@ html[data-theme="dark"] .admin-response-figure em {
     font-weight: 700;
     text-align: center;
     text-decoration: none;
-    transition: background var(--civic-transition, 180ms ease), transform .1s ease;
+    transition: background var(--civic-transition), transform .1s ease;
 }
 
 .admin-open-button:hover {
@@ -579,7 +584,7 @@ html[data-theme="dark"] .admin-response-figure em {
 .admin-open-button:active { transform: translateY(1px); }
 
 .admin-open-button:focus-visible {
-    outline: 3px solid var(--civic-lime, #d7f36b);
+    outline: 3px solid var(--civic-lime);
     outline-offset: 2px;
 }
 
@@ -671,7 +676,7 @@ html[data-theme="dark"] .admin-response-figure em {
     height: 80px;
     object-fit: cover;
     border-radius: 8px;
-    border: 1px solid var(--civic-border, #e0e8e1);
+    border: 1px solid var(--civic-border);
 }
 
 .admin-images a {
@@ -682,7 +687,7 @@ html[data-theme="dark"] .admin-response-figure em {
 
 .admin-images a:hover .admin-image-thumb,
 .admin-images a:focus-visible .admin-image-thumb {
-    border-color: var(--civic-green, #1b4d3e);
+    border-color: var(--civic-green);
 }
 
 /* Действията си имат собствен панел: преди падоха право в текста на
@@ -692,17 +697,9 @@ html[data-theme="dark"] .admin-response-figure em {
     flex-direction: column;
     gap: 12px;
     padding: 16px;
-    border: 1px solid var(--civic-border, #e0e8e1);
-    border-radius: var(--civic-radius-sm, 10px);
-    background: var(--civic-green-soft, #f0f6f1);
-}
-
-/* Статусът, корекцията и бележката са на отделни редове: в тясната
-   колона до картата две полета до еднакво бяха по половин палец всяко. */
-.admin-field-row {
-    display: grid;
-    grid-template-columns: 1fr;
-    gap: 12px;
+    border: 1px solid var(--civic-border);
+    border-radius: var(--civic-radius-sm);
+    background: var(--civic-green-soft);
 }
 
 .admin-field {
@@ -725,18 +722,7 @@ html[data-theme="dark"] .admin-response-figure em {
     color: var(--civic-accent-text);
 }
 
-/* Заглавието на панела: без него трите полета изглеждат като случайна
-   група, а са едно и също решение по сигнала. */
-.admin-actions-title {
-    margin: 0;
-    padding-bottom: 8px;
-    border-bottom: 1px solid var(--civic-border, #e0e8e1);
-    font-size: 12px;
-    font-weight: 800;
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
-    color: var(--civic-accent-text);
-}
+
 
 /* Числото и плъзгачът са един и същ избор по два начина: първото
    за точен запис, второто за бързо движение на мишката. */
@@ -754,7 +740,7 @@ html[data-theme="dark"] .admin-response-figure em {
 .admin-adjust-range {
     flex: 1 1 auto;
     min-width: 0;
-    accent-color: var(--civic-green, #1b4d3e);
+    accent-color: var(--civic-green);
 }
 
 .admin-action-form .form-select,
@@ -769,20 +755,20 @@ html[data-theme="dark"] .admin-response-figure em {
     border: 0;
     border-radius: 9px;
     padding: 11px 14px;
-    background: var(--civic-green, #1b4d3e);
+    background: var(--civic-green);
     color: #fff;
     font-family: inherit;
     font-size: 14px;
     font-weight: 700;
     cursor: pointer;
-    transition: background var(--civic-transition, 180ms ease), transform .1s ease;
+    transition: background var(--civic-transition), transform .1s ease;
 }
 
-.admin-save-button:hover { background: var(--civic-green-hover, #24634e); }
+.admin-save-button:hover { background: var(--civic-green-hover); }
 .admin-save-button:active { transform: translateY(1px); }
 
 .admin-save-button:focus-visible {
-    outline: 3px solid var(--civic-lime, #d7f36b);
+    outline: 3px solid var(--civic-lime);
     outline-offset: 2px;
 }
 
@@ -802,7 +788,7 @@ html[data-theme="dark"] .admin-response-figure em {
 }
 
 .admin-delete-button {
-    border: 1px solid var(--civic-danger, #c2413b);
+    border: 1px solid var(--civic-danger);
     border-radius: 9px;
     padding: 8px 13px;
     background: transparent;
@@ -811,16 +797,16 @@ html[data-theme="dark"] .admin-response-figure em {
     font-size: 13px;
     font-weight: 700;
     cursor: pointer;
-    transition: background var(--civic-transition, 180ms ease), color var(--civic-transition, 180ms ease);
+    transition: background var(--civic-transition), color var(--civic-transition);
 }
 
 .admin-delete-button:hover {
-    background: var(--civic-danger, #c2413b);
+    background: var(--civic-danger);
     color: #fff;
 }
 
 .admin-delete-button:focus-visible {
-    outline: 3px solid var(--civic-lime, #d7f36b);
+    outline: 3px solid var(--civic-lime);
     outline-offset: 2px;
 }
 
@@ -836,21 +822,21 @@ html[data-theme="dark"] .admin-response-figure em {
 .admin-notice {
     margin: 0 0 18px;
     padding: 11px 16px;
-    border: 1px solid var(--civic-border, #e0e8e1);
-    border-left: 4px solid var(--civic-green, #1b4d3e);
+    border: 1px solid var(--civic-border);
+    border-left: 4px solid var(--civic-green);
     border-radius: 10px;
-    background: var(--civic-green-soft, #f0f6f1);
+    background: var(--civic-green-soft);
     font-size: 14px;
-    color: var(--civic-text, #1d3028);
+    color: var(--civic-text);
 }
 
 .admin-empty {
     margin: 0;
     padding: 26px;
-    border: 1px dashed var(--civic-border, #e0e8e1);
-    border-radius: var(--civic-radius, 16px);
+    border: 1px dashed var(--civic-border);
+    border-radius: var(--civic-radius);
     text-align: center;
-    color: var(--civic-muted, #66766d);
+    color: var(--civic-muted);
 }
 
 .admin-urgent-detail { margin: 2px 0 0 0; }
@@ -859,13 +845,13 @@ html[data-theme="dark"] .admin-response-figure em {
 .reports-eyebrow {
     display: inline-block;
     margin-bottom: 10px;
-    color: var(--civic-muted, #66766d);
+    color: var(--civic-muted);
     font-size: 12px;
     font-weight: 800;
     letter-spacing: 1.5px;
 }
 
-.reports-eyebrow--danger { color: var(--civic-danger, #c2413b); }
+.reports-eyebrow--danger { color: var(--civic-danger); }
 
 .admin-list-heading { margin-top: 30px; }
 
@@ -879,39 +865,31 @@ html[data-theme="dark"] .admin-notice {
 html[data-theme="dark"] .admin-image-thumb { border-color: var(--dark-border); }
 html[data-theme="dark"] .admin-notice { border-left-color: var(--dark-accent); }
 
-/* Мобилна адаптивност: колоните на картата се нареджат една под друга,
-   а панелът на действията започва отдолу, защото на тясно двете колонки
-   не стигат заедно. */
+/* Мобилна адаптивност: колоните на картата се нареждат една под друга,
+   защото на тясно двете колони не се побират. */
 @media (max-width: 900px) {
     .admin-report-card {
         grid-template-columns: 1fr;
     }
 
-    /* На тясно бутонът слиза под текста и заема целия ред: до половината
-       ширина би изглеждал като второстепенен ред, а е единството
-       действие на картичката. */
-    .admin-open-button {
-        width: 100%;
-    }
-
-    .admin-save-button {
-        width: 100%;
-    }
-
-    /* На телефона и изтриването заема целия ред: до половината ширина
-       бутонът би приличал на второстепенен текст, а не на действие. */
+    /* На тясно трите бутона заемат целия ред: до половината ширина биха
+       приличали на второстепенен текст, а са действията на картичката. */
+    .admin-open-button,
+    .admin-save-button,
     .admin-delete-button {
         width: 100%;
     }
 
-    /* На телефона лентата с трите числа се нареджа по два на ред. */
+    /* На телефона лентата с трите числа се нарежда по два на ред. */
     .admin-meta {
         grid-template-columns: 1fr 1fr;
     }
 }
+
 /* ================= Спешни сигнали =================
-   Маркерът е игла, оцветена по средната сериозност, и
-   пулсира, когато сигналът е 4 или 5 и още не е решен. */
+   Маркерът е игла, оцветена по средната сериозност, а пулсът се
+   включва от приоритета: над прага за спешност и само докато
+   сигналът не е приключен. */
 .civic-pin-wrap {
     position: relative;
     width: 26px;
@@ -973,10 +951,11 @@ html[data-theme="dark"] .admin-notice { border-left-color: var(--dark-accent); }
     flex-wrap: wrap;
     align-items: center;
     gap: 8px 18px;
+    margin-top: 16px;
     padding: 12px 24px;
-    border-top: 1px solid var(--civic-border, #e0e8e1);
+    border-top: 1px solid var(--civic-border);
     font-size: 0.82rem;
-    color: var(--civic-muted, #66766d);
+    color: var(--civic-muted);
 }
 
 .map-legend span {
@@ -986,6 +965,7 @@ html[data-theme="dark"] .admin-notice { border-left-color: var(--dark-accent); }
 }
 
 .legend-dot {
+    display: inline-block;
     width: 11px;
     height: 11px;
     border-radius: 50%;
@@ -1033,9 +1013,9 @@ html[data-theme="dark"] .admin-notice { border-left-color: var(--dark-accent); }
     flex-wrap: wrap;
     gap: 8px 22px;
     padding: 14px 24px;
-    border-top: 1px solid var(--civic-border, #e0e8e1);
+    border-top: 1px solid var(--civic-border);
     font-size: 0.82rem;
-    color: var(--civic-muted, #66766d);
+    color: var(--civic-muted);
 }
 
 .map-stats span {
@@ -1247,7 +1227,7 @@ html[data-theme="dark"] .admin-notice { border-left-color: var(--dark-accent); }
 
 /* Корекцията на приоритета е число, затова се отделя като малка плочка:
    служителят я вижда като част от сметката, а не като още една дата.
-   Фонът и текстът и двата идват от semantic токени, които тъмната тема
+   Фонът и текстът идват от семантични токени, които тъмната тема
    обръща — преди това плочката беше светла върху тъмна страница. */
 .timeline-priority {
     align-self: start;
@@ -1305,7 +1285,7 @@ html[data-theme="dark"] .details-breakdown-total {
     font-size: 0.86rem;
     font-weight: 700;
     text-decoration: none;
-    transition: background var(--civic-transition, 180ms ease), transform .1s ease;
+    transition: background var(--civic-transition), transform .1s ease;
 }
 
 .admin-report-button:hover {
@@ -1318,7 +1298,7 @@ html[data-theme="dark"] .details-breakdown-total {
 }
 
 .admin-report-button:focus-visible {
-    outline: 3px solid var(--civic-lime, #d7f36b);
+    outline: 3px solid var(--civic-lime);
     outline-offset: 2px;
 }
 
@@ -1338,7 +1318,7 @@ html[data-theme="dark"] .details-breakdown-total {
     display: inline-flex;
     align-items: center;
     padding: 9px 16px;
-    border: 1px solid var(--civic-border, #e0e8e1);
+    border: 1px solid var(--civic-border);
     border-radius: 999px;
     background: transparent;
     color: var(--civic-accent-text);
@@ -1354,12 +1334,12 @@ html[data-theme="dark"] .details-breakdown-total {
 
 .admin-more summary:hover {
     border-color: var(--civic-green);
-    background: var(--civic-green-soft, #f0f6f1);
+    background: var(--civic-green-soft);
 }
 
 .admin-more[open] summary {
     border-color: var(--civic-green);
-    background: var(--civic-green-soft, #f0f6f1);
+    background: var(--civic-green-soft);
 }
 
 .admin-more-body {
@@ -1388,7 +1368,7 @@ html[data-theme="dark"] .details-breakdown-total {
     border: 0;
     border-radius: 8px;
     background: transparent;
-    color: var(--civic-text, #1d3028);
+    color: var(--civic-text);
     font-family: inherit;
     font-size: 0.82rem;
     font-weight: 600;
@@ -1399,7 +1379,7 @@ html[data-theme="dark"] .details-breakdown-total {
 
 .admin-more-body a:hover,
 .admin-more-body button:hover {
-    background: var(--civic-green-soft, #f0f6f1);
+    background: var(--civic-green-soft);
     color: var(--civic-accent-text);
 }
 
@@ -1464,7 +1444,7 @@ html[data-theme="dark"] .details-breakdown-total {
     font-size: 13px;
 }
 
-/* Страницата „Кредити" показва чуждите библиотеки в таблица: редът дава
+/* Страницата „Кредити“ показва чуждите библиотеки в таблица: редът дава
    име, версия, лиценз и приложение наведнъж, докато същото в абзаци би
    изисквало три прочитания. Цветовете са токени, не числа — и в тъмната
    тема редовете трябва да си останат черни върху светло. */
@@ -1501,7 +1481,7 @@ html[data-theme="dark"] .details-breakdown-total {
 }
 
 /* Хартиен вариант на таблото и на сигнала: без навигация, бутони и форми.
-   Клика се махват, защото листът е за четене — служителят не попълва
+   Всичко, изискващо клик, се маха, защото листът е за четене — служителят не попълва
    нищо с химикал, а препращането към карта се губи на сиво. Надписът към
    оценяването пада с бутоните: без тях той би изпратил към действие,
    което на хартия не може да се извърши. */

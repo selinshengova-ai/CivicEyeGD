@@ -4,18 +4,9 @@
 
 .home-page {
     --home-green: #123B32;
-    --home-green-light: #24594B;
-    --home-lime: #D7F36B;
-    --home-paper: #F3F5EF;
-    --home-muted: #68776E;
-    --home-border: #E1E7DF;
     --home-gap: 24px;
-    --welcome-green: #174b3e;
-    --welcome-green-dark: #10372e;
     --welcome-cream: #f7f5ef;
     --welcome-terracotta: #a35a3a;
-    --welcome-muted: #68766f;
-    --welcome-border: rgba(23, 75, 62, 0.13);
 
     width: min(100% - 48px, 1180px);
     margin-inline: auto;
@@ -48,7 +39,6 @@
 .home-page .home-intro { max-width: 490px; margin: 24px 0 0; color: #65736A; font-size: 16px; line-height: 1.85; }
 
 /* БУТОНИ И ДЕЙСТВИЯ */
-.home-page .home-actions,
 .home-page .home-account-buttons { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin-top: 14px; }
 .home-page .home-account-actions { margin-top: 26px; }
 .home-page .home-account-actions > p { margin: 0 0 10px 0; color: #3A614A; font-size: 13.5px; font-weight: 750; letter-spacing: 0.3px; }
@@ -216,12 +206,20 @@
 .home-page .home-status-new { background: #FFF1D9; color: #94631F; }
 .home-page .home-status-progress { background: #E7F0FF; color: #365F9B; }
 .home-page .home-status-resolved { background: #E5F4E7; color: #347447; }
+.home-page .home-status-rejected { background: #FCE7E4; color: #9A3324; }
 .home-page .home-report-card h3 { margin: 22px 0 0; color: #203D30; font-size: 18px; font-weight: 750; line-height: 1.45; overflow-wrap: anywhere; }
 .home-page .home-report-description { display: -webkit-box; overflow: hidden; -webkit-box-orient: vertical; -webkit-line-clamp: 3; margin: 10px 0 22px; color: var(--civic-muted); font-size: 13px; line-height: 1.8; overflow-wrap: anywhere; }
 .home-page .home-report-footer { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; margin-top: auto; padding-top: 15px; border-top: 1px solid #EEF1EB; }
 .home-page .home-report-address { min-width: 0; color: #65746A; font-size: 12px; line-height: 1.6; overflow-wrap: anywhere; }
 .home-page .home-report-footer time { flex: 0 0 auto; color: var(--civic-muted); font-size: 12px; white-space: nowrap; }
 .home-page .home-all-reports-mobile { display: none; }
+
+/* Празен списък: същата форма на карточките стъпки, за да не изглежда
+   поканата за първия сигнал като отделен, по-лошо изгладен екран. */
+.home-page .home-empty-state { display: grid; justify-items: start; gap: 14px; }
+.home-page .home-empty-icon { display: grid; width: 48px; height: 48px; place-items: center; border-radius: 14px; background: #EAF2DE; color: #315B43; font-size: 22px; }
+.home-page .home-empty-state h3 { margin: 0; color: #203D30; font-size: 18px; font-weight: 750; line-height: 1.4; }
+.home-page .home-empty-state p { max-width: 560px; margin: 0; color: var(--civic-muted); font-size: 14px; line-height: 1.8; }
 
 /* Как работи */
 .home-page .home-how-section { margin-top: 92px; padding: 82px 7% 100px; border-top: 1px solid rgba(23, 75, 62, 0.07); background: #fff; }
@@ -302,16 +300,14 @@
         margin-bottom: 12px;
     }
 
-    .home-page .home-account-buttons,
-    .home-page .home-actions {
+    .home-page .home-account-buttons {
         flex-direction: column;
         width: 100%;
         gap: 10px;
         margin-top: 14px;
     }
 
-    .home-page .home-account-buttons > a,
-    .home-page .home-actions > a {
+    .home-page .home-account-buttons > a {
         width: 100%;
         min-height: 48px;
         justify-content: center;

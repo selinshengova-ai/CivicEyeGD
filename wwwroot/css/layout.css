@@ -9,7 +9,6 @@
     --civic-green-hover: #24634e;
     --civic-green-light: #e8f2ec;
     --civic-green-soft: #f0f6f1;
-    --civic-blue: #3978e8;
     --civic-orange: #d97732;
     --civic-success: #258453;
     --civic-danger: #c2413b;
@@ -36,14 +35,10 @@
     --civic-warn-border: #f0d9b5;
     --civic-warn-stripe: #d99b2f;
     --civic-warn-text: #6d5522;
-    --civic-warn-strong: #8a5a12;
     --civic-lime: #d7f36b;
     --civic-radius-sm: 10px;
     --civic-radius: 16px;
-    --civic-radius-lg: 22px;
-    --civic-shadow-sm: 0 3px 12px rgba(24, 59, 45, 0.04);
     --civic-shadow: 0 8px 26px rgba(24, 59, 45, 0.06);
-    --civic-shadow-hover: 0 14px 34px rgba(24, 59, 45, 0.10);
     --civic-transition: 180ms ease;
 }
 
@@ -90,10 +85,33 @@ a:hover { color: var(--civic-green-hover); }
 button, input, select, textarea { font: inherit; }
 ::selection { color: var(--civic-green-dark); background: #cfe7d5; }
 
-:focus-visible { outline: 3px solid #6ca88b; outline-offset: 3px; }
-.btn:focus, .btn:active:focus, .btn-link.nav-link:focus, .form-control:focus, .form-check-input:focus {
+/* Токенът, а не фиксирано зелено: на светъл фон пръстенът трябва да е
+   тъмен, на тъмен — светъл, а --civic-accent-text е единственият цвят,
+   който вече е преопределен и в двете теми. Същият ползват и
+   фокус-пръстените във create.css и pages.css. */
+:focus-visible { outline: 3px solid var(--civic-accent-text); outline-offset: 3px; }
+.btn:focus, .btn:active:focus, .form-control:focus, .form-check-input:focus {
     box-shadow: 0 0 0 3px rgba(27, 77, 62, 0.15);
 }
+
+/* Линкът към съдържанието: изместен над екрана, докато не го доближи
+   клавиатурата. position: fixed е нужен, защото тялото е гъвкава колона и
+   един нормален елемент преди шапката би оставил празна ивица за всички. */
+.skip-link {
+    position: fixed;
+    top: -200px;
+    left: 16px;
+    z-index: 2000;
+    padding: 10px 18px;
+    border-radius: var(--civic-radius-sm);
+    background: var(--civic-white);
+    color: var(--civic-green);
+    font-weight: 600;
+    text-decoration: none;
+    box-shadow: var(--civic-shadow);
+}
+
+.skip-link:focus { top: 12px; color: var(--civic-green); }
 
 /* Навигация */
 body.civic-site { display: flex; flex-direction: column; }
@@ -117,7 +135,7 @@ body.civic-site { display: flex; flex-direction: column; }
 .civic-nav-number { color: var(--civic-muted); font-size: 12px; font-weight: 800; letter-spacing: 0.5px; }
 .civic-submit-button { display: inline-flex; min-height: 48px; align-items: center; justify-content: center; gap: 10px; padding: 12px 17px; border: 1px solid var(--civic-green); border-radius: 13px; background: var(--civic-green); color: var(--civic-white); font-size: 13px; font-weight: 750; text-decoration: none; white-space: nowrap; transition: transform 0.2s ease, background 0.2s ease; }
 .civic-submit-button:hover, .civic-submit-button:focus-visible { transform: translateY(-2px); background: var(--civic-green-light); color: var(--civic-white); }
-.civic-submit-icon { display: grid; width: 23px; height: 23px; place-items: center; border-radius: 7px; background: var(--civic-lime); color: var(--civic-green); font-size: 19px; line-height: 1; }
+.civic-submit-icon { display: grid; width: 23px; height: 23px; place-items: center; border-radius: 7px; background: var(--civic-lime); color: var(--civic-green-dark); font-size: 19px; line-height: 1; }
 .civic-submit-arrow { margin-left: 3px; color: var(--civic-lime); font-size: 16px; }
 .civic-toggler { padding: 10px; border: 1px solid var(--civic-border); border-radius: 12px; box-shadow: none !important; }
 .civic-toggler:focus { box-shadow: 0 0 0 3px rgba(215, 243, 107, 0.5) !important; }
@@ -182,7 +200,7 @@ body.civic-site button { cursor: pointer; }
 .civic-footer-year { color: var(--civic-muted); font-size: 12px; white-space: nowrap; }
 
 /* Адаптивност за навигация: под 1200px менюто се свива в hamburger,
-   защото дори шест връзки не побират в реда. */
+   защото дори шест връзки не се побират в реда. */
 @media (max-width: 1199.98px) {
     .civic-navbar { min-height: 76px; }
     .civic-nav-container { padding-right: 22px; padding-left: 22px; }
@@ -216,8 +234,4 @@ body.civic-site button { cursor: pointer; }
     .site-main { padding-top: 22px; padding-bottom: 36px; }
     .civic-footer-inner { padding-top: 22px; padding-bottom: 22px; }
     .civic-footer-text { line-height: 1.5; }
-}
-/* Фикс за иконата "+" в бутона за подаване на сигнал */
-.civic-submit-icon {
-    color: #123B32 !important; 
 }

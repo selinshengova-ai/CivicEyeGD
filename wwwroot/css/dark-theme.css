@@ -40,7 +40,6 @@ html[data-theme="dark"] {
     --civic-warn-border: var(--dark-border);
     --civic-warn-stripe: #e0aa4e;
     --civic-warn-text: var(--dark-text-muted);
-    --civic-warn-strong: #ffd98a;
     --civic-danger-text: #f2a79f;
 
     /* Меките зелени фонове също са фонове, не цветове на марката: зад тях
@@ -73,8 +72,7 @@ html[data-theme="dark"] .civic-nav-link:focus-visible { background: var(--dark-s
 html[data-theme="dark"] .home-page,
 html[data-theme="dark"] body .home-page,
 html[data-theme="dark"] .home-page .home-recent-section,
-html[data-theme="dark"] .home-page .home-how-section,
-html[data-theme="dark"] .home-page .content-section {
+html[data-theme="dark"] .home-page .home-how-section {
     background: transparent !important;
     background-color: transparent !important;
 }
@@ -248,8 +246,7 @@ html[data-theme="dark"] .civic-form-card h1,
 html[data-theme="dark"] .civic-form-card .section-kicker,
 html[data-theme="dark"] .panel-heading h2,
 html[data-theme="dark"] .back-link { color: var(--dark-text) !important; }
-html[data-theme="dark"] .civic-form-card .btn-civic-secondary,
-html[data-theme="dark"] .civic-form-card .map-action-button {
+html[data-theme="dark"] .civic-form-card .btn-civic-secondary {
     background: var(--dark-surface-2) !important;
     border-color: var(--dark-border) !important;
     color: var(--dark-text) !important;
@@ -272,10 +269,6 @@ html[data-theme="dark"] .form-check-label { color: var(--dark-text) !important; 
 html[data-theme="dark"] .card-body p,
 html[data-theme="dark"] .card-body .text-muted { color: var(--dark-text-muted) !important; }
 html[data-theme="dark"] .card-body a.text-success { color: var(--dark-accent) !important; }
-html[data-theme="dark"] .auth-card { background: var(--dark-surface) !important; border-color: var(--dark-border) !important; }
-html[data-theme="dark"] .auth-card h1, html[data-theme="dark"] .auth-card .form-label { color: var(--dark-text) !important; }
-html[data-theme="dark"] .auth-description, html[data-theme="dark"] .auth-switch { color: var(--dark-text-muted) !important; }
-html[data-theme="dark"] .auth-switch a { color: var(--dark-accent) !important; }
 
 /* --- 7. Детайли (Details) --- */
 html[data-theme="dark"] .details-description,
@@ -374,13 +367,3 @@ html[data-theme="dark"] .leaflet-popup-tip {
 html[data-theme="dark"] .leaflet-popup-content { color: var(--dark-text) !important; }
 html[data-theme="dark"] .leaflet-popup-content a { color: var(--civic-accent-text) !important; }
 html[data-theme="dark"] .leaflet-popup-close-button { color: var(--dark-text-muted) !important; }
-
-/* Статуси */
-.report-status[data-status="Подаден"] { background-color: #edf3ff; color: #2858a3; }
-.report-status[data-status="В процес"] { background-color: #fff1e5; color: #a65319; }
-.report-status[data-status="Решен"] { background-color: #e9f7ee; color: #18764b; }
-.report-status[data-status="Отхвърлен"] { background-color: #fff0ef; color: #a32f2a; }
-html[data-theme="dark"] .report-status[data-status="Подаден"] { background-color: rgba(40, 88, 163, 0.2); color: #a5c2f5; }
-html[data-theme="dark"] .report-status[data-status="В процес"] { background-color: rgba(166, 83, 25, 0.2); color: #f5b88c; }
-html[data-theme="dark"] .report-status[data-status="Решен"] { background-color: rgba(24, 118, 75, 0.2); color: #90e0b1; }
-html[data-theme="dark"] .report-status[data-status="Отхвърлен"] { background-color: rgba(163, 47, 42, 0.2); color: #f5a3a0; }

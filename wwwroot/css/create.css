@@ -75,6 +75,16 @@
     box-shadow: 0 0 0 3px rgba(67, 131, 107, .13);
 }
 
+/* Отсечената рамка горе важи само за мишката: 13-процентната сянка не се
+   вижда, а без мишка човек трябва да знае в кое поле е. Правилото идва
+   след тях, затова печели при клавиатурен фокус и използва същия токен
+   като пръстените в layout.css и pages.css. */
+.civic-form-card .form-control:focus-visible,
+.civic-form-card .form-select:focus-visible {
+    outline: 3px solid var(--civic-accent-text);
+    outline-offset: 2px;
+}
+
 .civic-form-card .text-danger { display: block; margin-top: 5px; font-size: 12px; color: var(--civic-danger-text); }
 .validation-summary:empty { display: none; }
 
@@ -168,11 +178,6 @@
     border: 1px solid var(--civic-border); border-radius: 10px; background: var(--civic-green-light); box-sizing: border-box;
 }
 #report-location-map { z-index: 1; }
-#street-view-placeholder { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; padding: 20px; text-align: center; background: var(--civic-surface-soft); color: var(--civic-muted); }
-.street-view-symbol { display: flex; align-items: center; justify-content: center; width: 76px; height: 76px; border: 1px solid var(--civic-border); border-radius: 50%; background: var(--civic-surface); color: var(--civic-accent-text); font-size: 21px; font-weight: 750; box-shadow: 0 6px 20px rgba(27, 77, 62, .08); }
-#street-view-placeholder p { max-width: 230px; margin: 0; font-size: 13px; line-height: 1.6; }
-#open-google-maps { color: var(--civic-accent-text); font-size: 12px; font-weight: 650; text-decoration: none; }
-#open-google-maps:hover { text-decoration: underline; }
 
 /* Бутони */
 .form-actions { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 30px; justify-content: center; width: 100%; max-width: 700px; margin-left: auto; margin-right: auto; }
@@ -199,7 +204,7 @@
 /* =========================================================
    ПРОЗОРЕЦЪТ ЗА ВЕЧЕ ПОДАДЕН СИГНАЛ
    =========================================================
-   Native <dialog> носи собствена моддалност, блокировка на tab-редата и
+   Native <dialog> носи собствена модалност, блокировка на tab-редата и
    затваряне с Esc. Нулираме единствено неговите подразбиращи се отстъпи,
    за да изглежда като картичка, а не като препратка насред страницата. */
 .duplicate-dialog {
@@ -322,6 +327,33 @@
     color: var(--civic-warn-text);
     font-size: 13px;
     line-height: 1.6;
+}
+
+/* Оценката в прозореца е същата скала като във формата — същите
+   радиобутони, само по-плътно, защото прозорецът се чете за няколко
+   секунди. Няма зададено display: [hidden] от браузъра трябва да остане
+   силно, защото при собствен сигнал полето се маха заедно с бутона. */
+.duplicate-severity {
+    margin: 0;
+    padding: 10px 12px 4px;
+    border: 1px solid var(--civic-border);
+    border-radius: 10px;
+}
+
+.duplicate-severity legend {
+    padding: 0 6px;
+    font-size: 13px;
+    font-weight: 650;
+    color: var(--civic-accent-text);
+}
+
+.duplicate-severity .severity-rating-group { gap: 8px; margin-top: 6px; }
+.duplicate-severity .severity-radio span { width: 38px; height: 38px; font-size: 14px; }
+
+.duplicate-severity-optional {
+    color: var(--civic-muted);
+    font-size: 12px;
+    font-weight: 500;
 }
 
 .duplicate-dialog-actions {
