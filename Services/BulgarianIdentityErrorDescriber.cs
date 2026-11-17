@@ -7,6 +7,12 @@ namespace CivicEyeGD.Services;
 // грешки при нашата политика за пароли (8 знака, цифра, малка буква).
 public sealed class BulgarianIdentityErrorDescriber : IdentityErrorDescriber
 {
+    // Единствената форма на „грешна парола“, която гражданинът чува. Две
+    // страницы проверят паролата сами, преди изобщо да попитат Identity,
+    // и повтарят текста оттук: две различни изречения за едно и също
+    // нещо биха звучали като две различни грешки.
+    public const string InvalidPasswordMessage = "Невалидна парола.";
+
     public override IdentityError DefaultError() => new()
     {
         Code = "DefaultError",
@@ -64,7 +70,7 @@ public sealed class BulgarianIdentityErrorDescriber : IdentityErrorDescriber
     public override IdentityError PasswordMismatch() => new()
     {
         Code = "PasswordMismatch",
-        Description = "Невалидна парола.",
+        Description = InvalidPasswordMessage,
     };
 
     public override IdentityError InvalidToken() => new()

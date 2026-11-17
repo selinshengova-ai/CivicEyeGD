@@ -1,0 +1,162 @@
+@page
+@model CivicEyeGD.Pages.Account.SecurityQuestionModel
+
+@{
+    ViewData["Title"] = "Въпрос за сигурност";
+}
+
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-12 col-sm-9 col-md-6 col-lg-5">
+
+            <div class="card border-0 shadow-sm rounded-4">
+                <div class="card-body p-4 p-md-5">
+
+                    <h1 class="h3 fw-bold mb-2">Въпрос за сигурност</h1>
+
+                    <p class="text-muted small mb-4">
+                        @User.Identity?.Name
+                    </p>
+
+                    @* Краткото „сега“ е нужно, защото без него не се разбира
+                       дали въпросът е зададен и дали следващият запис ще го
+                       замени, или ще е първият. *@
+                    @if (Model.HasQuestion)
+                    {
+                        <p class="small mb-4">
+                            Сега е избран: <strong>@Model.CurrentQuestionText</strong>
+                        </p>
+                    }
+                    else
+                    {
+                        <p class="small mb-4">
+                            Все още нямаш зададен въпрос. Докато го няма,
+                            загубената парола не може да бъде възстановена.
+                        </p>
+                    }
+
+                    @if (Model.Saved)
+                    {
+                        <div class="alert alert-success small" role="status">
+                            Въпросът е записан.
+                        </div>
+                    }
+
+                    <form method="post">
+                        <div asp-validation-summary="ModelOnly"
+                             class="text-danger small mb-3"
+                             aria-live="polite">
+                        </div>
+
+                        <div class="mb-3">
+                            <label asp-for="Input.QuestionKey"
+                                   class="form-label">
+                                Въпрос
+                            </label>
+
+                            <select asp-for="Input.QuestionKey"
+                                    class="form-select">
+                                <option value="">Избери въпрос…</option>
+
+                                @foreach (var option in Model.Options)
+                                {
+                                    <option value="@option.Key"
+                                            selected="@(option.Key == Model.Input.QuestionKey ? "selected" : null)">
+                                        @option.Text
+                                    </option>
+                                }
+                            </select>
+
+                            <span asp-validation-for="Input.QuestionKey"
+                                  class="text-danger small"></span>
+                        </div>
+
+                        <div class="mb-3">
+                            <label asp-for="Input.Answer"
+                                   class="form-label">
+                                Отговор
+                            </label>
+
+                            <input asp-for="Input.Answer"
+                                   class="form-control"
+                                   type="text"
+                                   autocomplete="off"
+                                   placeholder="Ще го поискаме при загубена парола" />
+
+                            <span asp-validation-for="Input.Answer"
+                                  class="text-danger small"></span>
+                        </div>
+
+                        <div class="mb-3">
+                            <label asp-for="Input.ConfirmAnswer"
+                                   class="form-label">
+                                Потвърди отговора
+                            </label>
+
+                            <input asp-for="Input.ConfirmAnswer"
+                                   class="form-control"
+                                   type="text"
+                                   autocomplete="off"
+                                   placeholder="Повтори отговора" />
+
+                            <span asp-validation-for="Input.ConfirmAnswer"
+                                  class="text-danger small"></span>
+                        </div>
+
+                        <div class="mb-4">
+                            <label asp-for="Input.CurrentPassword"
+                                   class="form-label">
+                                Сегашна парола
+                            </label>
+
+                            <input asp-for="Input.CurrentPassword"
+                                   class="form-control"
+                                   type="password"
+                                   autocomplete="current-password" />
+
+                            <span asp-validation-for="Input.CurrentPassword"
+                                  class="text-danger small"></span>
+                        </div>
+
+                        <button type="submit"
+                                class="btn btn-success btn-lg w-100">
+                            Запази въпроса
+                        </button>
+                    </form>
+
+                    @* Какво точно се съхранява е написано с думите на кода:
+                       отговорът не се пази като текст, а като бавен хеш с
+                       добавена случайна сол, затова никой — дори служителят
+                       на общината — не може да го прочете и да го каже на
+                       човека. *@
+                    <p class="small text-muted mt-4 mb-0">
+                        Отговорът се записва като хеш, не като текст, и се
+                        изтрива заедно с профила. Главните и малките букви не
+                        се различават, а излишните интервали се премахват.
+                        Ако го забравиш, избери друг въпрос и нов отговор.
+                    </p>
+
+                    <p class="text-center small mt-4 mb-0">
+                        <a asp-page="/Account/Profile"
+                           class="text-success fw-semibold text-decoration-none">
+                            ← Обратно към профила
+                        </a>
+                    </p>
+
+                    <p class="text-center small mt-2 mb-0">
+                        <a asp-page="/Account/ForgotPassword"
+                           class="text-muted text-decoration-none">
+                            Провери как изглежда възстановяването
+                        </a>
+                    </p>
+
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

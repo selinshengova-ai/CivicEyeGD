@@ -43,6 +43,34 @@ namespace CivicEyeGD.Migrations
                     b.ToTable("Confirmations");
                 });
 
+            modelBuilder.Entity("CivicEyeGD.Data.RecoveryQuestion", b =>
+                {
+                    b.Property<string>("UserId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("AnswerHash")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("AnswerSalt")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("QuestionKey")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("UserId");
+
+                    b.ToTable("RecoveryQuestions");
+                });
+
             modelBuilder.Entity("CivicEyeGD.Data.Report", b =>
                 {
                     b.Property<int>("Id")
@@ -405,6 +433,17 @@ namespace CivicEyeGD.Migrations
                         .IsRequired();
 
                     b.Navigation("Report");
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("CivicEyeGD.Data.RecoveryQuestion", b =>
+                {
+                    b.HasOne("Microsoft.AspNetCore.Identity.IdentityUser", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
 
                     b.Navigation("User");
                 });

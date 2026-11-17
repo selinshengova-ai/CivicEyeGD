@@ -1,5 +1,6 @@
 
 using System.ComponentModel.DataAnnotations;
+using CivicEyeGD.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
@@ -39,6 +40,13 @@ public class LoginModel : PageModel
     // връща човека към началната страница вместо към сигнала.
     [BindProperty(SupportsGet = true)]
     public string? ReturnUrl { get; set; }
+
+    // Отметката идва по адреса след успешно възстановяване на парола.
+    // Съобщението е в адреса, а не в самата страница, защото след изпратена
+    // форма браузърът пита дали да я преизпрати — а преизпратена парола не
+    // трябва да се описва наново.
+    [BindProperty(SupportsGet = true)]
+    public bool Recovered { get; set; }
 
     public class LoginInput
     {
@@ -94,12 +102,10 @@ public class LoginModel : PageModel
 
         if (result.IsLockedOut)
         {
-            // Същото правило е записано и в документацията: 5 опита,
-            // 10 минути изчакване.
-            ModelState.AddModelError(
-                string.Empty,
-                "Акаунтът е временно заключен след 5 неуспешни опита. "
-                + "Опитай отново след 10 минути.");
+            // Правилото и числата са в AccountLockout, заедно с
+            // настройката на Identity: документацията описва същите
+            // 5 опита и 10 минути изчакване.
+            ModelState.AddModelError(string.Empty, AccountLockout.Message);
 
             return Page();
         }

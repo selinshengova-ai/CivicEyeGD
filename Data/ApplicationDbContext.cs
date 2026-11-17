@@ -25,6 +25,12 @@ public class ApplicationDbContext : IdentityDbContext<IdentityUser>
     public DbSet<Confirmation> Confirmations { get; set; }
     public DbSet<StatusHistory> StatusHistories { get; set; }
 
+    // Един ред на профил: въпросът и хешът на отговора (с добавена сол),
+    // с които се възстановява загубена парола. Таблицата е отделна от
+    // AspNetUsers, за да не се пипне схемата на Identity и за да се вижда
+    // на едно място кое се изтрива при правото на забравяне.
+    public DbSet<RecoveryQuestion> RecoveryQuestions { get; set; }
+
     // Тук се донастройват правила, които конвенциите не познават: каква
     // да е реакцията при изтриване и кои редове са уникални. Става с
     // код, не с атрибути, защото моделите са прости, а правилата са
@@ -111,5 +117,41 @@ public class ApplicationDbContext : IdentityDbContext<IdentityUser>
             .WithMany(r => r.StatusHistories)
             .HasForeignKey(sh => sh.ReportId)
             .OnDelete(DeleteBehavior.Cascade);
+
+        // Връзки за RecoveryQuestion
+        // Един ред на профил, затова самият ключ на профила е и първичен:
+        // базата не може да съхрани втори въпрос за същия човек, дори две
+        // изпратени форми да го поискат едновременно.
+        builder.Entity<RecoveryQuestion>()
+            .HasKey(q => q.UserId);
+
+        // Cascade: отговорът е част от акаунта и няма право на живот след
+        // него. Правото на забравяне тук е в самата схема, а не само в
+        // кода на страницата за изтриване.
+        builder.Entity<RecoveryQuestion>()
+            .HasOne(q => q.User)
+            .WithMany()
+            .HasForeignKey(q => q.UserId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        // Ключът на въпроса идва от списък в кода, не от входа, затова
+        // границата му е предпазна. Солта и хешът са base64 с фиксирана
+        // дължина — 16 байта стават 24 символа, 32 байта стават 44 — и
+        // и двата са затворени в 64, за да остане място при смяна на
+        // размерите, без да се налага миграция на схемата.
+        builder.Entity<RecoveryQuestion>()
+            .Property(q => q.QuestionKey)
+            .HasMaxLength(32)
+            .IsRequired();
+
+        builder.Entity<RecoveryQuestion>()
+            .Property(q => q.AnswerSalt)
+            .HasMaxLength(64)
+            .IsRequired();
+
+        builder.Entity<RecoveryQuestion>()
+            .Property(q => q.AnswerHash)
+            .HasMaxLength(64)
+            .IsRequired();
     }
 }

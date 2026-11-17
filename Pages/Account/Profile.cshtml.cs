@@ -93,6 +93,11 @@ public class ProfileModel : PageModel
         // цифра, малка буква), а CurrentPassword се сравнява с хеша,
         // не с текст: грешна сегашна парола дава PasswordMismatch,
         // преведен от BulgarianIdentityErrorDescriber.
+        // Тук грешките не се броят към заключването, както при входа и
+        // при възстановяването: до тази форма стига само вече влязъл
+        // човек, а за него паролата не е ключът към профила, а
+        // потвърждение, че не е оставил браузъра отворен. Прагът от пет
+        // би бил наказание за собственика на сесията, а не защита.
         var result = await _userManager.ChangePasswordAsync(
             user,
             Input.CurrentPassword,

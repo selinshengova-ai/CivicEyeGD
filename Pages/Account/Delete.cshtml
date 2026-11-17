@@ -1,0 +1,149 @@
+@page
+@model CivicEyeGD.Pages.Account.DeleteModel
+
+@{
+    ViewData["Title"] = "Изтриване на профила";
+}
+
+@* Страницата съществува, защото политиката за поверителност обещава право
+   на забравяне, а обещание без път до него е текст, не функция. Тук то се
+   изпълнява на място: няма изчакване на администратор и няма имейл, който
+   приложението не може да прати. *@
+
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-12 col-sm-9 col-md-7 col-lg-6">
+
+            <div class="card border-0 shadow-sm rounded-4">
+                <div class="card-body p-4 p-md-5">
+
+                    <h1 class="h3 fw-bold mb-2">Изтриване на профила</h1>
+
+                    <p class="text-muted small mb-4">
+                        @User.Identity?.Name
+                    </p>
+
+                    @* Какво точно изчезва и какво остава се казва предварително,
+                       а не след натиснатия бутон: необратимо действие се
+                       съгласява само с пълна картина. Двата списъка следват
+                       поведението на базата от Data/ApplicationDbContext.cs,
+                       а не предположение. *@
+                    <div class="alert alert-warning small" role="alert">
+                        <p class="fw-semibold mb-2">След изтриването:</p>
+
+                        <ul class="mb-0 ps-3">
+                            <li>Изчезват името, имейлът и хешът на паролата.</li>
+                            <li>Изчезват и твоите оценки и потвърждения за
+                                сериозност: те са глас, а не обществен сигнал,
+                                и затова са лични данни.</li>
+                            <li>Сигналите, които си подал, остават в системата
+                                без автор — те са обществена информация за
+                                града, а статистиката на общината не трябва да
+                                се променя от напускането на един човек.</li>
+                            <li>За служител: дневникът на променените статуси
+                                остава, само връзката към неговия профил
+                                изчезва.</li>
+                        </ul>
+                    </div>
+
+                    @* Текстът за потвърждение стои на самата форма, както при
+                       изтриването на сигнал: скриптът го чете оттам, затова
+                       диалогът винаги сочи профила на влезлия. Без JavaScript
+                       питането липсва, но отметката и паролата се проверяват
+                       и без него — те са на сървъра. *@
+                    <form method="post" data-confirm-text="Изтриването не може да бъде върнато. Изтри ли профила?">
+                        <div asp-validation-summary="ModelOnly"
+                             class="text-danger small mb-3"
+                             aria-live="polite">
+                        </div>
+
+                        <div class="form-check mb-4">
+                            @* Отметката се проверява в кода, а не с атрибут:
+                               неотметнато поле изобщо не тръгва с формата,
+                               а „полето е задължително“ за някой, който
+                               просто не е съгласен, би било невярно. *@
+                            <input asp-for="Input.Confirmed"
+                                   class="form-check-input" />
+
+                            <label asp-for="Input.Confirmed"
+                                   class="form-check-label">
+                                Разбирам, че изтриването е необратимо и че
+                                нов профил с този имейл трябва да се създаде
+                                отначало.
+                            </label>
+
+                            <span asp-validation-for="Input.Confirmed"
+                                  class="text-danger small d-block"></span>
+                        </div>
+
+                        <div class="mb-4">
+                            <label asp-for="Input.Password"
+                                   class="form-label">
+                                Парола
+                            </label>
+
+                            @* Паролата се иска, макар човекът да е влязъл: тя
+                               е доказателството, че заявката е от собственика,
+                               а не от чужда форма или от колега с отворен
+                               браузър. Подсказката current-password кара
+                               браузъра да предложи запазената парола на сайта,
+                               без да я показва на екрана. *@
+                            <input asp-for="Input.Password"
+                                   class="form-control form-control-lg"
+                                   type="password"
+                                   autocomplete="current-password" />
+
+                            <span asp-validation-for="Input.Password"
+                                  class="text-danger small"></span>
+                        </div>
+
+                        @* Бутонът е червен и с текст, а не „Изпрати“: при
+                           необратимо действие цветът и думите трябва да
+                           съвпадат с последицата. Попитването на браузъра
+                           идва от скрипта отдолу, а решението се взема на
+                           сървъра: при изключен JavaScript отметката и
+                           паролата все пак се проверяват. *@
+                        <button type="submit"
+                                class="btn btn-danger btn-lg w-100">
+                            Изтрий профила завинаги
+                        </button>
+                    </form>
+
+                    <p class="text-center small mt-4 mb-0">
+                        <a asp-page="/Account/Profile"
+                           class="text-success fw-semibold text-decoration-none">
+                            ← Обратно към профила
+                        </a>
+                    </p>
+
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+
+    @* Скриптът пита преди изпращането: бутон, който не се връща обратно,
+       не трябва да се натиска случайно. Текстът се чете от самата форма,
+       за да стои до действието, а не в скрипта. При спрян JavaScript
+       питането го няма, но заявката спира и на сървъра: там отметката
+       липсва и изтриването не се извършва. *@
+    <script>
+        (function () {
+            const form = document.querySelector("form[data-confirm-text]");
+
+            if (!form) {
+                return;
+            }
+
+            form.addEventListener("submit", function (event) {
+                if (!window.confirm(form.getAttribute("data-confirm-text"))) {
+                    event.preventDefault();
+                }
+            });
+        })();
+    </script>
+}

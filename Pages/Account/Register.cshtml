@@ -63,9 +63,12 @@
                         @* Общите грешки се показват на едно място: че такъв
                            имейл вече съществува, че паролата не минава
                            правилата или че правата не се записват. Грешките
-                           за конкретно поле се изписват под самото поле. *@
+                           за конкретно поле се изписват под самото поле.
+                           aria-live ги обявява и на екранния четец, щом
+                           проверката в браузъра ги появи. *@
                         <div asp-validation-summary="ModelOnly"
-                             class="text-danger small mb-3">
+                             class="text-danger small mb-3"
+                             aria-live="polite">
                         </div>
 
                         <div class="mb-3">
@@ -151,11 +154,54 @@
                             цифра и малка буква.
                         </p>
 
+                        @* Двете полета са по желание и са тук, а не само в
+                           профила, защото точно сега човек знае отговора си:
+                           след месец въпросът се забравя, а пощенски сървър,
+                           който да прати линк, в проекта няма. *@
+                        <div class="mb-3">
+                            <label asp-for="Input.RecoveryQuestionKey"
+                                   class="form-label">
+                                Въпрос за сигурност (по желание)
+                            </label>
+
+                            <select asp-for="Input.RecoveryQuestionKey"
+                                    class="form-select">
+                                <option value="">Не сега</option>
+
+                                @foreach (var option in Model.Options)
+                                {
+                                    <option value="@option.Key"
+                                            selected="@(option.Key == Model.Input.RecoveryQuestionKey ? "selected" : null)">
+                                        @option.Text
+                                    </option>
+                                }
+                            </select>
+
+                            <span asp-validation-for="Input.RecoveryQuestionKey"
+                                  class="text-danger small"></span>
+                        </div>
+
+                        <div class="mb-4">
+                            <label asp-for="Input.RecoveryAnswer"
+                                   class="form-label">
+                                Отговор (по желание)
+                            </label>
+
+                            <input asp-for="Input.RecoveryAnswer"
+                                   class="form-control"
+                                   type="text"
+                                   autocomplete="off"
+                                   placeholder="Ще го поискаме само при загубена парола" />
+
+                            <span asp-validation-for="Input.RecoveryAnswer"
+                                  class="text-danger small"></span>
+                        </div>
+
                         @* Една точка за личните данни, а не отметка: тук се
-                           събира само имейл, име и парола, за които страницата
-                           „Поверителност“ обяснява какво се прави. Отметка за
-                           съгласие, която никой код не проверява, би била
-                           украса. *@
+                           събира само имейл и парола, а по желание — и хешът
+                           на един отговор, за които страницата „Поверителност“
+                           обяснява какво се прави. Отметка за съгласие, която
+                           никой код не проверява, би била украса. *@
                         <p class="small text-muted mb-4">
                             Създавайки профил, приемаш начина, по който се
                             съхраняват данните ти — описан е на страницата

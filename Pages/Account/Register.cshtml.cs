@@ -1,5 +1,7 @@
 
 using System.ComponentModel.DataAnnotations;
+using CivicEyeGD.Data;
+using CivicEyeGD.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
@@ -25,12 +27,18 @@ public class RegisterModel : PageModel
     private readonly UserManager<IdentityUser> _userManager;
     private readonly SignInManager<IdentityUser> _signInManager;
 
+    // Нужен е за допълнителния ред с въпроса за сигурност: той не е част
+    // от модела на Identity, затова CreateAsync не би го записал.
+    private readonly ApplicationDbContext _db;
+
     public RegisterModel(
         UserManager<IdentityUser> userManager,
-        SignInManager<IdentityUser> signInManager)
+        SignInManager<IdentityUser> signInManager,
+        ApplicationDbContext db)
     {
         _userManager = userManager;
         _signInManager = signInManager;
+        _db = db;
     }
 
     // Полетата са в отделен вложен клас, за да не се бъркат със
@@ -38,6 +46,11 @@ public class RegisterModel : PageModel
     // формата се преизкара след грешка.
     [BindProperty]
     public RegisterInput Input { get; set; } = new();
+
+    // Въпросите идват от сервиса, а не са преписани в отметките на
+    // страницата: две копия на еднакви формулировки рано или късно стават
+    // различни, а тогава човек вижда един въпрос и сървърът пази друг.
+    public (string Key, string Text)[] Options => RecoveryQuestions.Options;
 
     public class RegisterInput
     {
@@ -71,6 +84,24 @@ public class RegisterModel : PageModel
             nameof(Password),
             ErrorMessage = "Паролите не съвпадат.")]
         public string ConfirmPassword { get; set; } = string.Empty;
+
+        // Двете полета са по желание и затова нямат Required: човек, който
+        // не ги попълни, пак получава профил. Липсата им само означава, че
+        // загубената парола ще остане без път обратно — което формата казва
+        // с текст, а не го крие.
+        //
+        // Писани са като nullable именно заради думата „по желание“: низ,
+        // който не допуска null, връзката на модела тълкува като
+        // задължително поле и връща английското „The RecoveryAnswer field
+        // is required.“, когато човек е оставил полетата празни. Като null
+        // се чете и истинският смисъл — отговор може и да няма — а
+        // RecoveryQuestions приема пустотата навсякъде.
+        public string? RecoveryQuestionKey { get; set; }
+
+        [StringLength(
+            RecoveryQuestions.MaxAnswerLength,
+            ErrorMessage = "Отговорът не трябва да е по-дълъг от 60 символа.")]
+        public string? RecoveryAnswer { get; set; }
     }
 
     // Празен метод: формата е неподвижна и няма какво да се зарежда.
@@ -85,6 +116,42 @@ public class RegisterModel : PageModel
         if (!ModelState.IsValid)
         {
             return Page();
+        }
+
+        // Въпросът е по желание, но половинчатият му вид не е: избран
+        // въпрос без отговор би оставил профил, който обещава
+        // възстановяване и не го дава, а ключ извън списъка би се записал
+        // като текст, който никоя форма после не може да покаже.
+        //
+        // Двата реда са локални и невъзможни за null, защото полетата
+        // навсякъде по-нататък се четат като готови: празният ключ не е
+        // познат, а празният отговор е с дължина нула, затова и двете
+        // проверки отдолу спират записа преди той да стигне до базата.
+        var questionKey = Input.RecoveryQuestionKey ?? string.Empty;
+        var normalizedAnswer = RecoveryQuestions.Normalize(Input.RecoveryAnswer);
+
+        var wantsQuestion = !string.IsNullOrWhiteSpace(questionKey)
+            || normalizedAnswer.Length > 0;
+
+        if (wantsQuestion)
+        {
+            if (!RecoveryQuestions.IsKnown(questionKey))
+            {
+                ModelState.AddModelError(
+                    $"{nameof(Input)}.{nameof(Input.RecoveryQuestionKey)}",
+                    "Избери един от посочените въпроси.");
+
+                return Page();
+            }
+
+            if (normalizedAnswer.Length < RecoveryQuestions.MinAnswerLength)
+            {
+                ModelState.AddModelError(
+                    $"{nameof(Input)}.{nameof(Input.RecoveryAnswer)}",
+                    "Напиши отговор от поне 2 символа или остави двете полета празни.");
+
+                return Page();
+            }
         }
 
         // Потребителското име е същият имейл: така остава едно
@@ -141,6 +208,24 @@ public class RegisterModel : PageModel
             }
 
             return Page();
+        }
+
+        // Въпросът се записва чак сега, когато профилът вече съществува и
+        // има роля: по-рано би оставил ред за акаунт, който току-що беше
+        // изтрит при неуспех. В базата отива хешът, не отговорът.
+        if (wantsQuestion)
+        {
+            var salt = RecoveryQuestions.NewSalt();
+
+            _db.RecoveryQuestions.Add(new RecoveryQuestion
+            {
+                UserId = user.Id,
+                QuestionKey = questionKey,
+                AnswerSalt = salt,
+                AnswerHash = RecoveryQuestions.Hash(normalizedAnswer, salt)
+            });
+
+            await _db.SaveChangesAsync();
         }
 
         // Човекът влиза веднага, без втора форма за вход: самата
