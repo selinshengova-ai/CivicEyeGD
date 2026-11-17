@@ -72,12 +72,6 @@ public static class ReportResponse
     public static int? LongestResponseDays(IEnumerable<Report> reports) =>
         Longest(reports.Select(ResponseDays));
 
-    // Сигналите, за които дневникът е празен. Методът очаква вече
-    // подбран активен списък: приключен сигнал без ред не чака нищо и
-    // не трябва да влиза в бройката.
-    public static int AwaitingFirstActionCount(IEnumerable<Report> reports) =>
-        reports.Count(report => FirstActionAt(report) is null);
-
     // Дните се изписват с правилния брой на думата: „1 ден“ и „2 дни“
     // не се образуват по правило, което програма да познае, затова
     // формите идват от BulgarianPlural.

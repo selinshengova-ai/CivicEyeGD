@@ -150,20 +150,21 @@ public sealed class ReportExportService
             }
 
             // Етикетът носи цвета на приоритета: служителят вижда
-            // подредбата, без да чете числа.
+            // подредбата, без да чете числа. Имената се сравняват с
+            // константите на ReportPriorityService, не с преписан текст.
             var labelCell = sheet.Cell(line, 11);
             labelCell.Style.Font.Bold = true;
             labelCell.Style.Fill.PatternType = XLFillPatternValues.Solid;
             labelCell.Style.Fill.BackgroundColor = row.PriorityLabel switch
             {
-                "Висок приоритет" => XLColor.FromHtml("#F7D9D7"),
-                "Среден приоритет" => XLColor.FromHtml("#FAEBC8"),
+                ReportPriorityService.HighPriorityLabel => XLColor.FromHtml("#F7D9D7"),
+                ReportPriorityService.MediumPriorityLabel => XLColor.FromHtml("#FAEBC8"),
                 _ => XLColor.FromHtml("#DCEDE2")
             };
             labelCell.Style.Font.FontColor = row.PriorityLabel switch
             {
-                "Висок приоритет" => XLColor.FromHtml("#8E2B26"),
-                "Среден приоритет" => XLColor.FromHtml("#8A6503"),
+                ReportPriorityService.HighPriorityLabel => XLColor.FromHtml("#8E2B26"),
+                ReportPriorityService.MediumPriorityLabel => XLColor.FromHtml("#8A6503"),
                 _ => XLColor.FromHtml("#1B4D3E")
             };
         }
@@ -211,7 +212,7 @@ public sealed class ReportExportService
             // нито от кавички, нито от неутрализиране.
             builder.Append(string.Join(',', new[]
             {
-                row.Id.ToString(),
+                row.Id.ToString(CultureInfo.InvariantCulture),
                 Cell(row.Title),
                 Cell(row.Description),
                 Cell(row.Category),

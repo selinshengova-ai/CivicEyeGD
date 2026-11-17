@@ -2,7 +2,6 @@ using CivicEyeGD.Data;
 using CivicEyeGD.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.DataProtection;
-using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.RateLimiting;
@@ -66,8 +65,10 @@ builder.Services
         options.Password.RequireUppercase = false;
         options.Password.RequireLowercase = true;
         options.Password.RequireNonAlphanumeric = false;
-        options.Lockout.MaxFailedAccessAttempts = 5;
-        options.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(10);
+        // Двете числа са от AccountLockout, защото същите стоят и в
+        // текста, с който страниците обясняват заключването.
+        options.Lockout.MaxFailedAccessAttempts = AccountLockout.FailedAttempts;
+        options.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(AccountLockout.WaitMinutes);
     })
     .AddEntityFrameworkStores<ApplicationDbContext>()
     .AddDefaultTokenProviders();
@@ -85,7 +86,27 @@ builder.Services.ConfigureApplicationCookie(options =>
     options.Cookie.HttpOnly = true;
     options.Cookie.SameSite = SameSiteMode.Lax;
     options.Cookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
+
+    // Извън разработка сайтът се отваря само през HTTPS. Зад прокси на
+    // споделения хост Request.IsHttps понякога остава false, защото
+    // заглавката X-Forwarded-Proto идва от адрес, който не е вписан като
+    // известен прокси, и тогава „SameAsRequest“ би пуснал бисквитата без
+    // флага Secure. Изискването е поставено изрично; локално, където
+    // сайтът се гледа като http://localhost, остава както досега.
+    if (!builder.Environment.IsDevelopment())
+    {
+        options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
+    }
 });
+
+// Подновеният подпис на профила изхвърля отворените браузъри — но
+// Identity ги проверява по график. По подразбиране графикът е 30 минути,
+// затова страницата за възстановяване би обещала повече, отколкото
+// върши: един влязъл браузър би останал жив половин час след смяната на
+// паролата. Една минута е цената на едно допълнително четене на профила
+// за заявка, за да излезе навън всеки, чиято парола току-що е сменена.
+builder.Services.Configure<SecurityStampValidatorOptions>(options =>
+    options.ValidationInterval = TimeSpan.FromMinutes(1));
 
 // Identity иначе говори на английски за грешки в паролата и имейла,
 // а останалите текстове в приложението са български.
@@ -256,7 +277,6 @@ app.MapGet("/", (HttpContext context) =>
 
 app.MapGet("/report-images/{id:int}", async (
     int id,
-    HttpContext httpContext,
     ApplicationDbContext db,
     ReportImageStorage storage) =>
 {
@@ -265,10 +285,10 @@ app.MapGet("/report-images/{id:int}", async (
     if (!ReportImageStorage.IsAllowedContentType(image.ContentType)) return Results.NotFound();
     var path = storage.GetFullPath(image.StoredFileName);
     if (path is null) return Results.NotFound();
-    httpContext.Response.Headers["X-Content-Type-Options"] = "nosniff";
     return Results.File(path, image.ContentType);
     // Снимките са обществени, защото страниците, които ги показват,
     // също са: без това публичната карта идва със счупени изображения.
+    // Заглавката срещу разгръщане по тип идва от глобалния филтър.
 }).AllowAnonymous();
 
 app.MapRazorPages().WithStaticAssets();

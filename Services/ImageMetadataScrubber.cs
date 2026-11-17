@@ -10,7 +10,7 @@ namespace CivicEyeGD.Services;
 /// Единствената стойност, която оцелява, е ориентация на кадъра. Без нея
 /// портретна снимка от телефон се завърта на 90 градуса, защото пикселите
 /// се съхраняват хоризонтално, а браузърът разчита на числото, за да ги
-/// изправи. То не съдържа нищо лично: единайсет възможни стойности,
+/// изправи. То не съдържа нищо лично: седем възможни стойности,
 /// описващи единствено как се държи телефонът.
 /// </summary>
 public static class ImageMetadataScrubber
@@ -322,15 +322,18 @@ public static class ImageMetadataScrubber
         {
             var type = ReadType(data, position);
             var length = ReadLittleEndianInt32(data, position + 4);
-            var blockEnd = position + 8 + length + (length % 2);
-
-            if (length < 0 || blockEnd > end)
+            // Дължината идва от файла, затова границата се проверява в
+            // long: с цяло число огромен блок пресича максимума и
+            // блокът се озовава преди началото си.
+            if (length < 0 || (long)position + 8 + length + (length % 2) > end)
             {
                 return null;
             }
 
+            var blockEnd = position + 8 + length + (length % 2);
+
             // EXIF и XMP са единствените блокове с лични данни; кадровите
-            // блокове (VP8, VP8L, VP8C) и цветовият профил остават.
+            // блокове (VP8, VP8L, VP8X) и цветовият профил остават.
             if (type is not ("EXIF" or "XMP "))
             {
                 body.AddRange(data[position..blockEnd]);
