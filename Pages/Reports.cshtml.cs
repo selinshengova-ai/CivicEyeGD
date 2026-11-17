@@ -70,6 +70,16 @@ public class ReportsModel : PageModel
 
     public string Status { get; private set; } = string.Empty;
 
+    // Публичната страница не бива да товари сървъра безкрайно: при
+    // много сигнали се показват последните, а останалите се намират
+    // през търсенето и филтрите. Без таван една заявка би заредила
+    // всички гласове и снимки в паметта.
+    public const int MaxShownReports = 300;
+
+    // Когато таванът е сработд, страницата го казва: иначе човек би
+    // помислил, че вижда целия град, а не последните триста.
+    public bool IsLimited { get; private set; }
+
     public async Task OnGetAsync(
         string? search,
         string? category,
@@ -147,10 +157,18 @@ public class ReportsModel : PageModel
             query = query.Where(r => r.Status == Status);
         }
 
+        var totalCount = await query.CountAsync();
+        IsLimited = totalCount > MaxShownReports;
+
         // Подредбата се случва в паметта, не в SQLite: приоритетът е
         // сума от три колекции, които базата не знае как се събират, а
-        // втора формула в SQL би остаряла спрямо услугата.
-        Reports = OrderReports(await query.ToListAsync());
+        // втора формула в SQL би остаряла спрямо услугата. Затова преди
+        // подредбата се взимат само последните MaxShownReports записа.
+        Reports = OrderReports(await query
+            .OrderByDescending(r => r.CreatedAt)
+            .ThenByDescending(r => r.Id)
+            .Take(MaxShownReports)
+            .ToListAsync());
     }
 
     // Приключилите сигнали са последни при всяка подредба: затвореният

@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
+using System.Net;
 using System.Threading.RateLimiting;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -133,15 +134,46 @@ builder.Services.AddRateLimiter(options =>
 {
     options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
 
+    // Една кофа за писане и една за четене на страница. Четенето има
+    // по-висок таван, защото проверката за близък сигнал се пуска при
+    // всяко местене на маркера: с обща кофа човек, който търси точното
+    // място, изяжда лимита за изпращане, преди да е попълнил формата.
     options.AddPolicy("forms", httpContext =>
-        RateLimitPartition.GetFixedWindowLimiter(
-            partitionKey: httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+    {
+        var writing = IsWriteRequest(httpContext);
+        var key = ClientKey(httpContext);
+
+        return RateLimitPartition.GetFixedWindowLimiter(
+            partitionKey: writing ? key : key + ":read",
             factory: _ => new FixedWindowRateLimiterOptions
             {
-                PermitLimit = 30,
+                PermitLimit = writing ? 30 : 120,
                 Window = TimeSpan.FromMinutes(1),
                 QueueLimit = 0
-            }));
+            });
+    });
+
+    // Гласуването се брои по човек, не по адрес: в училище или в общината
+    // цялата сграда излиза през един адрес и общ лимит би спрял
+    // гражданите, а не скрипта. Един глас на сигнал и без това спира
+    // повторното натискане; това ограничение спира обхождането на
+    // много сигнали подред с един акаунт.
+    options.AddPolicy("votes", httpContext =>
+    {
+        var user = httpContext.User.Identity?.IsAuthenticated == true
+            ? httpContext.User.Identity.Name
+            : ClientKey(httpContext);
+        var writing = IsWriteRequest(httpContext);
+
+        return RateLimitPartition.GetFixedWindowLimiter(
+            partitionKey: "vote:" + user + (writing ? string.Empty : ":read"),
+            factory: _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = writing ? 20 : 90,
+                Window = TimeSpan.FromMinutes(1),
+                QueueLimit = 0
+            });
+    });
 
     options.OnRejected = async (context, cancellationToken) =>
     {
@@ -161,15 +193,41 @@ builder.Services.AddScoped<ReportOfficeService>();
 
 var app = builder.Build();
 
-// Зад обратен прокси (Azure App Service, nginx) заявките пристигат като HTTP.
-// Без това приложение не разбира, че потребителят е на HTTPS, и бисквитата
-// за вход не се изпраща. Позволено е само извън режим за разработка.
+// Зад обратен прокси (Azure App Service, nginx, IIS на споделен хост)
+// заявките пристигат като HTTP, а адресът на клиента е в X-Forwarded-For.
+// Без обработка приложение не разбира, че потребителят е на HTTPS, и
+// всички заявки изглеждат от адреса на проксито — тоест една обща кофа
+// за лимита. Доверяваме се само на изброените в настройките проксита:
+// иначе всеки би могъл да подправи заглавката и да смени адреса си.
 if (!app.Environment.IsDevelopment())
 {
-    app.UseForwardedHeaders(new ForwardedHeadersOptions
+    var forwardedHeaders = new ForwardedHeadersOptions
     {
-        ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto
-    });
+        ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto,
+        // Само последният прокси пред нас се брои: верига от няколко
+        // заглавки е начин да се подмени адресът.
+        ForwardLimit = 1
+    };
+
+    foreach (var proxy in builder.Configuration.GetSection("ForwardedHeaders:KnownProxies").Get<string[]>() ?? [])
+    {
+        if (IPAddress.TryParse(proxy, out var address))
+        {
+            forwardedHeaders.KnownProxies.Add(address);
+        }
+    }
+
+    // Празният списък е валиден само ако сайтът наистина не е зад прокси.
+    // Затова липсата се записва в дневника: при споделен хост това е
+    // причината лимитът да е общ, а не скрита подробност.
+    if (forwardedHeaders.KnownProxies.Count == 0)
+    {
+        app.Logger.LogWarning(
+            "Няма изброени доверени проксита (ForwardedHeaders:KnownProxies). "
+            + "Ако сайтът е зад обратен прокси, адресът на клиента няма да се разпознава.");
+    }
+
+    app.UseForwardedHeaders(forwardedHeaders);
 }
 
 if (!app.Environment.IsDevelopment())
@@ -223,9 +281,12 @@ app.Use(async (context, next) =>
 app.UseHttpsRedirection();
 app.UseStaticFiles();
 app.UseRouting();
-app.UseRateLimiter();
 app.UseAuthentication();
 app.UseAuthorization();
+
+// След проверката за самоличност: политиката „votes“ дели кофите по
+// потребител, а той е известен едва след UseAuthentication.
+app.UseRateLimiter();
 
 using (var scope = app.Services.CreateScope())
 {
@@ -267,6 +328,20 @@ using (var scope = app.Services.CreateScope())
             await Task.Delay(TimeSpan.FromSeconds(3));
         }
     }
+
+    // Снимка се записва на диска преди реда в базата. Ако процесът падне
+    // между двете, файлът остава без собственик и никой не го трие —
+    // затова при всяко стартиране се махат старите такива.
+    var sweptImages = await ReportImageJanitor.SweepAsync(
+        dbContext,
+        scope.ServiceProvider.GetRequiredService<ReportImageStorage>(),
+        DateTime.UtcNow,
+        startupLogger);
+
+    if (sweptImages > 0)
+    {
+        startupLogger.LogInformation("Изчистени {Count} осиротели снимки.", sweptImages);
+    }
 }
 
 app.MapGet("/", (HttpContext context) =>
@@ -277,6 +352,7 @@ app.MapGet("/", (HttpContext context) =>
 
 app.MapGet("/report-images/{id:int}", async (
     int id,
+    HttpContext context,
     ApplicationDbContext db,
     ReportImageStorage storage) =>
 {
@@ -285,6 +361,10 @@ app.MapGet("/report-images/{id:int}", async (
     if (!ReportImageStorage.IsAllowedContentType(image.ContentType)) return Results.NotFound();
     var path = storage.GetFullPath(image.StoredFileName);
     if (path is null) return Results.NotFound();
+
+    // Снимките не се менят след записа, затова браузърът може да ги пази:
+    // без това картата тегли всички отново при всяко презареждане.
+    context.Response.Headers.CacheControl = "public,max-age=3600";
     return Results.File(path, image.ContentType);
     // Снимките са обществени, защото страниците, които ги показват,
     // също са: без това публичната карта идва със счупени изображения.
@@ -293,6 +373,20 @@ app.MapGet("/report-images/{id:int}", async (
 
 app.MapRazorPages().WithStaticAssets();
 app.Run();
+
+// Адресът, по който се дели лимитът. Зад прокси това е адресът от
+// X-Forwarded-For, защото UseForwardedHeaders вече го е сложил в
+// Connection.RemoteIpAddress.
+static string ClientKey(HttpContext context) =>
+    context.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+
+// Писането е всичко, което променя състояние. Четенето взима отделна
+// кофа: то не пълни базата и не бива да изяжда лимита на формите.
+static bool IsWriteRequest(HttpContext context) =>
+    HttpMethods.IsPost(context.Request.Method)
+    || HttpMethods.IsPut(context.Request.Method)
+    || HttpMethods.IsPatch(context.Request.Method)
+    || HttpMethods.IsDelete(context.Request.Method);
 
 static Task ExecutePragmaAsync(ApplicationDbContext dbContext, string pragma)
 {

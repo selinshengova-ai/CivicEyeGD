@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 
 namespace CivicEyeGD.Pages;
@@ -16,10 +17,13 @@ namespace CivicEyeGD.Pages;
 // поставен върху обработващ метод на Razor Page той не стига до
 // крайната точка и не действа (MVC1001).
 //
-// Отделно ограничение за гласуването няма смисъл: един акаунт може да
-// потвърди сигнал веднъж (уникален индекс), подателят не гласува, а
-// самото създаване на акаунти е ограничено с политиката "forms".
+// Отделно ограничение за гласуването няма смисъл по адрес: един акаунт
+// може да потвърди сигнал веднъж (уникален индекс), а създаването на
+// акаунти е ограничено с политиката "forms". Затова тук лимитът е по
+// потребител — спира обхождането на много сигнали с един акаунт, без да
+// заключва цяла сграда, излизаща през един адрес.
 [AllowAnonymous]
+[EnableRateLimiting("votes")]
 public class DetailsModel : PageModel
 {
     private readonly ApplicationDbContext _context;
@@ -132,13 +136,27 @@ public class DetailsModel : PageModel
         // Две щраквания подред: и двете минават през проверката, преди
         // първият запис да е готов. Тогава правилото за уникалност спира
         // втория, а потребителят трябва да види обяснение, не сървърна
-        // грешка.
+        // грешка. Проверяваме какво наистина има в базата: не всяка
+        // грешка при запис е повторно потвърждение — при недостъпна база
+        // същото изключение идва за друга причина и не бива да се
+        // превръща в „вече си потвърдил“.
         try
         {
             await _context.SaveChangesAsync();
         }
         catch (DbUpdateException)
         {
+            _context.ChangeTracker.Clear();
+
+            var alreadyConfirmed = await _context.Confirmations
+                .AsNoTracking()
+                .AnyAsync(c => c.ReportId == id && c.UserId == userId);
+
+            if (!alreadyConfirmed)
+            {
+                throw;
+            }
+
             return BadRequest("Вече си потвърдил този проблем.");
         }
 
@@ -183,6 +201,17 @@ public class DetailsModel : PageModel
         }
         catch (DbUpdateException)
         {
+            _context.ChangeTracker.Clear();
+
+            var alreadyRated = await _context.SeverityRatings
+                .AsNoTracking()
+                .AnyAsync(r => r.ReportId == id && r.UserId == userId);
+
+            if (!alreadyRated)
+            {
+                throw;
+            }
+
             ErrorMessage = "Оценката вече е записана.";
             return Page();
         }
@@ -244,9 +273,9 @@ public class DetailsModel : PageModel
     // която изтрива под него, за да важи едно и също правило и на двете.
     public async Task<IActionResult> OnPostOfficeAsync(
         int id,
-        string newStatus,
+        string? newStatus,
         string? comment,
-        int adjustment)
+        int? adjustment)
     {
         await LoadReportAsync(id);
         if (Report is null) return NotFound();
@@ -256,8 +285,17 @@ public class DetailsModel : PageModel
         // и без него.
         if (!IsOfficer) return Forbid();
 
+        // Стойността е nullable, за да се различава „липсва“ от „нула“.
+        // Празно или нечислово поле иначе би станало 0 и корекцията на
+        // приоритета би се изтрила, без някой да го е поискал.
+        if (adjustment is null || !ModelState.IsValid)
+        {
+            ErrorMessage = "Корекцията на приоритета трябва да е цяло число между 0 и 10. Нищо не е записано.";
+            return Page();
+        }
+
         var outcome = await _office.UpdateAsync(
-            _userManager.GetUserId(User), id, newStatus, comment, adjustment);
+            _userManager.GetUserId(User), id, newStatus ?? string.Empty, comment, adjustment.Value);
 
         switch (outcome)
         {
@@ -267,6 +305,13 @@ public class DetailsModel : PageModel
                 return BadRequest("Корекцията на приоритета е между 0 и 10.");
             case ReportOfficeService.Outcome.NotFound:
                 return NotFound();
+            case ReportOfficeService.Outcome.Conflict:
+                // Някой друг е променил сигнала между отварянето и
+                // записа. Показваме новото състояние, вместо да
+                // затвърдим старото върху чуждото.
+                await LoadReportAsync(id);
+                ErrorMessage = "Сигналът беше променен от друг служител. Виж новото състояние и опитай отново.";
+                return Page();
         }
 
         await LoadReportAsync(id);
@@ -372,18 +417,41 @@ public class DetailsModel : PageModel
     {
         if (Report is null) return;
 
+        var authorIds = Report.StatusHistories
+            .Select(h => h.ChangedByUserId)
+            .Where(id => id is not null)
+            .Select(id => id!)
+            .Distinct()
+            .ToList();
+
+        if (authorIds.Count == 0) return;
+
+        // Две заявки за целия дневник, не по една на ред: при дълга
+        // история цикълът с FindByIdAsync би отворил толкова връзки,
+        // колкото са стъпките.
+        var existingIds = (await _context.Users
+                .AsNoTracking()
+                .Where(user => authorIds.Contains(user.Id))
+                .Select(user => user.Id)
+                .ToListAsync())
+            .ToHashSet();
+
+        var administratorIds = (await (
+                from userRole in _context.UserRoles
+                join role in _context.Roles on userRole.RoleId equals role.Id
+                where role.Name == "Administrator" && authorIds.Contains(userRole.UserId)
+                select userRole.UserId)
+            .AsNoTracking()
+            .ToListAsync())
+            .ToHashSet();
+
         var labels = new Dictionary<string, string>();
 
-        foreach (var changedById in Report.StatusHistories
-                     .Select(h => h.ChangedByUserId)
-                     .Where(id => id is not null)
-                     .Distinct())
+        foreach (var changedById in authorIds)
         {
-            var user = await _userManager.FindByIdAsync(changedById!);
-
-            labels[changedById!] = user is null
+            labels[changedById] = !existingIds.Contains(changedById)
                 ? "Служител с премахнат акаунт"
-                : (await _userManager.GetRolesAsync(user)).Contains("Administrator")
+                : administratorIds.Contains(changedById)
                     ? "Администратор на платформата"
                     : "Служител на общината";
         }

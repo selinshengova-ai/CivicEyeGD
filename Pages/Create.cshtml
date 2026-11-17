@@ -9,7 +9,10 @@
     сигнала, форматът се връща попълнен и написаното от човека не се губи. *@
 @* Leaflet идва с фиксирана версия 1.9.4: картата изглежда по един и същ
     начин след всяко публикуване, а библиотеката не влиза в проекта. *@
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css" />
+<link rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css"
+      integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+      crossorigin="anonymous" />
 <script>
     // Панелът се маха при отказ на Google: невалиден или ограничен ключ,
     // мрежова грешка, блокиран скрипт. Формулярът остава напълно работещ,
@@ -325,7 +328,9 @@
     </div>
 </section>
 
-<script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"
+        integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+        crossorigin="anonymous"></script>
 
 @* Библиотеката се зарежда чак тук, под формата, за да не забавя първия
    кадър: човекът вижда полетата веднага, картата — малко по-късно. *@

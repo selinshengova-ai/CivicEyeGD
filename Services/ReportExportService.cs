@@ -1,5 +1,6 @@
 using System.Globalization;
 using System.Text;
+using System.Xml;
 using ClosedXML.Excel;
 
 namespace CivicEyeGD.Services;
@@ -97,13 +98,15 @@ public sealed class ReportExportService
 
             // Стойностите се записват като текст и числа, никога като формула:
             // заглавие "=1+1" остава текст в клетката и Excel го изобразява
-            // буквално, вместо да го изпълни.
+            // буквално, вместо да го изпълни. Свободният текст минава и през
+            // XmlSafe: управляващ знак от заявката би направил книгата
+            // невалиден XML и Excel би отказал целия файл.
             sheet.Cell(line, 1).Value = row.Id;
-            sheet.Cell(line, 2).Value = row.Title;
-            sheet.Cell(line, 3).Value = row.Description;
-            sheet.Cell(line, 4).Value = row.Category;
-            sheet.Cell(line, 5).Value = row.Status;
-            sheet.Cell(line, 6).Value = row.Address;
+            sheet.Cell(line, 2).Value = XmlSafe(row.Title);
+            sheet.Cell(line, 3).Value = XmlSafe(row.Description);
+            sheet.Cell(line, 4).Value = XmlSafe(row.Category);
+            sheet.Cell(line, 5).Value = XmlSafe(row.Status);
+            sheet.Cell(line, 6).Value = XmlSafe(row.Address);
             sheet.Cell(line, 7).Value = row.CreatedAt;
             sheet.Cell(line, 8).Value = row.AverageSeverity;
             sheet.Cell(line, 9).Value = row.Confirmations;
@@ -242,18 +245,20 @@ public sealed class ReportExportService
             .ToArray();
     }
 
-    // Кавички с удвояване на стойностите вътре; водещите =, +, - и @ се
-    // неутрализират, защото Excel иначе изпълнява текста като формула.
-    // Формула в клетка може да прочете съседни клетки и да изпрати
+    // Кавички с удвояване на стойностите вътре; водещите =, +, -, @, табулатор
+    // и нов ред се неутрализират, защото Excel иначе изпълнява текста като
+    // формула. Формула в клетка може да прочете съседни клетки и да изпрати
     // съдържанието им навън, а заглавията и описанията са свободен текст
     // на гражданите: един сигнал би стигнал, за да се изпълни чужд код
-    // в компютъра на служителя. Този път е задължителен именно за CSV,
-    // защото там няма тип на клетката, който да спре изчислението.
+    // в компютъра на служителя. Табулаторът и новият ред са в списъка,
+    // защото Excel ги прескача преди да реши, че редът е формула. Този
+    // път е задължителен именно за CSV, защото там няма тип на клетката,
+    // който да спре изчислението.
     private static string Cell(string? value)
     {
         var text = value ?? string.Empty;
 
-        if (text.Length > 0 && (text[0] is '=' or '+' or '-' or '@'))
+        if (text.Length > 0 && (text[0] is '=' or '+' or '-' or '@' or '\t' or '\r' or '\n'))
         {
             // Водещият знак се спасява с апостроф, а не се изтрива:
             // служителят трябва да вижда същия текст, какъвто е писал
@@ -265,5 +270,26 @@ public sealed class ReportExportService
         // собствените ѝ кавички се удвояват: описание с нов ред или със
         // запетая не бива да разместява колоните на следващите редове.
         return "\"" + text.Replace("\"", "\"\"") + "\"";
+    }
+
+    // XML 1.0 не позволява повечето управляващи знаци, а .xlsx е архив от
+    // XML части. Заявка може да донесе такъв знак в описанието, затова
+    // преди запис в книгата той отпада — иначе Excel вижда повреден файл
+    // и отказва всички редове, не само един.
+    private static string XmlSafe(string? value)
+    {
+        if (string.IsNullOrEmpty(value)) return string.Empty;
+
+        var builder = new StringBuilder(value.Length);
+
+        foreach (var character in value)
+        {
+            if (XmlConvert.IsXmlChar(character))
+            {
+                builder.Append(character);
+            }
+        }
+
+        return builder.ToString();
     }
 }

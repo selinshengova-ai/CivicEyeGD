@@ -153,6 +153,12 @@ public sealed class ReportImageStorage
         }
     }
 
+    // Всички файлове в папката. Нужен е на проверката при стартиране,
+    // която търси снимки без ред в базата — за тях няма друг начин да
+    // се разбере, че са останали.
+    public IEnumerable<FileInfo> EnumerateFiles() =>
+        new DirectoryInfo(_rootDirectory).EnumerateFiles();
+
     // Определя типа по „магическите“ байтове на файла,
     // а не по това, което твърди браузърът.
     private static string? DetectImageType(Stream stream)

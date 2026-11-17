@@ -40,17 +40,29 @@ public sealed class ReportOfficeService
         /// <summary>Сигналът го няма — връщаме 404, а не празна страница.</summary>
         NotFound,
 
+        /// <summary>
+        /// Някой друг е променил сигнала между прочитането и записа.
+        /// Страницата показва новото състояние, вместо да запише старо
+        /// върху чуждо.
+        /// </summary>
+        Conflict,
+
         /// <summary>Сигналът и всичко около него са премахнати.</summary>
         Deleted
     }
 
     private readonly ApplicationDbContext _context;
     private readonly ReportImageStorage _storage;
+    private readonly ILogger<ReportOfficeService> _logger;
 
-    public ReportOfficeService(ApplicationDbContext context, ReportImageStorage storage)
+    public ReportOfficeService(
+        ApplicationDbContext context,
+        ReportImageStorage storage,
+        ILogger<ReportOfficeService> logger)
     {
         _context = context;
         _storage = storage;
+        _logger = logger;
     }
 
     /// <summary>
@@ -123,7 +135,20 @@ public sealed class ReportOfficeService
         report.AdminPriorityAdjustment = adjustment;
 
         _context.StatusHistories.Add(entry);
-        await _context.SaveChangesAsync();
+
+        // Статусът и корекцията са маркирани като проверявани при запис
+        // (ConcurrencyCheck): ако някой друг ги е сменил, след като сме
+        // ги прочели, UPDATE-ът не намира реда и EF хвърля тук, вместо
+        // тихо да презапише чуждата намеса.
+        try
+        {
+            await _context.SaveChangesAsync();
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            _context.ChangeTracker.Clear();
+            return Outcome.Conflict;
+        }
 
         return Outcome.Saved;
     }
@@ -160,9 +185,18 @@ public sealed class ReportOfficeService
 
         // Чак сега, когато редовете наистина са изтрити: при неуспешен
         // запис в базата снимките остават на място и сигналът пак се отваря.
+        // Неуспешно изтриване на файл не връща грешка към служителя —
+        // редът вече го няма, а файлът се прибира при следващо стартиране.
         foreach (var storedFileName in storedFileNames)
         {
-            _storage.Delete(storedFileName);
+            try
+            {
+                _storage.Delete(storedFileName);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Снимка остана на диска след изтрит сигнал: {File}.", storedFileName);
+            }
         }
 
         return Outcome.Deleted;

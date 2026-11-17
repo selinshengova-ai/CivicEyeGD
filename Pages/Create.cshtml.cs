@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using System.ComponentModel.DataAnnotations;
+using System.Data;
 
 namespace CivicEyeGD.Pages;
 
@@ -178,12 +179,7 @@ public class CreateModel : PageModel
 
             if (NearbyDuplicates.Count > 0)
             {
-                ModelState.AddModelError(
-                    string.Empty,
-                    "На това място вече има подаден сигнал от същата категория. "
-                    + "Отвори го и го потвърди вместо да създадеш дубликат. "
-                    + "Ако проблемът е различен, отметни „Това е различен проблем“ "
-                    + "и изпрати отново.");
+                ModelState.AddModelError(string.Empty, DuplicateMessage);
                 return Page();
             }
         }
@@ -213,6 +209,28 @@ public class CreateModel : PageModel
 
         try
         {
+            // Проверката и записът трябва да са едно цяло: иначе две
+            // едновременни заявки минават проверката преди първата да е
+            // записала и се получават два сигнала на едно място.
+            // SQLite доставчикът на EF отваря транзакцията с BEGIN
+            // IMMEDIATE — заключването се взима преди четенето, затова
+            // втората заявка изчаква първата и вижда нейния ред.
+            await using var transaction = await _context.Database
+                .BeginTransactionAsync(IsolationLevel.Serializable);
+
+            if (!Report.DuplicateAcknowledged)
+            {
+                NearbyDuplicates = await FindNearbyAsync(
+                    Report.Category, Report.Latitude!.Value, Report.Longitude!.Value);
+
+                if (NearbyDuplicates.Count > 0)
+                {
+                    // Изходът затваря транзакцията без запис.
+                    ModelState.AddModelError(string.Empty, DuplicateMessage);
+                    return Page();
+                }
+            }
+
             foreach (var photo in Photos)
             {
                 if (photo.Length == 0) continue;
@@ -231,6 +249,7 @@ public class CreateModel : PageModel
 
             _context.Reports.Add(newReport);
             await _context.SaveChangesAsync();
+            await transaction.CommitAsync();
         }
         catch (Exception ex)
         {
@@ -245,6 +264,15 @@ public class CreateModel : PageModel
 
         return RedirectToPage("/Details", new { id = newReport.Id });
     }
+
+    // Един текст за двете места, на които проверката отказва: първата
+    // (преди транзакцията) и втората (вътре в нея). Ако се разминат,
+    // човек би видял различно обяснение за същото положение.
+    private const string DuplicateMessage =
+        "На това място вече има подаден сигнал от същата категория. "
+        + "Отвори го и го потвърди вместо да създадеш дубликат. "
+        + "Ако проблемът е различен, отметни „Това е различен проблем“ "
+        + "и изпрати отново.";
 
     // SQLite не смята разстояние по голям кръг, затова от базата идва
     // само съседният квадрат. В рамките на един град това са нула или

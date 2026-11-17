@@ -83,6 +83,7 @@ namespace CivicEyeGD.Migrations
                         .HasColumnType("TEXT");
 
                     b.Property<int>("AdminPriorityAdjustment")
+                        .IsConcurrencyToken()
                         .HasColumnType("INTEGER");
 
                     b.Property<string>("Category")
@@ -105,6 +106,7 @@ namespace CivicEyeGD.Migrations
                         .HasColumnType("REAL");
 
                     b.Property<string>("Status")
+                        .IsConcurrencyToken()
                         .IsRequired()
                         .HasColumnType("TEXT");
 
@@ -492,7 +494,8 @@ namespace CivicEyeGD.Migrations
                 {
                     b.HasOne("Microsoft.AspNetCore.Identity.IdentityUser", "ChangedByUser")
                         .WithMany()
-                        .HasForeignKey("ChangedByUserId");
+                        .HasForeignKey("ChangedByUserId")
+                        .OnDelete(DeleteBehavior.SetNull);
 
                     b.HasOne("CivicEyeGD.Data.Report", "Report")
                         .WithMany("StatusHistories")

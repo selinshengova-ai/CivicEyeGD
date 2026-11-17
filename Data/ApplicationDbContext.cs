@@ -118,6 +118,17 @@ public class ApplicationDbContext : IdentityDbContext<IdentityUser>
             .HasForeignKey(sh => sh.ReportId)
             .OnDelete(DeleteBehavior.Cascade);
 
+        // Връзката със служителя също се обявява изрично: при изтрит
+        // акаунт базата сама нулира името в дневника. Без това правило
+        // външният ключ отказва изтриването на служител, който има
+        // история, и правото на изтриване се проваля точно там, където
+        // човек най-малко очаква.
+        builder.Entity<StatusHistory>()
+            .HasOne(sh => sh.ChangedByUser)
+            .WithMany()
+            .HasForeignKey(sh => sh.ChangedByUserId)
+            .OnDelete(DeleteBehavior.SetNull);
+
         // Връзки за RecoveryQuestion
         // Един ред на профил, затова самият ключ на профила е и първичен:
         // базата не може да съхрани втори въпрос за същия човек, дори две

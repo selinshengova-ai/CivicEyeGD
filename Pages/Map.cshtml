@@ -241,10 +241,17 @@
     *@
     <link rel="stylesheet"
           href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+          integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
           crossorigin="anonymous" />
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+            integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
             crossorigin="anonymous"></script>
+
+    @* Данните стоят в блок, който браузърът не изпълнява, а после се
+       четат с JSON.parse. Така дори грешка в сериализатора не може да
+       превърне текста на гражданин в изпълняем скрипт. *@
+    <script type="application/json" id="map-data">@Html.Raw(Model.ReportsJson)</script>
 
     <script>
         // Маркерите се изчертават в браузъра, за да не се презарежда
@@ -265,13 +272,10 @@
                 return;
             }
 
-            // Данните идват от SQLite чрез MapModel.
-            // Html.Raw е нужен, защото иначе Razor би превърнала
-            // кавичките в HTML-кодове и JSON-ът нямаше да се чете.
-            // Безопасно е: сериализаторът замества <, > и & с
-            // Unicode-кодове, така че текст на потребителя не може
-            // да прекъсне собствения си блок със скрипт.
-            const reports = @Html.Raw(Model.ReportsJson);
+            // Данните идват от SQLite чрез MapModel и от блока по-горе:
+            // JSON.parse чете текста, без да го изпълнява.
+            const reports = JSON.parse(
+                document.getElementById("map-data").textContent);
 
             // Скритите по дефиниция приключени сигнали се броят в модела,
             // за да не се различава числото тук от това в заглавката.
